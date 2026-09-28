@@ -14,11 +14,15 @@ local GL = RegisterMod("GreenLanternMod", 1)
 -- ---------------------------------------------------------------------------
 
 -- IDs resolved dynamically at runtime
-local ITEM_POWER_BATTERY       = nil  -- Pocket active (Hal)
+local ITEM_POWER_BATTERY       = nil  -- Active (Hal)
 local ITEM_GIANT_FIST          = nil  -- Active 4-room
-local ITEM_COAST_CITY          = nil  -- Tainted Hal pocket active
+local ITEM_COAST_CITY          = nil  -- Active 4-room (Tainted Hal)
 local ITEM_SOLID_LIGHT_SHIELD  = nil  -- Passive
 local TRINKET_YELLOW_IMPURITY  = nil  -- Trinket
+
+-- Character overlay costumes (keep hair & domino mask on top of picked-up item costumes)
+local COSTUME_HAL              = -1
+local COSTUME_TAINTED_HAL      = -1
 
 -- Player types
 local PLAYER_HAL         = nil  -- Normal Hal Jordan
@@ -58,6 +62,7 @@ local function GetPlayerData(player)
             willpower           = WILLPOWER_MAX,
             ringDepleted        = false,
             overcharge          = false,
+            surgeBuff           = false,
             overchargeRoomIdx   = -1,
             oathTextTimer       = 0,
             oathText            = "",
@@ -67,9 +72,14 @@ local function GetPlayerData(player)
             stolenRings         = 0,
             coastCityActive     = false,
             coastCityFrame      = 0,
+            coastCityBoost      = 1.0,
 
             -- Yellow Impurity
             fearControlTimer    = 0,
+
+            -- Costume & Inspection tracking
+            lastCollectibleCount = -1,
+            inspectTimer         = 150,
         }
     end
     return d.GreenLantern
@@ -85,6 +95,8 @@ local function LoadItemIDs()
     ITEM_COAST_CITY         = Isaac.GetItemIdByName("The Tragedy of Coast City")
     ITEM_SOLID_LIGHT_SHIELD = Isaac.GetItemIdByName("Solid Light Shield")
     TRINKET_YELLOW_IMPURITY = Isaac.GetTrinketIdByName("Yellow Impurity")
+    COSTUME_HAL             = Isaac.GetCostumeIdByPath("gfx/characters/hal_costume.anm2")
+    COSTUME_TAINTED_HAL     = Isaac.GetCostumeIdByPath("gfx/characters/tainted_hal_costume.anm2")
     PLAYER_HAL              = Isaac.GetPlayerTypeByName("Hal Jordan", false)
     local tHal              = Isaac.GetPlayerTypeByName("Hal Jordan", true)
     if not tHal or tHal < 0 then
@@ -106,6 +118,28 @@ local function IsTaintedHal(player)
     return PLAYER_TAINTED_HAL and PLAYER_TAINTED_HAL >= 0 and player:GetPlayerType() == PLAYER_TAINTED_HAL
 end
 
+local function RefreshCharacterCostume(player)
+    pcall(function()
+        if IsHalJordan(player) then
+            if not COSTUME_HAL or COSTUME_HAL < 0 then
+                COSTUME_HAL = Isaac.GetCostumeIdByPath("gfx/characters/hal_costume.anm2")
+            end
+            if COSTUME_HAL and COSTUME_HAL >= 0 then
+                player:TryRemoveNullCostume(COSTUME_HAL)
+                player:AddNullCostume(COSTUME_HAL)
+            end
+        elseif IsTaintedHal(player) then
+            if not COSTUME_TAINTED_HAL or COSTUME_TAINTED_HAL < 0 then
+                COSTUME_TAINTED_HAL = Isaac.GetCostumeIdByPath("gfx/characters/tainted_hal_costume.anm2")
+            end
+            if COSTUME_TAINTED_HAL and COSTUME_TAINTED_HAL >= 0 then
+                player:TryRemoveNullCostume(COSTUME_TAINTED_HAL)
+                player:AddNullCostume(COSTUME_TAINTED_HAL)
+            end
+        end
+    end)
+end
+
 -- ---------------------------------------------------------------------------
 -- SECTION 4: GAME & PLAYER INITIALIZATION
 -- ---------------------------------------------------------------------------
@@ -123,6 +157,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.willpower         = WILLPOWER_MAX
         data.ringDepleted      = false
         data.overcharge        = false
+        data.surgeBuff         = false
         data.overchargeRoomIdx = -1
     end
 
@@ -148,16 +183,27 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 if ITEM_POWER_BATTERY and ITEM_POWER_BATTERY > 0 and not player:HasCollectible(ITEM_POWER_BATTERY) then
                     player:AddCollectible(ITEM_POWER_BATTERY, 3, false, ActiveSlot.SLOT_PRIMARY)
                 end
+                RefreshCharacterCostume(player)
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED)
                 player:EvaluateItems()
             elseif IsTaintedHal(player) then
                 if ITEM_COAST_CITY and ITEM_COAST_CITY > 0 and not player:HasCollectible(ITEM_COAST_CITY) then
-                    player:AddCollectible(ITEM_COAST_CITY, 0, false, ActiveSlot.SLOT_PRIMARY)
+                    player:AddCollectible(ITEM_COAST_CITY, 4, false, ActiveSlot.SLOT_PRIMARY)
                 end
+                RefreshCharacterCostume(player)
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
             end
         end)
+    end
+
+    -- Re-apply character hair/mask overlay whenever the player picks up a new item so costumes merge!
+    if IsHalJordan(player) or IsTaintedHal(player) then
+        local count = player:GetCollectibleCount()
+        if data.lastCollectibleCount ~= count then
+            data.lastCollectibleCount = count
+            RefreshCharacterCostume(player)
+        end
     end
 end)
 
@@ -177,10 +223,13 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         if cacheFlag == CacheFlag.CACHE_DAMAGE then
             player.Damage = player.Damage * HAL_DAMAGE_MULTIPLIER
 
-            -- Overcharge: double damage in current room
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
             if data.overcharge and data.overchargeRoomIdx == roomIdx then
+                -- Full Overcharge: 2.0x damage in current room
                 player.Damage = player.Damage * 2.0
+            elseif data.surgeBuff and data.overchargeRoomIdx == roomIdx then
+                -- Construct Surge (used when <50% Willpower): 1.35x damage in current room
+                player.Damage = player.Damage * 1.35
             end
 
             -- Ring depleted: 50% damage penalty
@@ -203,6 +252,8 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
             if data.overcharge and data.overchargeRoomIdx == roomIdx then
                 player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            elseif data.surgeBuff and data.overchargeRoomIdx == roomIdx then
+                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL
             end
         end
     end
@@ -283,33 +334,67 @@ end)
 -- Power Battery
 GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
     if itemID ~= ITEM_POWER_BATTERY then return end
-    if not IsHalJordan(player) then return end
 
     local data = GetPlayerData(player)
+    local prevWill = data.willpower or WILLPOWER_MAX
+    local wasDepleted = data.ringDepleted
 
-    if data.ringDepleted or data.willpower < WILLPOWER_MAX then
-        data.willpower    = WILLPOWER_MAX
-        data.ringDepleted = false
-        data.overcharge   = false
+    -- 1. Always refill Willpower to 100% and restore ring power
+    data.willpower         = WILLPOWER_MAX
+    data.ringDepleted      = false
+    data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
 
-        player:AnimateHappy()
-        player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-        player:EvaluateItems()
-
-        data.oathTextTimer = 150
-        data.oathText = "In brightest day, in blackest night,\nNo evil shall escape my sight!"
+    -- 2. If used at >= 50% Willpower (and not depleted), grant FULL OVERCHARGE (2.0x DMG + Piercing + Spectral).
+    --    Otherwise, still grant CONSTRUCT SURGE (1.35x DMG + Spectral) so using Power Battery is ALWAYS rewarding!
+    if not wasDepleted and prevWill >= 50.0 then
+        data.overcharge = true
+        data.surgeBuff  = false
+        data.oathTextTimer = 120
+        data.oathText = "OVERCHARGE! (2x DMG + Piercing)"
     else
-        -- Overcharge
-        data.overcharge        = true
-        data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
-
-        player:AnimateHappy()
-        player:AddCacheFlags(CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-        player:EvaluateItems()
-
-        data.oathTextTimer = 150
-        data.oathText = "OVERCHARGE!\nBeware my power — Green Lantern's light!"
+        data.overcharge = false
+        data.surgeBuff  = true
+        data.oathTextTimer = 120
+        data.oathText = "WILLPOWER RESTORED! (+35% DMG Surge)"
     end
+
+    -- 3. Unleash an immediate 8-way Emerald Construct Ring Burst + Shockwave around the player!
+    for i = 1, 8 do
+        local angle = (i - 1) * (math.pi / 4)
+        local dir = Vector(math.cos(angle), math.sin(angle))
+        local beam = Isaac.Spawn(
+            EntityType.ENTITY_TEAR,
+            TearVariant.BLUE_CANDLE,
+            0,
+            player.Position + dir * 14,
+            dir * 16.0,
+            player
+        ):ToTear()
+        if beam then
+            beam.CollisionDamage = player.Damage * 2.5
+            beam.Scale           = 1.6
+            beam.TearFlags       = beam.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            beam:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+        end
+    end
+
+    -- Shockwave: damage & knockback nearby enemies and clear nearby enemy projectiles
+    for _, ent in ipairs(Isaac.GetRoomEntities()) do
+        local dist = (ent.Position - player.Position):Length()
+        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 130 then
+            ent:TakeDamage(player.Damage * 3.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+            local push = (ent.Position - player.Position)
+            if push:Length() > 0.1 then
+                ent.Velocity = ent.Velocity + push:Normalized() * 12.0
+            end
+        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 150 then
+            ent:Die()
+        end
+    end
+
+    player:AnimateHappy()
+    player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
+    player:EvaluateItems()
 
     return true
 end, ITEM_POWER_BATTERY)
@@ -381,21 +466,27 @@ end)
 -- The Tragedy of Coast City
 GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
     if itemID ~= ITEM_COAST_CITY then return end
-    if not IsTaintedHal(player) then return end
 
     local data = GetPlayerData(player)
 
-    if data.emeraldSparks < SPARK_MAX then
-        player:AnimateSad()
-        return false
-    end
-
+    -- Stored Emerald Sparks boost vortex damage up to +50% (no longer blocks activation when <100%!)
+    local sparkBonus = 1.0 + ((data.emeraldSparks or 0.0) / SPARK_MAX) * 0.5
+    data.coastCityBoost  = sparkBonus
     data.emeraldSparks   = 0.0
     data.coastCityActive = true
     data.coastCityFrame  = Game():GetFrameCount()
 
     local room   = Game():GetRoom()
     local center = room:GetCenterPos()
+
+    -- Immediately inflict Fear AND deal an initial Emerald Cataclysm blast to ALL enemies in the room!
+    for _, ent in ipairs(Isaac.GetRoomEntities()) do
+        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+            ent:AddFear(EntityRef(player), 180)
+            ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
+            ent:TakeDamage(player.Damage * 2.5 * sparkBonus, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+        end
+    end
 
     local construct = Isaac.Spawn(
         EntityType.ENTITY_EFFECT,
@@ -410,6 +501,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         cd.isCoastCity  = true
         cd.spawnFrame   = Game():GetFrameCount()
         cd.owner        = player
+        cd.sparkBonus   = sparkBonus
         construct.Scale = 4.0
         construct:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 1, 0)
     end
@@ -418,7 +510,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     return true
 end, ITEM_COAST_CITY)
 
--- Coast City logic: pull feared enemies & deal DPS
+-- Coast City logic: pull ALL vulnerable enemies toward center vortex & deal continuous emerald DPS
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     local room         = Game():GetRoom()
     local center       = room:GetCenterPos()
@@ -450,20 +542,30 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     end
 
     local ownerPlayer = cd.owner or Isaac.GetPlayer(0)
+    local sparkBonus  = cd.sparkBonus or 1.0
 
     for _, enemy in ipairs(Isaac.GetRoomEntities()) do
-        if enemy:IsEnemy() and enemy:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+        if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
+            local isFeared = enemy:HasEntityFlags(EntityFlag.FLAG_FEAR)
             local toCenter = (center - enemy.Position)
             local dist     = toCenter:Length()
 
-            if dist > 8 then
-                local pullStr = math.min(8.0, 300.0 / math.max(dist, 10))
-                enemy.Velocity = enemy.Velocity + toCenter:Normalized() * pullStr
-            else
-                if age % 10 == 0 and ownerPlayer then
-                    local dmg = ownerPlayer.Damage * 3.0
-                    enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(construct), 0)
+            -- Pull ALL vulnerable enemies toward the vortex (Feared enemies pull even faster)
+            if dist > 18 then
+                local pullMult = isFeared and 1.35 or 1.0
+                local pullStr  = math.min(7.5, 260.0 / math.max(dist, 15)) * pullMult
+                enemy.Velocity = enemy.Velocity * 0.8 + toCenter:Normalized() * pullStr
+            end
 
+            -- Deal pulsing Emerald Vortex damage every 10 frames across the vortex radius (or lighter fallout damage room-wide)
+            if age % 10 == 0 and ownerPlayer then
+                enemy:AddFear(EntityRef(ownerPlayer), 60)
+                local fearMult = isFeared and 1.35 or 1.0
+                local distMult = (dist <= 110) and 2.2 or 0.9
+                local dmg = ownerPlayer.Damage * distMult * fearMult * sparkBonus
+                enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(construct), 0)
+
+                if dist <= 110 and math.random() < 0.45 then
                     local spark = Isaac.Spawn(
                         EntityType.ENTITY_PICKUP,
                         PickupVariant.PICKUP_COIN,
@@ -618,7 +720,8 @@ GL:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE, function(_, entity)
     end
     if not hasTaintedHal then return end
 
-    if entity:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+    -- Always drop an Emerald Spark from Feared enemies, or 40% chance from any enemy killed by Tainted Hal
+    if entity:HasEntityFlags(EntityFlag.FLAG_FEAR) or math.random() < 0.40 then
         local spark = Isaac.Spawn(
             EntityType.ENTITY_PICKUP,
             PickupVariant.PICKUP_COIN,
@@ -652,6 +755,15 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                         ent:Remove()
                     else
                         data.emeraldSparks = math.min(SPARK_MAX, data.emeraldSparks + SPARK_PER_KILL)
+                        -- Also grant +1 charge to Coast City active item when picking up sparks!
+                        pcall(function()
+                            if player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == ITEM_COAST_CITY then
+                                local curCharge = player:GetActiveCharge(ActiveSlot.SLOT_PRIMARY)
+                                if curCharge < 4 then
+                                    player:SetActiveCharge(math.min(4, curCharge + 1), ActiveSlot.SLOT_PRIMARY)
+                                end
+                            end
+                        end)
                         ent:Remove()
                     end
                 end
@@ -740,21 +852,23 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                 familiar.Scale    = 1.3
 
                 if currentFrame % 25 == (ringIdx * 5) % 25 then
-                    local nearestFeared = nil
-                    local nearestDist   = 400
+                    local targetEnemy = nil
+                    local nearestDist = 400
 
+                    -- Prioritize Feared enemies, fallback to any vulnerable enemy
                     for _, enemy in ipairs(Isaac.GetRoomEntities()) do
-                        if enemy:IsEnemy() and enemy:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+                        if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
                             local dist = (enemy.Position - familiar.Position):Length()
-                            if dist < nearestDist then
-                                nearestDist   = dist
-                                nearestFeared = enemy
+                            local effectiveDist = enemy:HasEntityFlags(EntityFlag.FLAG_FEAR) and (dist * 0.5) or dist
+                            if effectiveDist < nearestDist then
+                                nearestDist = effectiveDist
+                                targetEnemy = enemy
                             end
                         end
                     end
 
-                    if nearestFeared then
-                        local dir      = (nearestFeared.Position - familiar.Position):Normalized()
+                    if targetEnemy then
+                        local dir      = (targetEnemy.Position - familiar.Position):Normalized()
                         local laserVel = dir * 18
                         local laser    = Isaac.Spawn(
                             EntityType.ENTITY_TEAR,
@@ -809,7 +923,7 @@ GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collide
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 14: OVERCHARGE RESET ON NEW ROOM
+-- SECTION 14: OVERCHARGE / SURGE RESET ON NEW ROOM
 -- ---------------------------------------------------------------------------
 
 GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
@@ -818,8 +932,9 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
         if IsHalJordan(player) then
             local data = GetPlayerData(player)
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
-            if data.overcharge and data.overchargeRoomIdx ~= roomIdx then
+            if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx ~= roomIdx then
                 data.overcharge = false
+                data.surgeBuff  = false
                 player:AddCacheFlags(CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
             end
@@ -828,7 +943,7 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 15: HUD RENDERING (Top-Left Compact Willpower & Emerald Spark HUD)
+-- SECTION 15: HUD RENDERING & ITEM INSPECTION DESCRIPTIONS
 -- ---------------------------------------------------------------------------
 
 local hudFont = nil
@@ -852,7 +967,70 @@ local function DrawHudText(text, x, y, r, g, b, a)
     end
 end
 
+local eidRegistered = false
+local function EnsureEIDRegistered()
+    if eidRegistered or not EID then return end
+    LoadItemIDs()
+    if not ITEM_POWER_BATTERY or ITEM_POWER_BATTERY < 0 then return end
+    pcall(function()
+        EID:addCollectible(ITEM_POWER_BATTERY,
+            "Refills Willpower to 100% and fires an 8-way piercing construct burst#At >=50% Willpower: Overcharge (2x DMG + Piercing + Spectral for the room)#Below 50%: +35% DMG Surge + Spectral for the room",
+            "Power Battery")
+        EID:addCollectible(ITEM_GIANT_FIST,
+            "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
+            "Construct: Giant Fist")
+        EID:addCollectible(ITEM_COAST_CITY,
+            "Fears and blasts all enemies in the room, then spawns a 10s Emerald Vortex#Pulls all enemies toward the center and deals heavy continuous DPS#Stored Emerald Sparks boost vortex damage up to +50%",
+            "The Tragedy of Coast City")
+        EID:addCollectible(ITEM_SOLID_LIGHT_SHIELD,
+            "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
+            "Solid Light Shield")
+        if TRINKET_YELLOW_IMPURITY and TRINKET_YELLOW_IMPURITY > 0 then
+            EID:addTrinket(TRINKET_YELLOW_IMPURITY,
+                "1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage briefly inflicts Fear (reversed movement for 2s)",
+                "Yellow Impurity")
+        end
+        eidRegistered = true
+    end)
+end
+
+local function GetModItemInspectionInfo(isTrinket, id)
+    if not ITEM_POWER_BATTERY or ITEM_POWER_BATTERY < 0 then LoadItemIDs() end
+    if not isTrinket then
+        if id == ITEM_POWER_BATTERY then
+            return "Power Battery [3R Active]", {
+                "100% Willpower + 8-way construct burst & knockback",
+                ">=50% Will: 2x DMG + Piercing | <50%: +35% DMG"
+            }
+        elseif id == ITEM_GIANT_FIST then
+            return "Construct: Giant Fist [4R Active]", {
+                "Fires a giant piercing 10x DMG emerald fist",
+                "Smashes rocks, poop, and obstacles in its path"
+            }
+        elseif id == ITEM_COAST_CITY then
+            return "The Tragedy of Coast City [4R Active]", {
+                "Fears & blasts all enemies + 10s Emerald Vortex",
+                "Pulls enemies in for heavy DPS (Sparks add +50% DMG)"
+            }
+        elseif id == ITEM_SOLID_LIGHT_SHIELD then
+            return "Solid Light Shield [Passive]", {
+                "+2 Soul Hearts & orbital light shield",
+                "25%-75% chance (Luck) to reflect enemy shots"
+            }
+        end
+    else
+        if id == TRINKET_YELLOW_IMPURITY then
+            return "Yellow Impurity [Trinket]", {
+                "1.5x Damage Multiplier (+50% Damage Up)",
+                "Contact/explosion hits cause 2s Fear reversal"
+            }
+        end
+    end
+    return nil, nil
+end
+
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
+    EnsureEIDRegistered()
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
 
     local hudOffset = (Options and Options.HUDOffset) or 0
@@ -864,14 +1042,13 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
         if player then
             local hudX = baseX
             local hudY = baseY + (i * 14)
+            local data = GetPlayerData(player)
 
             -- HAL JORDAN HUD (Top-left below hearts)
             if IsHalJordan(player) then
-                local data = GetPlayerData(player)
                 local pct  = math.max(0.0, math.min(1.0, data.willpower / WILLPOWER_MAX))
                 local BAR_W = 36
 
-                -- Compact bar background & fill right below the hearts
                 Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
 
                 local r, g, b = 0.1, 0.95, 0.3
@@ -879,6 +1056,8 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                     r, g, b = 0.95, 0.2, 0.2
                 elseif data.overcharge then
                     r, g, b = 1.0, 0.88, 0.15
+                elseif data.surgeBuff then
+                    r, g, b = 0.35, 1.0, 0.65
                 end
 
                 if pct > 0 then
@@ -889,7 +1068,9 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 if data.ringDepleted then
                     label = "EMPTY"
                 elseif data.overcharge then
-                    label = string.format("%.0f%% MAX", data.willpower)
+                    label = string.format("%.0f%% 2xDMG", data.willpower)
+                elseif data.surgeBuff then
+                    label = string.format("%.0f%% +35%%", data.willpower)
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
@@ -900,7 +1081,6 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
 
             -- TAINTED HAL HUD (Top-left below hearts)
             if IsTaintedHal(player) then
-                local data = GetPlayerData(player)
                 local pct  = math.max(0.0, math.min(1.0, data.emeraldSparks / SPARK_MAX))
                 local BAR_W = 36
 
@@ -913,11 +1093,64 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                     Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
                 end
 
-                local label = pct >= 1.0 and "READY" or string.format("%.0f%%", data.emeraldSparks)
+                local label = pct >= 1.0 and "MAX +50%" or string.format("%.0f%%", data.emeraldSparks)
                 if data.stolenRings > 0 then
                     label = string.format("%s [%d]", label, data.stolenRings)
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
+            end
+
+            -- BUILT-IN ITEM INSPECTOR (when near a mod item/trinket pedestal OR holding Tab/Map)
+            if i == 0 then
+                local inspectTitle, inspectLines = nil, nil
+
+                -- 1. Check nearby pedestals / trinkets on the floor in the room
+                local nearestDist = 170
+                for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
+                    if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
+                        local dist = (ent.Position - player.Position):Length()
+                        if dist < nearestDist then
+                            local t, l = GetModItemInspectionInfo(false, ent.SubType)
+                            if t then
+                                nearestDist  = dist
+                                inspectTitle = t
+                                inspectLines = l
+                            end
+                        end
+                    elseif ent.Variant == PickupVariant.PICKUP_TRINKET and ent.SubType > 0 then
+                        local dist = (ent.Position - player.Position):Length()
+                        if dist < nearestDist then
+                            local t, l = GetModItemInspectionInfo(true, ent.SubType)
+                            if t then
+                                nearestDist  = dist
+                                inspectTitle = t
+                                inspectLines = l
+                            end
+                        end
+                    end
+                end
+
+                -- 2. Or if holding Tab (ACTION_MAP), inspect equipped Green Lantern active/passive/trinket
+                local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
+                if not inspectTitle and holdingMap then
+                    local actId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
+                    inspectTitle, inspectLines = GetModItemInspectionInfo(false, actId)
+                    if not inspectTitle and ITEM_SOLID_LIGHT_SHIELD and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
+                        inspectTitle, inspectLines = GetModItemInspectionInfo(false, ITEM_SOLID_LIGHT_SHIELD)
+                    end
+                    if not inspectTitle and TRINKET_YELLOW_IMPURITY and player:HasTrinket(TRINKET_YELLOW_IMPURITY) then
+                        inspectTitle, inspectLines = GetModItemInspectionInfo(true, TRINKET_YELLOW_IMPURITY)
+                    end
+                end
+
+                if inspectTitle and inspectLines then
+                    local boxX = math.max(8, baseX - 34)
+                    local boxY = hudY + 11
+                    DrawHudText(inspectTitle, boxX, boxY, 0.25, 1.0, 0.45, 0.95)
+                    for idx, line in ipairs(inspectLines) do
+                        DrawHudText(line, boxX, boxY + idx * 9, 0.92, 0.96, 0.93, 0.90)
+                    end
+                end
             end
         end
     end

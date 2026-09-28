@@ -4,7 +4,7 @@
     <active
         id="1"
         name="Power Battery"
-        description="In brightest day, in blackest night..."
+        description="Recharges Willpower + emerald construct blast &amp; DMG buff"
         gfx="collectible_power_battery.png"
         maxcharges="3"
         chargetype="normal"
@@ -14,7 +14,7 @@
     <active
         id="2"
         name="Construct: Giant Fist"
-        description="Solid willpower, concentrated."
+        description="Fires a massive piercing 10x DMG fist that crushes rocks"
         gfx="collectible_giant_fist.png"
         maxcharges="4"
         chargetype="normal"
@@ -24,10 +24,10 @@
     <active
         id="3"
         name="The Tragedy of Coast City"
-        description="A city devoured by the ring's hunger."
+        description="Fears all enemies, pulls them in &amp; deals massive vortex DMG"
         gfx="collectible_coast_city.png"
-        maxcharges="0"
-        chargetype="special"
+        maxcharges="4"
+        chargetype="normal"
         quality="4"
         />
 
@@ -35,7 +35,7 @@
     <passive
         id="4"
         name="Solid Light Shield"
-        description="Willpower hardened into armor."
+        description="Orbital shield + 2 Soul Hearts + reflects enemy shots"
         gfx="collectible_solid_light_shield.png"
         quality="3"
         />
@@ -44,7 +44,7 @@
     <trinket
         id="1"
         name="Yellow Impurity"
-        description="Power without purity."
+        description="+50% Damage up, but taking contact hits inflicts brief Fear"
         gfx="trinket_yellow_impurity.png"
         />
 </items>
