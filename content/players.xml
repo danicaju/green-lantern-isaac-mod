@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    players.xml for Green Lantern Mod
+    Defines Hal Jordan (normal) and Tainted Hal / Parallax (tainted version).
+
+    IMPORTANT FOR ARTISTS / SETUP:
+    - Sprite sheets go in: resources/gfx/characters/
+    - Portrait images go in: resources/gfx/ui/boss/
+    - Name images go in: resources/gfx/ui/boss/
+    - Big portraits go in: resources/gfx/ui/stage/
+
+    Required sprite files (must be created by artist):
+      - hal_jordan.png          (character sprite sheet, 4 rows x 13 cols, 128x256 px)
+      - hal_jordan_extra.png    (extra animation rows)
+      - portrait_hal_jordan.png (boss portrait, 258x190 px)
+      - name_hal_jordan.png     (name image, 195x36 px)
+      - stage_hal_jordan.png    (big portrait, 100x100 px)
+      - tainted_hal.png
+      - portrait_tainted_hal.png
+      - name_tainted_hal.png
+      - stage_tainted_hal.png
+
+    hp = number of half red hearts (2 containers = 4 half-hearts)
+    We set hp="4" for 2 red heart containers, then add 1 soul heart via Lua.
+    
+    Items are granted via Lua to avoid ID conflicts with other mods.
+    Starting speed and other stats are also tuned via MC_EVALUATE_CACHE in Lua.
+-->
+<players root="gfx/characters/" portraitroot="gfx/ui/boss/" nameimageroot="gfx/ui/boss/" bigportraitroot="gfx/ui/stage/">
+    <!--
+        HAL JORDAN - Green Lantern
+        - 2 red heart containers (hp="4" = 4 half-hearts)
+        - 1 Soul Heart granted via Lua
+        - Flight granted via Lua (CanFly = true)
+        - canShoot="true": uses standard tear mechanic (visually reskinned)
+        - Items: Power Battery (pocket active) granted via Lua
+    -->
+    <player
+        name="Hal Jordan"
+        skin="hal_jordan.png"
+        skinalt="hal_jordan_extra.png"
+        hp="4"
+        armor="0"
+        black="0"
+        items=""
+        card=""
+        trinket=""
+        pocketActive=""
+        canShoot="true"
+        portraitroot="gfx/ui/boss/"
+        portrait="portrait_hal_jordan.png"
+        nameimage="name_hal_jordan.png"
+        bigportrait="stage_hal_jordan.png"
+        />
+
+    <!--
+        TAINTED HAL / PARALLAX
+        - bSkinParent links this as tainted version of "Hal Jordan"
+        - 3 Black Hearts (black="6" = 6 half black hearts = 3 containers)
+        - Cannot gain red hearts (enforced via Lua)
+        - Starts already with massive damage buff (applied via Lua)
+    -->
+    <player
+        name="Hal Jordan"
+        skin="tainted_hal.png"
+        skinalt="tainted_hal_extra.png"
+        hp="0"
+        armor="0"
+        black="6"
+        bSkinParent="Hal Jordan"
+        items=""
+        card=""
+        trinket=""
+        pocketActive=""
+        canShoot="true"
+        portraitroot="gfx/ui/boss/"
+        portrait="portrait_tainted_hal.png"
+        nameimage="name_tainted_hal.png"
+        bigportrait="stage_tainted_hal.png"
+        />
+</players>

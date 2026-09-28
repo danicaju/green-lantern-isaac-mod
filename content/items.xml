@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<items gfxroot="gfx/items/" version="1">
+    <!-- ===== ACTIVE ITEMS ===== -->
+    <active
+        id="1"
+        name="Power Battery"
+        description="In brightest day, in blackest night..."
+        gfx="collectibles/collectible_power_battery.png"
+        maxcharges="3"
+        chargetype="normal"
+        quality="3"
+        />
+
+    <active
+        id="2"
+        name="Construct: Giant Fist"
+        description="Solid willpower, concentrated."
+        gfx="collectibles/collectible_giant_fist.png"
+        maxcharges="4"
+        chargetype="normal"
+        quality="3"
+        />
+
+    <active
+        id="3"
+        name="The Tragedy of Coast City"
+        description="A city devoured by the ring's hunger."
+        gfx="collectibles/collectible_coast_city.png"
+        maxcharges="0"
+        chargetype="special"
+        quality="4"
+        />
+
+    <!-- ===== PASSIVE ITEMS ===== -->
+    <passive
+        id="4"
+        name="Solid Light Shield"
+        description="Willpower hardened into armor."
+        gfx="collectibles/collectible_solid_light_shield.png"
+        quality="3"
+        />
+</items>

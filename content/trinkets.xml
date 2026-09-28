@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trinkets root="gfx/items/trinkets/" version="1">
+    <trinket
+        id="1"
+        name="Yellow Impurity"
+        description="Power without purity."
+        gfx="trinket_yellow_impurity.png"
+        />
+</trinkets>
