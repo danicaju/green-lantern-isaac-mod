@@ -513,9 +513,9 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
                 drain = drain * 0.25
             end
 
-            local prevWillBucket = math.floor(data.willpower or WILLPOWER_MAX)
+            local prevWillBucket = math.floor((data.willpower or WILLPOWER_MAX) + 0.5)
             data.willpower = math.max(0, data.willpower - drain)
-            local newWillBucket = math.floor(data.willpower)
+            local newWillBucket = math.floor(data.willpower + 0.5)
 
             if data.willpower <= 0 then
                 data.ringDepleted = true
@@ -597,9 +597,9 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
         local frame = Game():GetFrameCount()
         if data.lastLaserDrainFrame ~= frame then
             data.lastLaserDrainFrame = frame
-            local prevWillBucket = math.floor(data.willpower or WILLPOWER_MAX)
+            local prevWillBucket = math.floor((data.willpower or WILLPOWER_MAX) + 0.5)
             data.willpower = math.max(0, data.willpower - 1.2)
-            local newWillBucket = math.floor(data.willpower)
+            local newWillBucket = math.floor(data.willpower + 0.5)
             if data.willpower <= 0 then
                 data.ringDepleted = true
                 data.willpower = 0
@@ -1423,39 +1423,58 @@ local function GetGLAuraSprites()
     return glAuraSprite, glFlareSprite
 end
 
--- Render the animated Emerald Lantern / Parallax Aura and Power Ring hand flare during combat!
+local function RenderGLPlayerAura(player)
+    if not (IsHalJordan(player) or IsTaintedHal(player)) then return end
+    local data = GetPlayerData(player)
+    if IsHalJordan(player) and data.ringDepleted then return end
+
+    local auraSpr, _ = GetGLAuraSprites()
+    if not auraSpr then return end
+
+    local frame = Game():GetFrameCount()
+    local animName = IsTaintedHal(player) and "ParallaxAura" or "HalAura"
+    local animFrame = math.floor(frame / 3) % 8
+    auraSpr:SetFrame(animName, animFrame)
+
+    local isMaxPower = (IsHalJordan(player) and ((data.willpower or 0) >= 99.5 or data.overcharge or data.surgeBuff))
+        or (IsTaintedHal(player) and ((data.emeraldSparks or 0) >= 99.5 or data.coastCityActive))
+
+    local auraScale = isMaxPower and 1.05 or 0.92
+    local auraAlpha = isMaxPower and 0.92 or 0.72
+    auraSpr.Scale = Vector(auraScale, auraScale)
+    if data.overcharge then
+        auraSpr.Color = Color(0.55, 1.0, 0.55, auraAlpha, 0.12, 0.45, 0.08)
+    else
+        auraSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
+    end
+
+    local bodyScreenPos = Isaac.WorldToScreen(player.Position)
+    auraSpr:Render(bodyScreenPos, Vector.Zero, Vector.Zero)
+end
+
+-- 1. Render the animated Emerald Lantern / Parallax hover ring & aura BEHIND the player boots/body
+if ModCallbacks.MC_PRE_PLAYER_RENDER then
+    GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
+        if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+        RenderGLPlayerAura(player)
+        return nil
+    end)
+end
+
+-- 2. Render crisp 4-point Power Ring star flare on the character's outstretched ring hand IN FRONT of the player
 GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
     if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
     if not HasGreenLanternRing(player) then return end
     local data = GetPlayerData(player)
     if IsHalJordan(player) and data.ringDepleted then return end
 
-    local auraSpr, flareSpr = GetGLAuraSprites()
-    local frame = Game():GetFrameCount()
-
-    -- 1. Render animated emerald energy aura / lantern projection around Hal Jordan or Tainted Hal
-    if auraSpr and (IsHalJordan(player) or IsTaintedHal(player)) then
-        local animName = IsTaintedHal(player) and "ParallaxAura" or "HalAura"
-        local animFrame = math.floor(frame / 3) % 8
-        auraSpr:SetFrame(animName, animFrame)
-
-        local isMaxPower = (IsHalJordan(player) and ((data.willpower or 0) >= 99.5 or data.overcharge or data.surgeBuff))
-            or (IsTaintedHal(player) and ((data.emeraldSparks or 0) >= 99.5 or data.coastCityActive))
-
-        local auraScale = isMaxPower and 1.10 or 0.92
-        local auraAlpha = isMaxPower and 0.90 or 0.68
-        auraSpr.Scale = Vector(auraScale, auraScale)
-        if data.overcharge then
-            auraSpr.Color = Color(0.55, 1.0, 0.55, auraAlpha, 0.12, 0.45, 0.08)
-        else
-            auraSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
-        end
-
-        local bodyScreenPos = Isaac.WorldToScreen(player.Position)
-        auraSpr:Render(bodyScreenPos, Vector.Zero, Vector.Zero)
+    if not ModCallbacks.MC_PRE_PLAYER_RENDER then
+        RenderGLPlayerAura(player)
     end
 
-    -- 2. Render crisp 4-point Power Ring star flare on the character's outstretched ring hand
+    local _, flareSpr = GetGLAuraSprites()
+    local frame = Game():GetFrameCount()
+
     if flareSpr then
         local shootInput = player:GetShootingInput()
         local isFiring = (shootInput and shootInput:Length() > 0.1) or (data.ringFlareTimer and data.ringFlareTimer > 0)
@@ -1523,7 +1542,7 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 elseif data.surgeBuff then
                     label = string.format("%.0f%% 1.5xDMG", data.willpower)
                 elseif pct >= 0.995 then
-                    label = "100% MAX"
+                    label = "100% +25%DMG"
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
