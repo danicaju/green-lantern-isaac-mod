@@ -43,7 +43,7 @@
     <passive
         id="5"
         name="Green Lantern Ring"
-        description="Willpower made manifest — fires emerald energy beams from your hand"
+        description="Willpower made manifest — fires piercing emerald energy beams from your hand"
         gfx="collectible_power_ring.png"
         quality="4"
         />

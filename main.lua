@@ -84,7 +84,8 @@ local function GetPlayerData(player)
 
             -- Costume & Inspection tracking
             lastCollectibleCount = -1,
-            inspectTimer         = 150,
+            multiShotFrame       = -1,
+            multiShotIndex       = 0,
         }
     end
     return d.GreenLantern
@@ -385,11 +386,15 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         end
 
         if cacheFlag == CacheFlag.CACHE_TEARFLAG then
+            if not data.ringDepleted then
+                -- All Green Lantern Ring energy beams pass through enemies and obstacles!
+                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            end
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
             if data.overcharge and data.overchargeRoomIdx == roomIdx then
-                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_HOMING
             elseif data.surgeBuff and data.overchargeRoomIdx == roomIdx then
-                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_HOMING
+                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_HOMING
             end
         end
     end
@@ -409,18 +414,18 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         end
 
         if cacheFlag == CacheFlag.CACHE_TEARFLAG then
-            player.TearFlags = player.TearFlags | TearFlags.TEAR_FEAR
+            player.TearFlags = player.TearFlags | TearFlags.TEAR_FEAR | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         end
     end
 
-    -- GREEN LANTERN RING (when picked up by non-Hal characters, grants +1.0 DMG, +0.20 ShotSpeed & Spectral)
+    -- GREEN LANTERN RING (when picked up by non-Hal characters, grants +1.0 DMG, +0.20 ShotSpeed, Piercing & Spectral)
     if not IsHalJordan(player) and not IsTaintedHal(player) and HasGreenLanternRing(player) then
         if cacheFlag == CacheFlag.CACHE_DAMAGE then
             player.Damage = player.Damage + 1.0
         elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
             player.ShotSpeed = player.ShotSpeed + 0.20
         elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
-            player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL
+            player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         end
     end
 
@@ -433,8 +438,35 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 6: GREEN LANTERN RING BEAM HANDLING (Hand origin + Energy Beam sprite)
+-- SECTION 6: GREEN LANTERN RING BEAM HANDLING (Hand origin + Piercing + Synergies)
 -- ---------------------------------------------------------------------------
+
+-- Helper to spawn a secondary piercing construct ring beam (used by Brimstone, Tech X, Mom's Knife, Ludovico, Fetus, etc.)
+local function SpawnConstructSubBeam(player, originPos, velocity, dmgMult, scaleMult, extraFlags)
+    if not player then return nil end
+    local tearVar = (TearVariant and TearVariant.BLUE) or 0
+    local ent = Isaac.Spawn(
+        EntityType.ENTITY_TEAR,
+        tearVar,
+        0,
+        originPos,
+        velocity,
+        player
+    )
+    local beam = ent and ent:ToTear()
+    if beam then
+        local td = beam:GetData()
+        td.isConstructSubBeam = true
+        beam.CollisionDamage  = math.max(1.0, player.Damage * (dmgMult or 0.5))
+        beam.Scale            = scaleMult or 0.85
+        beam.TearFlags        = beam.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | (extraFlags or 0)
+        if IsTaintedHal(player) then
+            beam.TearFlags = beam.TearFlags | TearFlags.TEAR_FEAR
+        end
+        ApplyRingBeamSprite(beam, scaleMult or 0.85)
+    end
+    return beam
+end
 
 GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     local spawner = tear.SpawnerEntity
@@ -444,13 +476,45 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
 
     if not HasGreenLanternRing(player) then return end
 
+    local td = tear:GetData()
+    if td and td.isConstructSubBeam then return end
+
     local data = GetPlayerData(player)
+    local frame = Game():GetFrameCount()
+
+    -- Multi-shot fan offset (20/20, Inner Eye, Mutant Spider, Monstro's Lung, Conjoined)
+    if data.multiShotFrame == frame then
+        data.multiShotIndex = (data.multiShotIndex or 0) + 1
+    else
+        data.multiShotFrame = frame
+        data.multiShotIndex = 0
+    end
 
     -- 1. Snap projectile spawn position to the outstretched Power Ring hand (never from the eyes!)
     local handOffset = GetRingHandOffset(player, tear.Velocity)
-    tear.Position = player.Position + handOffset
+    local perpOffset = Vector.Zero
+    if data.multiShotIndex > 0 and tear.Velocity:Length() > 0.1 then
+        local dir = tear.Velocity:Normalized()
+        local perp = Vector(-dir.Y, dir.X)
+        local side = (data.multiShotIndex % 2 == 1) and 1 or -1
+        local tier = math.ceil(data.multiShotIndex / 2)
+        perpOffset = perp * (side * math.min(tier * 5.5, 14.0))
+    end
+
+    tear.Position = player.Position + handOffset + perpOffset
     data.lastRingHandOffset = handOffset
     data.ringFlareTimer     = 6
+
+    -- Grant Piercing + Spectral to all active Green Lantern Ring laser beams so they slice through enemies!
+    if not (IsHalJordan(player) and data.ringDepleted) then
+        tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
+    end
+    if IsTaintedHal(player) then
+        tear.TearFlags = tear.TearFlags | TearFlags.TEAR_FEAR
+    end
+
+    -- Synergy scale adjustments (Chocolate Milk, Monstro's Lung, Ipecac, Haemolacria, Soy/Almond Milk)
+    local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
 
     -- 2. HAL JORDAN WILLPOWER & BEAM SCALING
     if IsHalJordan(player) then
@@ -459,36 +523,266 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
             tear.Velocity = tear.Velocity * 0.18
             ApplyRingBeamSprite(tear, 0.55)
         else
-            local scale = data.overcharge and 1.35 or (data.surgeBuff and 1.18 or 1.0)
-            ApplyRingBeamSprite(tear, scale)
+            local baseScale = data.overcharge and 1.35 or (data.surgeBuff and 1.18 or 1.0)
+            ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
 
-            -- Drain willpower
-            data.willpower = math.max(0, data.willpower - WILLPOWER_PER_TEAR)
+            -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
+            local drain = WILLPOWER_PER_TEAR
+            if data.multiShotIndex > 0 then
+                drain = drain * 0.25 -- Multi-shot / Monstro's Lung extra beams cost 75% less willpower
+            end
+            if CollectibleType.COLLECTIBLE_SOY_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_SOY_MILK) then
+                drain = drain * 0.20
+            elseif CollectibleType.COLLECTIBLE_ALMOND_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_ALMOND_MILK) then
+                drain = drain * 0.25
+            end
+
+            data.willpower = math.max(0, data.willpower - drain)
             if data.willpower <= 0 then
                 data.ringDepleted = true
                 data.willpower = 0
                 player:AnimateSad()
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, player.Position, Vector.Zero, player)
-                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE)
+                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
             end
         end
     elseif IsTaintedHal(player) then
         -- 3. TAINTED HAL (PARALLAX): Larger, heavy emerald construct energy blast from the ring
-        tear.Scale = tear.Scale * 1.4
-        ApplyRingBeamSprite(tear, 1.30)
+        tear.Scale = tear.Scale * 1.35
+        ApplyRingBeamSprite(tear, 1.28 * math.sqrt(sizeFactor))
     else
         -- Any other character holding Green Lantern Ring
-        ApplyRingBeamSprite(tear, 1.05)
+        ApplyRingBeamSprite(tear, 1.05 * math.sqrt(sizeFactor))
     end
 end)
 
 -- Keep all Green Lantern Ring energy beams oriented along their exact flight velocity vector
+-- + Handle Ludovico Technique Orbital Construct Drone synergy
 GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
     local td = tear:GetData()
-    if td and td.isGLRingBeam and tear.Velocity:Length() > 0.1 then
+    if not td then return end
+
+    if td.isGLRingBeam and tear.Velocity:Length() > 0.1 then
         local ts = tear:GetSprite()
         ts.Rotation = tear.Velocity:GetAngleDegrees()
+    end
+
+    -- SYNERGY: The Ludovico Technique -> Orbital Construct Turret
+    if (tear.TearFlags & TearFlags.TEAR_LUDOVICO) ~= 0 then
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if player and HasGreenLanternRing(player) then
+            local ts = tear:GetSprite()
+            ts.Color = Color(0.15, 1.0, 0.4, 1, 0.08, 0.75, 0.2)
+            if tear.FrameCount % 18 == 0 then
+                local nearestEnemy = nil
+                local nearestDist = 280
+                for _, ent in ipairs(Isaac.GetRoomEntities()) do
+                    if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+                        local d = (ent.Position - tear.Position):Length()
+                        if d < nearestDist then
+                            nearestDist = d
+                            nearestEnemy = ent
+                        end
+                    end
+                end
+                if nearestEnemy then
+                    local dir = (nearestEnemy.Position - tear.Position):Normalized()
+                    SpawnConstructSubBeam(player, tear.Position, dir * 15.0, 0.45, 0.80, TearFlags.TEAR_HOMING)
+                end
+            end
+        end
+    end
+end)
+
+-- Spawn a crisp emerald energy flash when a piercing Ring Beam slices through an enemy
+GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
+    local td = tear:GetData()
+    if not (td and td.isGLRingBeam) then return end
+    if not (collider and collider:IsActiveEnemy(false) and collider:IsVulnerableEnemy()) then return end
+
+    local frame = Game():GetFrameCount()
+    if not td.lastPierceFlashFrame or (frame - td.lastPierceFlashFrame) >= 5 then
+        td.lastPierceFlashFrame = frame
+        local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, collider.Position, Vector.Zero, tear)
+        if fx then
+            fx.Scale = 0.70
+            fx:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.9, 0.15, 0.85, 0.25)
+        end
+    end
+end)
+
+-- ---------------------------------------------------------------------------
+-- SECTION 6B: GREEN LANTERN RING ITEM SYNERGIES
+-- (Brimstone, Tech X, Technology, Mom's Knife, Dr. Fetus, Epic Fetus, Ipecac, Haemolacria)
+-- ---------------------------------------------------------------------------
+
+-- 1. LASER SYNERGIES: Brimstone, Tech X, Technology, Technology 2, Tech.5, Jacob's Ladder
+GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
+    local spawner = laser.SpawnerEntity
+    local player = spawner and spawner:ToPlayer()
+    if not player or not HasGreenLanternRing(player) then return end
+
+    local ld = laser:GetData()
+    if ld.glLaserSynergyInit then return end
+    ld.glLaserSynergyInit = true
+
+    local data = GetPlayerData(player)
+    data.ringFlareTimer = 8
+
+    -- Tint all player lasers into blazing Hard-Light Emerald Construct Beams!
+    laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+    laser.CollisionDamage = laser.CollisionDamage * 1.25
+    laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+    if IsTaintedHal(player) then
+        laser.TearFlags = laser.TearFlags | TearFlags.TEAR_FEAR
+    end
+
+    -- Hal Jordan Willpower management for laser weapons (when firing non-sub lasers)
+    if IsHalJordan(player) and not data.ringDepleted then
+        local frame = Game():GetFrameCount()
+        if data.lastLaserDrainFrame ~= frame then
+            data.lastLaserDrainFrame = frame
+            data.willpower = math.max(0, data.willpower - 1.2)
+            if data.willpower <= 0 then
+                data.ringDepleted = true
+                data.willpower = 0
+                player:AnimateSad()
+                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
+                player:EvaluateItems()
+            end
+        end
+    end
+end)
+
+GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
+    local spawner = laser.SpawnerEntity
+    local player = spawner and spawner:ToPlayer()
+    if not player or not HasGreenLanternRing(player) then return end
+
+    local data = GetPlayerData(player)
+    data.ringFlareTimer = 4
+    laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+
+    -- Tech X Circle Laser Synergy: Construct Ring Vortex pulls nearby enemies into the laser ring
+    local isCircle = (laser.Radius and laser.Radius > 15) or (laser.Variant == 2)
+    if isCircle then
+        for _, ent in ipairs(Isaac.GetRoomEntities()) do
+            if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+                local toRing = (laser.Position - ent.Position)
+                local dist = toRing:Length()
+                local maxPullDist = (laser.Radius or 45) + 60
+                if dist > 10 and dist < maxPullDist then
+                    ent.Velocity = ent.Velocity * 0.86 + toRing:Normalized() * 2.4
+                    if IsTaintedHal(player) and laser.FrameCount % 15 == 0 then
+                        ent:AddFear(EntityRef(player), 60)
+                        ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
+                    end
+                end
+            end
+        end
+        -- Fire piercing mini construct beams outward from the Tech X ring every 14 frames
+        if laser.FrameCount % 14 == 0 and not (IsHalJordan(player) and data.ringDepleted) then
+            local baseAngle = (laser.FrameCount * 0.25)
+            for i = 1, 2 do
+                local a = baseAngle + (i - 1) * math.pi
+                local dir = Vector(math.cos(a), math.sin(a))
+                SpawnConstructSubBeam(player, laser.Position + dir * (laser.Radius or 30), dir * 14.0, 0.35, 0.75, 0)
+            end
+        end
+    else
+        -- Straight Laser / Brimstone / Technology Synergy:
+        -- Project hard-light piercing construct bolts riding along the laser beam!
+        if laser.FrameCount % 7 == 0 and not (IsHalJordan(player) and data.ringDepleted) then
+            local angleRad = math.rad(laser.AngleDegrees or laser.Angle or 0)
+            local dir = Vector(math.cos(angleRad), math.sin(angleRad))
+            if dir:Length() > 0.1 then
+                local handOffset = GetRingHandOffset(player, dir)
+                local spread = math.rad((math.random() - 0.5) * 10)
+                local bDir = Vector(math.cos(angleRad + spread), math.sin(angleRad + spread))
+                SpawnConstructSubBeam(player, player.Position + handOffset, bDir * 17.0, 0.45, 0.90, 0)
+            end
+        end
+    end
+end)
+
+-- 2. MOM'S KNIFE SYNERGY: Hard-Light Emerald Energy Sword that fires piercing construct beams while flying
+GL:AddCallback(ModCallbacks.MC_POST_KNIFE_UPDATE, function(_, knife)
+    local spawner = knife.SpawnerEntity
+    local player = spawner and spawner:ToPlayer()
+    if not player or not HasGreenLanternRing(player) then return end
+
+    knife:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.10, 0.85, 0.25)
+
+    if knife:IsFlying() then
+        local data = GetPlayerData(player)
+        data.ringFlareTimer = 5
+        if knife.FrameCount % 8 == 0 and not (IsHalJordan(player) and data.ringDepleted) then
+            local dir = (knife.Position - player.Position)
+            if dir:Length() > 1.0 then
+                dir = dir:Normalized()
+            else
+                dir = Vector(1, 0)
+            end
+            SpawnConstructSubBeam(player, knife.Position, dir * 16.0, 0.55, 0.95, 0)
+        end
+    end
+end)
+
+-- 3. DR. FETUS & EPIC FETUS SYNERGY: Emerald Construct Warheads that detonate into an 8-way Ring Beam Nova
+GL:AddCallback(ModCallbacks.MC_POST_BOMB_UPDATE, function(_, bomb)
+    local spawner = bomb.SpawnerEntity
+    local player = spawner and spawner:ToPlayer()
+    if not player or not HasGreenLanternRing(player) then return end
+
+    local bd = bomb:GetData()
+    bd.isGLConstructBomb = true
+    bd.glBombOwner       = player
+    bomb:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.08, 0.78, 0.20)
+end)
+
+GL:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, function(_, effect)
+    if EffectVariant.ROCKET and effect.Variant == EffectVariant.ROCKET then
+        local spawner = effect.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if player and HasGreenLanternRing(player) then
+            local ed = effect:GetData()
+            ed.isGLConstructRocket = true
+            ed.glRocketOwner       = player
+            effect:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.10, 0.82, 0.22)
+        end
+    end
+end)
+
+-- Detonation Construct Ring Nova for Dr. Fetus Bombs, Epic Fetus Rockets, Ipecac & Haemolacria
+GL:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE, function(_, entity)
+    local ed = entity:GetData()
+    if not ed then return end
+
+    if ed.isGLConstructBomb or ed.isGLConstructRocket then
+        local player = ed.glBombOwner or ed.glRocketOwner
+        if player and not (IsHalJordan(player) and GetPlayerData(player).ringDepleted) then
+            for i = 1, 8 do
+                local angle = (i - 1) * (math.pi / 4)
+                local dir = Vector(math.cos(angle), math.sin(angle))
+                SpawnConstructSubBeam(player, entity.Position + dir * 10, dir * 15.0, 0.60, 0.95, 0)
+            end
+        end
+    elseif ed.isGLRingBeam and not ed.isConstructSubBeam then
+        local spawner = entity.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if player and HasGreenLanternRing(player) then
+            local tear = entity:ToTear()
+            local hasExplosive = tear and ((tear.TearFlags & TearFlags.TEAR_EXPLOSIVE) ~= 0 or (tear.TearFlags & TearFlags.TEAR_BURSTSPLIT) ~= 0)
+            if hasExplosive and not (IsHalJordan(player) and GetPlayerData(player).ringDepleted) then
+                for i = 1, 6 do
+                    local angle = (i - 1) * (math.pi / 3)
+                    local dir = Vector(math.cos(angle), math.sin(angle))
+                    SpawnConstructSubBeam(player, entity.Position, dir * 14.0, 0.45, 0.85, 0)
+                end
+            end
+        end
     end
 end)
 
@@ -1210,7 +1504,7 @@ local function EnsureEIDRegistered()
                 "Solid Light Shield", lang)
             if ITEM_POWER_RING and ITEM_POWER_RING > 0 then
                 EID:addCollectible(ITEM_POWER_RING,
-                    "Signature Green Lantern Power Ring worn on your hand#Projects intense emerald construct energy beams directly from the ring#Grants Spectral beams (+1.0 DMG & +0.20 Shot Speed on other characters)",
+                    "Signature Green Lantern Power Ring worn on your hand#Projects piercing & spectral emerald construct energy beams directly from the ring#Synergizes with Brimstone, Tech X, Technology, Mom's Knife, Dr. Fetus, Epic Fetus, Ludovico, and Multi-shot",
                     "Green Lantern Ring", lang)
             end
             if TRINKET_YELLOW_IMPURITY and TRINKET_YELLOW_IMPURITY > 0 then
@@ -1229,7 +1523,7 @@ local function GetModItemInspectionInfo(isTrinket, id)
         if id == ITEM_POWER_BATTERY then
             return "Power Battery [3R Active]", {
                 "100% Willpower + 12-way construct burst & shockwave",
-                ">=50% Will: 2x DMG + Piercing | <50%: 1.5x DMG + Homing"
+                ">=50% Will: 2x DMG + Homing | <50%: 1.5x DMG + Homing"
             }
         elseif id == ITEM_GIANT_FIST then
             return "Construct: Giant Fist [4R Active]", {
@@ -1248,8 +1542,8 @@ local function GetModItemInspectionInfo(isTrinket, id)
             }
         elseif id == ITEM_POWER_RING then
             return "Green Lantern Ring [Starting Passive]", {
-                "Worn on hand — fires emerald construct energy beams",
-                "Spectral ring blasts (+1 DMG & +0.2 ShotSpeed)"
+                "Fires piercing & spectral emerald energy beams from hand",
+                "Synergizes with Brimstone, Tech X, Knife, Fetus & Lasers"
             }
         end
     else
@@ -1357,17 +1651,13 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
             end
 
-            -- BUILT-IN ITEM INSPECTOR (shows when near mod pedestals, when holding Tab/Map, or briefly at run start)
+            -- BUILT-IN ITEM INSPECTOR (ONLY shows when standing near a mod pedestal on the floor, or while actively holding Tab/Map)
             if i == 0 then
                 local inspectTitle, inspectLines = nil, nil
 
-                if data.inspectTimer and data.inspectTimer > 0 then
-                    data.inspectTimer = data.inspectTimer - 1
-                end
-
                 -- 1. Check nearby mod pedestals / trinkets on the floor (when EID is not installed)
                 if not EID then
-                    local nearestDist = 170
+                    local nearestDist = 95
                     for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
                         if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
                             local dist = (ent.Position - player.Position):Length()
@@ -1393,10 +1683,10 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                     end
                 end
 
-                -- 2. Or if holding Tab (ACTION_MAP) or during initial run start, inspect equipped Green Lantern items
+                -- 2. Or if actively holding Tab (ACTION_MAP) after stage intro finishes, inspect equipped Green Lantern item
                 local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
-                local showEquipped = holdingMap or (data.inspectTimer and data.inspectTimer > 0)
-                if not inspectTitle and showEquipped then
+                    and (Game():GetFrameCount() > 60)
+                if not inspectTitle and holdingMap then
                     local actId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
                     inspectTitle, inspectLines = GetModItemInspectionInfo(false, actId)
                     if not inspectTitle and ITEM_SOLID_LIGHT_SHIELD and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
@@ -1408,8 +1698,8 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 end
 
                 if inspectTitle and inspectLines then
-                    local boxX = math.max(8, baseX - 34)
-                    local boxY = hudY + 11
+                    local boxX = math.max(12, baseX - 28)
+                    local boxY = 215
                     DrawHudText(inspectTitle, boxX, boxY, 0.25, 1.0, 0.45, 0.95)
                     for idx, line in ipairs(inspectLines) do
                         DrawHudText(line, boxX, boxY + idx * 9, 0.92, 0.96, 0.93, 0.90)
