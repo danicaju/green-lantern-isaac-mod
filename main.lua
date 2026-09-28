@@ -197,12 +197,28 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         end)
     end
 
-    -- Re-apply character hair/mask overlay whenever the player picks up a new item so costumes merge!
+    -- Re-apply character hair/mask/suit overlay whenever the player picks up or swaps an item so costumes merge!
     if IsHalJordan(player) or IsTaintedHal(player) then
         local count = player:GetCollectibleCount()
-        if data.lastCollectibleCount ~= count then
+        local activeId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
+        local queueEmpty = player:IsItemQueueEmpty()
+
+        if data.lastCollectibleCount ~= count
+            or data.lastActiveItem ~= activeId
+            or (data.wasQueueEmpty == false and queueEmpty == true)
+        then
             data.lastCollectibleCount = count
+            data.lastActiveItem = activeId
+            data.costumeRefreshTimer = 6
             RefreshCharacterCostume(player)
+        end
+        data.wasQueueEmpty = queueEmpty
+
+        if data.costumeRefreshTimer and data.costumeRefreshTimer > 0 then
+            data.costumeRefreshTimer = data.costumeRefreshTimer - 1
+            if data.costumeRefreshTimer == 4 or data.costumeRefreshTimer == 0 then
+                RefreshCharacterCostume(player)
+            end
         end
     end
 end)
@@ -929,6 +945,9 @@ end)
 GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
     for i = 0, Game():GetNumPlayers() - 1 do
         local player = Isaac.GetPlayer(i)
+        if IsHalJordan(player) or IsTaintedHal(player) then
+            RefreshCharacterCostume(player)
+        end
         if IsHalJordan(player) then
             local data = GetPlayerData(player)
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
@@ -1100,39 +1119,41 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
             end
 
-            -- BUILT-IN ITEM INSPECTOR (when near a mod item/trinket pedestal OR holding Tab/Map)
+            -- BUILT-IN ITEM INSPECTOR (fallback when EID is NOT installed, or when holding Tab/Map with no nearby pedestal)
             if i == 0 then
                 local inspectTitle, inspectLines = nil, nil
 
-                -- 1. Check nearby pedestals / trinkets on the floor in the room
-                local nearestDist = 170
-                for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
-                    if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
-                        local dist = (ent.Position - player.Position):Length()
-                        if dist < nearestDist then
-                            local t, l = GetModItemInspectionInfo(false, ent.SubType)
-                            if t then
-                                nearestDist  = dist
-                                inspectTitle = t
-                                inspectLines = l
+                -- 1. Check nearby pedestals / trinkets on the floor ONLY if External Item Descriptions (EID) is not active
+                if not EID then
+                    local nearestDist = 170
+                    for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
+                        if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
+                            local dist = (ent.Position - player.Position):Length()
+                            if dist < nearestDist then
+                                local t, l = GetModItemInspectionInfo(false, ent.SubType)
+                                if t then
+                                    nearestDist  = dist
+                                    inspectTitle = t
+                                    inspectLines = l
+                                end
                             end
-                        end
-                    elseif ent.Variant == PickupVariant.PICKUP_TRINKET and ent.SubType > 0 then
-                        local dist = (ent.Position - player.Position):Length()
-                        if dist < nearestDist then
-                            local t, l = GetModItemInspectionInfo(true, ent.SubType)
-                            if t then
-                                nearestDist  = dist
-                                inspectTitle = t
-                                inspectLines = l
+                        elseif ent.Variant == PickupVariant.PICKUP_TRINKET and ent.SubType > 0 then
+                            local dist = (ent.Position - player.Position):Length()
+                            if dist < nearestDist then
+                                local t, l = GetModItemInspectionInfo(true, ent.SubType)
+                                if t then
+                                    nearestDist  = dist
+                                    inspectTitle = t
+                                    inspectLines = l
+                                end
                             end
                         end
                     end
                 end
 
-                -- 2. Or if holding Tab (ACTION_MAP), inspect equipped Green Lantern active/passive/trinket
+                -- 2. Or if holding Tab (ACTION_MAP) when EID is not displaying a pedestal, inspect equipped Green Lantern items
                 local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
-                if not inspectTitle and holdingMap then
+                if not inspectTitle and holdingMap and not EID then
                     local actId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
                     inspectTitle, inspectLines = GetModItemInspectionInfo(false, actId)
                     if not inspectTitle and ITEM_SOLID_LIGHT_SHIELD and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
