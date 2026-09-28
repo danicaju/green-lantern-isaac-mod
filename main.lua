@@ -184,15 +184,15 @@ local function GetRingHandOffset(player, fireVel)
 
     if math.abs(dx) >= math.abs(dy) then
         if dx >= 0 then
-            return Vector(15, -10) -- Outstretched right ring hand
+            return Vector(12, -12) -- Outstretched right ring hand
         else
-            return Vector(-15, -10) -- Outstretched left ring hand (flipped)
+            return Vector(-12, -12) -- Outstretched left ring hand (flipped)
         end
     else
         if dy >= 0 then
-            return Vector(10, -6)  -- Outstretched ring hand aiming down
+            return Vector(9, -10)  -- Outstretched ring hand aiming down
         else
-            return Vector(10, -16) -- Outstretched ring hand aiming up
+            return Vector(9, -16)  -- Outstretched ring hand aiming up
         end
     end
 end
@@ -257,6 +257,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.overcharge        = false
         data.surgeBuff         = false
         data.overchargeRoomIdx = -1
+        RefreshCharacterCostume(player)
     end
 
     -- TAINTED HAL INIT
@@ -266,6 +267,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.stolenRings     = 0
         data.coastCityActive = false
         data.coastCityFrame  = 0
+        RefreshCharacterCostume(player)
     end
 end)
 
