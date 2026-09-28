@@ -25,11 +25,11 @@ Mod de **Green Lantern (Hal Jordan)** y su versión Tainted (**The Butcher of Oa
 
 | Nombre | Tipo | Descripción |
 | :--- | :--- | :--- |
-| **Power Battery** | Activo (Pocket) | Recarga la barra de Willpower de Hal Jordan. |
+| **Power Battery** | Activo (Inicial) | Recarga la barra de Willpower de Hal Jordan o activa *Overcharge*. |
 | **Construct: Giant Fist** | Activo | Invoca un puño gigante de luz sólida que golpea y empuja enemigos. |
 | **Solid Light Shield** | Pasivo | Orbital de luz sólida que bloquea proyectiles y daña al contacto. |
-| **The Tragedy of Coast City** | Pasivo | Al perder corazones en una sala activa el estado *Parallax* (+Daño masivo y lágrimas de miedo). |
-| **Yellow Impurity** | Trinket | Los enemigos con *Fear* sueltan chispas de energía al morir; penaliza contra enemigos amarillos/campeones. |
+| **The Tragedy of Coast City** | Activo (Tainted) | Invoca el constructo de Coast City al llenar las chispas esmeralda. |
+| **Yellow Impurity** | Trinket | Incrementa el daño x1.5, pero los impactos recibidos pueden causar *Fear*. |
 
 ---
 
@@ -44,10 +44,10 @@ green_lantern_mod/
 │   ├── items.xml                     # Definición de los 4 ítems
 │   ├── trinkets.xml                  # Definición del trinket Yellow Impurity
 │   └── gfx/                          # Gráficos y animaciones del menú de selección de personaje
-│       ├── hal_charactermenu.png     # Sprite de Hal Jordan en la rueda de selección (160x160)
-│       ├── tainted_charactermenu.png # Sprite de Tainted Hal en la rueda de selección (160x160)
-│       ├── charactermenu.png         # Hoja de texto/stats del menú normal (512x512)
-│       ├── charactermenualt.png      # Hoja de texto/stats del menú Tainted (512x512)
+│       ├── hal_charactermenu.png     # Sprite y textos de Hal Jordan en el menú (160x160)
+│       ├── tainted_charactermenu.png # Sprite y textos de Tainted Hal en el menú (160x160)
+│       ├── charactermenu.png         # Hoja base del menú normal (512x512)
+│       ├── charactermenualt.png      # Hoja base del menú Tainted (512x512)
 │       ├── characterportraits.anm2   # Animación del retrato en el menú normal
 │       ├── characterportraitsalt.anm2# Animación del retrato en el menú Tainted
 │       ├── charactermenu.anm2        # Animación del nombre/stats en el menú normal
@@ -69,10 +69,10 @@ green_lantern_mod/
         │       └── trinket_yellow_impurity.png
         └── ui/
             ├── boss/                 # Pantalla VS contra jefes y racha de victoria
-            │   ├── portrait_hal_jordan.png   # Retrato grande de Hal Jordan (192x192)
-            │   ├── portrait_tainted_hal.png  # Retrato grande de Tainted Hal (192x192)
-            │   ├── name_hal_jordan.png       # Letrero con el nombre de Hal Jordan (256x64)
-            │   └── name_tainted_hal.png      # Letrero con el nombre de Tainted Hal (256x64)
+            │   ├── portrait_hal_jordan.png   # Retrato de Hal Jordan en pantalla VS (112x78)
+            │   ├── portrait_tainted_hal.png  # Retrato de Tainted Hal en pantalla VS (112x78)
+            │   ├── name_hal_jordan.png       # Letrero con el nombre de Hal Jordan (192x64)
+            │   └── name_tainted_hal.png      # Letrero con el nombre de Tainted Hal (192x64)
             └── stage/                # Transición de pesadilla entre pisos (112x112)
                 ├── stage_hal_jordan.png
                 └── stage_tainted_hal.png

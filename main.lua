@@ -145,14 +145,14 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 if player:GetSoulHearts() < 2 then
                     player:AddSoulHearts(2) -- 1 full soul heart
                 end
-                if ITEM_POWER_BATTERY and ITEM_POWER_BATTERY > 0 then
-                    player:SetPocketActiveItem(ITEM_POWER_BATTERY, ActiveSlot.SLOT_POCKET, true)
+                if ITEM_POWER_BATTERY and ITEM_POWER_BATTERY > 0 and not player:HasCollectible(ITEM_POWER_BATTERY) then
+                    player:AddCollectible(ITEM_POWER_BATTERY, 3, false, ActiveSlot.SLOT_PRIMARY)
                 end
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED)
                 player:EvaluateItems()
             elseif IsTaintedHal(player) then
-                if ITEM_COAST_CITY and ITEM_COAST_CITY > 0 then
-                    player:SetPocketActiveItem(ITEM_COAST_CITY, ActiveSlot.SLOT_POCKET, true)
+                if ITEM_COAST_CITY and ITEM_COAST_CITY > 0 and not player:HasCollectible(ITEM_COAST_CITY) then
+                    player:AddCollectible(ITEM_COAST_CITY, 0, false, ActiveSlot.SLOT_PRIMARY)
                 end
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
@@ -828,67 +828,96 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 15: HUD RENDERING (Willpower Bar & Emerald Spark Meter)
+-- SECTION 15: HUD RENDERING (Top-Left Compact Willpower & Emerald Spark HUD)
 -- ---------------------------------------------------------------------------
 
+local hudFont = nil
+local function GetHudFont()
+    if not hudFont and Font then
+        local f = Font()
+        local ok = pcall(function() f:Load("font/luaminioutlined.fnt") end)
+        if ok and f:IsLoaded() then
+            hudFont = f
+        end
+    end
+    return hudFont
+end
+
+local function DrawHudText(text, x, y, r, g, b, a)
+    local f = GetHudFont()
+    if f and KColor then
+        f:DrawStringScaled(text, x, y, 1.0, 1.0, KColor(r, g, b, a), 0, false)
+    else
+        Isaac.RenderScaledText(text, x, y, 0.5, 0.5, r, g, b, a)
+    end
+end
+
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
+    if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
+
+    local hudOffset = (Options and Options.HUDOffset) or 0
+    local baseX = 48 + math.floor(hudOffset * 20)
+    local baseY = 33 + math.floor(hudOffset * 12)
+
     for i = 0, Game():GetNumPlayers() - 1 do
         local player = Isaac.GetPlayer(i)
         if player then
-            -- HAL JORDAN HUD
+            local hudX = baseX
+            local hudY = baseY + (i * 14)
+
+            -- HAL JORDAN HUD (Top-left below hearts)
             if IsHalJordan(player) then
                 local data = GetPlayerData(player)
-                local pct  = data.willpower / WILLPOWER_MAX
-                local BAR_W = 50
-                local BAR_H = 4
-                local screenPos = Isaac.WorldToScreen(player.Position) - Vector(BAR_W / 2, 28)
+                local pct  = math.max(0.0, math.min(1.0, data.willpower / WILLPOWER_MAX))
+                local BAR_W = 36
 
-                -- Dark background
-                Isaac.RenderScaledText("_", screenPos.X, screenPos.Y, BAR_W * 0.15, BAR_H * 0.5, 0.1, 0.1, 0.1, 0.8)
+                -- Compact bar background & fill right below the hearts
+                Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
 
-                -- Dynamic color: Green -> Red (depleted) -> Gold (overcharge)
-                local r, g, b = 0.0, 0.9, 0.2
+                local r, g, b = 0.1, 0.95, 0.3
                 if data.ringDepleted then
-                    r, g, b = 0.9, 0.1, 0.1
+                    r, g, b = 0.95, 0.2, 0.2
                 elseif data.overcharge then
-                    r, g, b = 1.0, 0.85, 0.0
+                    r, g, b = 1.0, 0.88, 0.15
                 end
 
-                Isaac.RenderScaledText("_", screenPos.X, screenPos.Y, BAR_W * pct * 0.15, BAR_H * 0.5, r, g, b, 0.9)
+                if pct > 0 then
+                    Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
+                end
 
-                local label = data.ringDepleted and "RING DEPLETED" or string.format("Willpower: %.0f%%", data.willpower)
-                Isaac.RenderText(label, screenPos.X, screenPos.Y - 6, r, g, b, 0.9)
+                local label = string.format("%.0f%%", data.willpower)
+                if data.ringDepleted then
+                    label = "EMPTY"
+                elseif data.overcharge then
+                    label = string.format("%.0f%% MAX", data.willpower)
+                end
+                DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
                 if data.oathTextTimer and data.oathTextTimer > 0 then
                     data.oathTextTimer = data.oathTextTimer - 1
-                    local alpha = math.min(1.0, data.oathTextTimer / 30)
-                    local oathPos = Isaac.WorldToScreen(player.Position) - Vector(60, 50)
-                    Isaac.RenderText(data.oathText or "", oathPos.X, oathPos.Y, 0.1, 0.9, 0.2, alpha)
                 end
             end
 
-            -- TAINTED HAL HUD
+            -- TAINTED HAL HUD (Top-left below hearts)
             if IsTaintedHal(player) then
                 local data = GetPlayerData(player)
-                local pct  = data.emeraldSparks / SPARK_MAX
-                local BAR_W = 50
-                local BAR_H = 4
-                local screenPos = Isaac.WorldToScreen(player.Position) - Vector(BAR_W / 2, 28)
+                local pct  = math.max(0.0, math.min(1.0, data.emeraldSparks / SPARK_MAX))
+                local BAR_W = 36
 
-                Isaac.RenderScaledText("_", screenPos.X, screenPos.Y, BAR_W * 0.15, BAR_H * 0.5, 0.05, 0.05, 0.05, 0.8)
+                Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
 
-                local r, g, b = 0.0, 0.8, 0.35
-                if pct >= 1.0 then r, g, b = 0.2, 1.0, 0.5 end
+                local r, g, b = 0.0, 0.85, 0.4
+                if pct >= 1.0 then r, g, b = 0.25, 1.0, 0.55 end
 
-                Isaac.RenderScaledText("_", screenPos.X, screenPos.Y, BAR_W * pct * 0.15, BAR_H * 0.5, r, g, b, 0.9)
-
-                local label = pct >= 1.0 and "COAST CITY READY!" or string.format("Emerald: %.0f%%", data.emeraldSparks)
-                Isaac.RenderText(label, screenPos.X, screenPos.Y - 6, r, g, b, 0.9)
-
-                if data.stolenRings > 0 then
-                    local ringLabel = string.format("Rings: %d", data.stolenRings)
-                    Isaac.RenderText(ringLabel, screenPos.X, screenPos.Y + 6, 0.1, 0.9, 0.3, 0.85)
+                if pct > 0 then
+                    Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
                 end
+
+                local label = pct >= 1.0 and "READY" or string.format("%.0f%%", data.emeraldSparks)
+                if data.stolenRings > 0 then
+                    label = string.format("%s [%d]", label, data.stolenRings)
+                end
+                DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
             end
         end
     end
