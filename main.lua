@@ -89,6 +89,39 @@ end
 -- SECTION 3: HELPER UTILITIES
 -- ---------------------------------------------------------------------------
 
+-- Persistent state for The Tragedy of Coast City 10-second Emerald Vortex
+local activeCoastCity = {
+    active     = false,
+    spawnFrame = 0,
+    roomIdx    = -1,
+    owner      = nil,
+    sparkBonus = 1.0,
+}
+
+local stageApiRegistered = false
+local function RegisterStageAPIGraphics()
+    if stageApiRegistered then return end
+    if StageAPI and StageAPI.Loaded and StageAPI.AddPlayerGraphicsInfo then
+        if PLAYER_HAL and PLAYER_HAL >= 0 then
+            StageAPI.AddPlayerGraphicsInfo(PLAYER_HAL, {
+                Portrait    = "gfx/ui/boss/portrait_hal_jordan.png",
+                Name        = "gfx/ui/boss/name_hal_jordan.png",
+                PortraitBig = "gfx/ui/boss/portrait_hal_jordan.png",
+                NoShake     = false,
+            })
+        end
+        if PLAYER_TAINTED_HAL and PLAYER_TAINTED_HAL >= 0 then
+            StageAPI.AddPlayerGraphicsInfo(PLAYER_TAINTED_HAL, {
+                Portrait    = "gfx/ui/boss/portrait_tainted_hal.png",
+                Name        = "gfx/ui/boss/name_tainted_hal.png",
+                PortraitBig = "gfx/ui/boss/portrait_tainted_hal.png",
+                NoShake     = false,
+            })
+        end
+        stageApiRegistered = true
+    end
+end
+
 local function LoadItemIDs()
     ITEM_POWER_BATTERY      = Isaac.GetItemIdByName("Power Battery")
     ITEM_GIANT_FIST         = Isaac.GetItemIdByName("Construct: Giant Fist")
@@ -106,7 +139,11 @@ local function LoadItemIDs()
         tHal                = Isaac.GetPlayerTypeByName("Tainted Hal", false)
     end
     PLAYER_TAINTED_HAL      = tHal
+    RegisterStageAPIGraphics()
 end
+
+-- Resolve IDs immediately when script loads so callbacks always have valid IDs
+LoadItemIDs()
 
 local function IsHalJordan(player)
     if not PLAYER_HAL or PLAYER_HAL < 0 then LoadItemIDs() end
@@ -146,6 +183,7 @@ end
 
 GL:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
     LoadItemIDs()
+    activeCoastCity.active = false
 end)
 
 GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
@@ -241,11 +279,11 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
 
             local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
             if data.overcharge and data.overchargeRoomIdx == roomIdx then
-                -- Full Overcharge: 2.0x damage in current room
+                -- Full Overcharge (>=50% Willpower): 2.0x damage in current room
                 player.Damage = player.Damage * 2.0
             elseif data.surgeBuff and data.overchargeRoomIdx == roomIdx then
-                -- Construct Surge (used when <50% Willpower): 1.35x damage in current room
-                player.Damage = player.Damage * 1.35
+                -- Construct Surge (<50% Willpower): 1.5x damage in current room
+                player.Damage = player.Damage * 1.5
             end
 
             -- Ring depleted: 50% damage penalty
@@ -269,7 +307,7 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
             if data.overcharge and data.overchargeRoomIdx == roomIdx then
                 player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
             elseif data.surgeBuff and data.overchargeRoomIdx == roomIdx then
-                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL
+                player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_HOMING
             end
         end
     end
@@ -349,6 +387,7 @@ end)
 
 -- Power Battery
 GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
+    if not ITEM_POWER_BATTERY or ITEM_POWER_BATTERY < 0 then LoadItemIDs() end
     if itemID ~= ITEM_POWER_BATTERY then return end
 
     local data = GetPlayerData(player)
@@ -361,7 +400,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
 
     -- 2. If used at >= 50% Willpower (and not depleted), grant FULL OVERCHARGE (2.0x DMG + Piercing + Spectral).
-    --    Otherwise, still grant CONSTRUCT SURGE (1.35x DMG + Spectral) so using Power Battery is ALWAYS rewarding!
+    --    Otherwise, grant CONSTRUCT SURGE (1.5x DMG + Homing + Spectral) so using Power Battery is ALWAYS powerful!
     if not wasDepleted and prevWill >= 50.0 then
         data.overcharge = true
         data.surgeBuff  = false
@@ -371,39 +410,51 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         data.overcharge = false
         data.surgeBuff  = true
         data.oathTextTimer = 120
-        data.oathText = "WILLPOWER RESTORED! (+35% DMG Surge)"
+        data.oathText = "WILLPOWER SURGE! (1.5x DMG + Homing)"
     end
 
-    -- 3. Unleash an immediate 8-way Emerald Construct Ring Burst + Shockwave around the player!
-    for i = 1, 8 do
-        local angle = (i - 1) * (math.pi / 4)
+    -- 3. Visual & audio emerald burst around the player
+    local burstFx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, player.Position, Vector.Zero, player)
+    if burstFx then
+        burstFx.Scale = 2.2
+        burstFx:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.8, 0)
+    end
+    pcall(function()
+        SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 1.0, 0, false, 1.0)
+    end)
+
+    -- 4. Unleash an immediate 12-way Emerald Construct Ring Burst (using TearVariant.BLUE = 0)
+    local tearVar = (TearVariant and TearVariant.BLUE) or 0
+    for i = 1, 12 do
+        local angle = (i - 1) * (math.pi / 6)
         local dir = Vector(math.cos(angle), math.sin(angle))
-        local beam = Isaac.Spawn(
+        local ent = Isaac.Spawn(
             EntityType.ENTITY_TEAR,
-            TearVariant.BLUE_CANDLE,
+            tearVar,
             0,
             player.Position + dir * 14,
-            dir * 16.0,
+            dir * 15.0,
             player
-        ):ToTear()
+        )
+        local beam = ent and ent:ToTear()
         if beam then
-            beam.CollisionDamage = player.Damage * 2.5
-            beam.Scale           = 1.6
-            beam.TearFlags       = beam.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            beam.CollisionDamage = player.Damage * 2.5 + 4.0
+            beam.Scale           = 1.8
+            beam.TearFlags       = beam.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_HOMING
             beam:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
         end
     end
 
-    -- Shockwave: damage & knockback nearby enemies and clear nearby enemy projectiles
+    -- 5. Shockwave: damage & knockback nearby enemies and clear nearby enemy projectiles
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         local dist = (ent.Position - player.Position):Length()
-        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 130 then
-            ent:TakeDamage(player.Damage * 3.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 160 then
+            ent:TakeDamage(player.Damage * 3.5 + 10.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
             local push = (ent.Position - player.Position)
             if push:Length() > 0.1 then
-                ent.Velocity = ent.Velocity + push:Normalized() * 12.0
+                ent.Velocity = ent.Velocity + push:Normalized() * 14.0
             end
-        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 150 then
+        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 180 then
             ent:Die()
         end
     end
@@ -413,10 +464,11 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     player:EvaluateItems()
 
     return true
-end, ITEM_POWER_BATTERY)
+end)
 
 -- Construct: Giant Fist
 GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
+    if not ITEM_GIANT_FIST or ITEM_GIANT_FIST < 0 then LoadItemIDs() end
     if itemID ~= ITEM_GIANT_FIST then return end
 
     local direction = player:GetShootingInput()
@@ -434,14 +486,16 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     end
 
     local fistVelocity = direction * 20.0
-    local fist = Isaac.Spawn(
+    local tearVar = (TearVariant and TearVariant.TOOTH) or 0
+    local ent = Isaac.Spawn(
         EntityType.ENTITY_TEAR,
-        TearVariant.TOOTH,
+        tearVar,
         0,
         player.Position + direction * 20,
         fistVelocity,
         player
-    ):ToTear()
+    )
+    local fist = ent and ent:ToTear()
 
     if fist then
         fist.CollisionDamage = player.Damage * 10
@@ -452,7 +506,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     end
 
     return true
-end, ITEM_GIANT_FIST)
+end)
 
 -- Giant Fist rock destruction
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
@@ -481,29 +535,52 @@ end)
 
 -- The Tragedy of Coast City
 GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
+    if not ITEM_COAST_CITY or ITEM_COAST_CITY < 0 then LoadItemIDs() end
     if itemID ~= ITEM_COAST_CITY then return end
 
     local data = GetPlayerData(player)
 
-    -- Stored Emerald Sparks boost vortex damage up to +50% (no longer blocks activation when <100%!)
+    -- Stored Emerald Sparks boost vortex damage up to +50% (never blocks activation!)
     local sparkBonus = 1.0 + ((data.emeraldSparks or 0.0) / SPARK_MAX) * 0.5
     data.coastCityBoost  = sparkBonus
     data.emeraldSparks   = 0.0
     data.coastCityActive = true
     data.coastCityFrame  = Game():GetFrameCount()
 
-    local room   = Game():GetRoom()
-    local center = room:GetCenterPos()
+    local room    = Game():GetRoom()
+    local center  = room:GetCenterPos()
+    local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
 
-    -- Immediately inflict Fear AND deal an initial Emerald Cataclysm blast to ALL enemies in the room!
+    -- Store 10-second vortex state in persistent Lua table so it lasts the full 300 frames!
+    activeCoastCity.active     = true
+    activeCoastCity.spawnFrame = Game():GetFrameCount()
+    activeCoastCity.roomIdx    = roomIdx
+    activeCoastCity.owner      = player
+    activeCoastCity.sparkBonus = sparkBonus
+
+    pcall(function()
+        SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 1.0, 0, false, 0.85)
+    end)
+
+    -- Immediately inflict Fear AND deal an initial Emerald Cataclysm blast + beam to ALL enemies in the room!
+    local beamCount = 0
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
-            ent:AddFear(EntityRef(player), 180)
+            ent:AddFear(EntityRef(player), 240)
             ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
-            ent:TakeDamage(player.Damage * 2.5 * sparkBonus, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+            ent:TakeDamage(player.Damage * 3.0 * sparkBonus + 12.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+            if beamCount < 6 then
+                beamCount = beamCount + 1
+                local eBeam = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.CRACK_THE_SKY, 0, ent.Position, Vector.Zero, player)
+                if eBeam then
+                    eBeam.Scale = 2.0
+                    eBeam:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.8, 0)
+                end
+            end
         end
     end
 
+    -- Spawn central Emerald Vortex beam & shockwave
     local construct = Isaac.Spawn(
         EntityType.ENTITY_EFFECT,
         EffectVariant.CRACK_THE_SKY,
@@ -513,41 +590,30 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         player
     )
     if construct then
-        local cd = construct:GetData()
-        cd.isCoastCity  = true
-        cd.spawnFrame   = Game():GetFrameCount()
-        cd.owner        = player
-        cd.sparkBonus   = sparkBonus
-        construct.Scale = 4.0
+        construct.Scale = 3.5
         construct:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 1, 0)
+    end
+
+    local poof = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, center, Vector.Zero, player)
+    if poof then
+        poof.Scale = 2.5
+        poof:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.8, 0)
     end
 
     player:AnimateHappy()
     return true
-end, ITEM_COAST_CITY)
+end)
 
--- Coast City logic: pull ALL vulnerable enemies toward center vortex & deal continuous emerald DPS
+-- Coast City logic: pull ALL vulnerable enemies toward center vortex & deal continuous emerald DPS for 10 seconds (300 frames)
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
-    local room         = Game():GetRoom()
-    local center       = room:GetCenterPos()
+    if not activeCoastCity.active then return end
+
     local currentFrame = Game():GetFrameCount()
+    local roomIdx      = Game():GetLevel():GetCurrentRoomIndex()
+    local age          = currentFrame - (activeCoastCity.spawnFrame or currentFrame)
 
-    local construct = nil
-    for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.CRACK_THE_SKY, -1, false)) do
-        local ed = ent:GetData()
-        if ed and ed.isCoastCity then
-            construct = ent
-            break
-        end
-    end
-
-    if not construct then return end
-
-    local cd  = construct:GetData()
-    local age = currentFrame - (cd.spawnFrame or currentFrame)
-
-    if age > COAST_CITY_DURATION then
-        construct:Remove()
+    if roomIdx ~= activeCoastCity.roomIdx or age > COAST_CITY_DURATION then
+        activeCoastCity.active = false
         for i = 0, Game():GetNumPlayers() - 1 do
             local p = Isaac.GetPlayer(i)
             if IsTaintedHal(p) then
@@ -557,8 +623,26 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
         return
     end
 
-    local ownerPlayer = cd.owner or Isaac.GetPlayer(0)
-    local sparkBonus  = cd.sparkBonus or 1.0
+    local room        = Game():GetRoom()
+    local center      = room:GetCenterPos()
+    local ownerPlayer = activeCoastCity.owner or Isaac.GetPlayer(0)
+    local sparkBonus  = activeCoastCity.sparkBonus or 1.0
+
+    -- Pulse a visible emerald vortex effect at the center of the room every 15 frames
+    if age % 15 == 0 then
+        local pulse = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, center, Vector.Zero, ownerPlayer)
+        if pulse then
+            pulse.Scale = 1.7
+            pulse:GetSprite().Color = Color(0, 1, 0.3, 0.85, 0, 0.7, 0)
+        end
+    end
+    if age % 30 == 0 then
+        local sky = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.CRACK_THE_SKY, 0, center, Vector.Zero, ownerPlayer)
+        if sky then
+            sky.Scale = 2.4
+            sky:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.9, 0)
+        end
+    end
 
     for _, enemy in ipairs(Isaac.GetRoomEntities()) do
         if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
@@ -567,28 +651,29 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
             local dist     = toCenter:Length()
 
             -- Pull ALL vulnerable enemies toward the vortex (Feared enemies pull even faster)
-            if dist > 18 then
+            if dist > 16 then
                 local pullMult = isFeared and 1.35 or 1.0
-                local pullStr  = math.min(7.5, 260.0 / math.max(dist, 15)) * pullMult
-                enemy.Velocity = enemy.Velocity * 0.8 + toCenter:Normalized() * pullStr
+                local pullStr  = math.min(8.5, 280.0 / math.max(dist, 15)) * pullMult
+                enemy.Velocity = enemy.Velocity * 0.78 + toCenter:Normalized() * pullStr
             end
 
-            -- Deal pulsing Emerald Vortex damage every 10 frames across the vortex radius (or lighter fallout damage room-wide)
-            if age % 10 == 0 and ownerPlayer then
-                enemy:AddFear(EntityRef(ownerPlayer), 60)
-                local fearMult = isFeared and 1.35 or 1.0
-                local distMult = (dist <= 110) and 2.2 or 0.9
+            -- Deal pulsing Emerald Vortex damage every 12 frames across the room
+            if age % 12 == 0 and ownerPlayer then
+                enemy:AddFear(EntityRef(ownerPlayer), 90)
+                enemy:AddEntityFlags(EntityFlag.FLAG_FEAR)
+                local fearMult = isFeared and 1.35 or 1.1
+                local distMult = (dist <= 120) and 2.2 or 1.1
                 local dmg = ownerPlayer.Damage * distMult * fearMult * sparkBonus
-                enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(construct), 0)
+                enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(ownerPlayer), 0)
 
-                if dist <= 110 and math.random() < 0.45 then
+                if dist <= 130 and math.random() < 0.40 then
                     local spark = Isaac.Spawn(
                         EntityType.ENTITY_PICKUP,
                         PickupVariant.PICKUP_COIN,
                         CoinSubType.COIN_PENNY,
                         enemy.Position + Vector(math.random(-15, 15), math.random(-15, 15)),
                         Vector.Zero,
-                        construct
+                        ownerPlayer
                     )
                     if spark then
                         spark:GetData().isEmeraldSpark = true
@@ -609,7 +694,8 @@ GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flag
     if entity.Type ~= EntityType.ENTITY_PLAYER then return end
     local player = entity:ToPlayer()
     if not player then return end
-    if not player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then return end
+    if not ITEM_SOLID_LIGHT_SHIELD or ITEM_SOLID_LIGHT_SHIELD < 0 then LoadItemIDs() end
+    if not (ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD)) then return end
 
     if source and source.Entity and source.Entity.Type == EntityType.ENTITY_TEAR then
         local srcEnt  = source.Entity
@@ -618,14 +704,16 @@ GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flag
 
         if math.random() < chance then
             local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length())
-            local reflected  = Isaac.Spawn(
+            local tearVar    = (TearVariant and TearVariant.BLUE) or 0
+            local ent        = Isaac.Spawn(
                 EntityType.ENTITY_TEAR,
-                TearVariant.BLUE_CANDLE,
+                tearVar,
                 0,
                 srcEnt.Position,
                 reflectVel,
                 player
-            ):ToTear()
+            )
+            local reflected  = ent and ent:ToTear()
 
             if reflected then
                 reflected.CollisionDamage = player.Damage
@@ -886,14 +974,16 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                     if targetEnemy then
                         local dir      = (targetEnemy.Position - familiar.Position):Normalized()
                         local laserVel = dir * 18
-                        local laser    = Isaac.Spawn(
+                        local tearVar  = (TearVariant and TearVariant.BLUE) or 0
+                        local ent      = Isaac.Spawn(
                             EntityType.ENTITY_TEAR,
-                            TearVariant.BLUE_CANDLE,
+                            tearVar,
                             0,
                             familiar.Position,
                             laserVel,
                             player
-                        ):ToTear()
+                        )
+                        local laser    = ent and ent:ToTear()
 
                         if laser then
                             laser.CollisionDamage = player.Damage * 1.5
@@ -939,10 +1029,11 @@ GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collide
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 14: OVERCHARGE / SURGE RESET ON NEW ROOM
+-- SECTION 14: OVERCHARGE / SURGE / COAST CITY RESET ON NEW ROOM
 -- ---------------------------------------------------------------------------
 
 GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
+    activeCoastCity.active = false
     for i = 0, Game():GetNumPlayers() - 1 do
         local player = Isaac.GetPlayer(i)
         if IsHalJordan(player) or IsTaintedHal(player) then
@@ -992,22 +1083,24 @@ local function EnsureEIDRegistered()
     LoadItemIDs()
     if not ITEM_POWER_BATTERY or ITEM_POWER_BATTERY < 0 then return end
     pcall(function()
-        EID:addCollectible(ITEM_POWER_BATTERY,
-            "Refills Willpower to 100% and fires an 8-way piercing construct burst#At >=50% Willpower: Overcharge (2x DMG + Piercing + Spectral for the room)#Below 50%: +35% DMG Surge + Spectral for the room",
-            "Power Battery")
-        EID:addCollectible(ITEM_GIANT_FIST,
-            "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
-            "Construct: Giant Fist")
-        EID:addCollectible(ITEM_COAST_CITY,
-            "Fears and blasts all enemies in the room, then spawns a 10s Emerald Vortex#Pulls all enemies toward the center and deals heavy continuous DPS#Stored Emerald Sparks boost vortex damage up to +50%",
-            "The Tragedy of Coast City")
-        EID:addCollectible(ITEM_SOLID_LIGHT_SHIELD,
-            "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
-            "Solid Light Shield")
-        if TRINKET_YELLOW_IMPURITY and TRINKET_YELLOW_IMPURITY > 0 then
-            EID:addTrinket(TRINKET_YELLOW_IMPURITY,
-                "1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage briefly inflicts Fear (reversed movement for 2s)",
-                "Yellow Impurity")
+        for _, lang in ipairs({"en_us", "en_us_detailed", "es"}) do
+            EID:addCollectible(ITEM_POWER_BATTERY,
+                "Refills Willpower to 100% and fires a 12-way homing piercing construct burst#Deals 3.5x AoE shockwave damage + knockback#At >=50% Willpower: Overcharge (2x DMG + Piercing + Spectral for the room)#Below 50%: 1.5x DMG Surge + Homing + Spectral for the room",
+                "Power Battery", lang)
+            EID:addCollectible(ITEM_GIANT_FIST,
+                "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
+                "Construct: Giant Fist", lang)
+            EID:addCollectible(ITEM_COAST_CITY,
+                "Fears and blasts all enemies in the room (3x DMG), then spawns a 10s Emerald Vortex#Pulls all enemies toward the center and deals continuous heavy AoE DPS#Stored Emerald Sparks boost vortex damage up to +50%",
+                "The Tragedy of Coast City", lang)
+            EID:addCollectible(ITEM_SOLID_LIGHT_SHIELD,
+                "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
+                "Solid Light Shield", lang)
+            if TRINKET_YELLOW_IMPURITY and TRINKET_YELLOW_IMPURITY > 0 then
+                EID:addTrinket(TRINKET_YELLOW_IMPURITY,
+                    "1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage briefly inflicts Fear (reversed movement for 2s)",
+                    "Yellow Impurity", lang)
+            end
         end
         eidRegistered = true
     end)
@@ -1018,8 +1111,8 @@ local function GetModItemInspectionInfo(isTrinket, id)
     if not isTrinket then
         if id == ITEM_POWER_BATTERY then
             return "Power Battery [3R Active]", {
-                "100% Willpower + 8-way construct burst & knockback",
-                ">=50% Will: 2x DMG + Piercing | <50%: +35% DMG"
+                "100% Willpower + 12-way construct burst & shockwave",
+                ">=50% Will: 2x DMG + Piercing | <50%: 1.5x DMG + Homing"
             }
         elseif id == ITEM_GIANT_FIST then
             return "Construct: Giant Fist [4R Active]", {
@@ -1050,6 +1143,7 @@ end
 
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     EnsureEIDRegistered()
+    RegisterStageAPIGraphics()
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
 
     local hudOffset = (Options and Options.HUDOffset) or 0
@@ -1089,7 +1183,7 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 elseif data.overcharge then
                     label = string.format("%.0f%% 2xDMG", data.willpower)
                 elseif data.surgeBuff then
-                    label = string.format("%.0f%% +35%%", data.willpower)
+                    label = string.format("%.0f%% 1.5xDMG", data.willpower)
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
@@ -1119,11 +1213,15 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
             end
 
-            -- BUILT-IN ITEM INSPECTOR (fallback when EID is NOT installed, or when holding Tab/Map with no nearby pedestal)
+            -- BUILT-IN ITEM INSPECTOR (shows when near mod pedestals, when holding Tab/Map, or briefly at run start)
             if i == 0 then
                 local inspectTitle, inspectLines = nil, nil
 
-                -- 1. Check nearby pedestals / trinkets on the floor ONLY if External Item Descriptions (EID) is not active
+                if data.inspectTimer and data.inspectTimer > 0 then
+                    data.inspectTimer = data.inspectTimer - 1
+                end
+
+                -- 1. Check nearby mod pedestals / trinkets on the floor (when EID is not installed)
                 if not EID then
                     local nearestDist = 170
                     for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
@@ -1151,9 +1249,10 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                     end
                 end
 
-                -- 2. Or if holding Tab (ACTION_MAP) when EID is not displaying a pedestal, inspect equipped Green Lantern items
+                -- 2. Or if holding Tab (ACTION_MAP) or during initial run start, inspect equipped Green Lantern items
                 local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
-                if not inspectTitle and holdingMap and not EID then
+                local showEquipped = holdingMap or (data.inspectTimer and data.inspectTimer > 0)
+                if not inspectTitle and showEquipped then
                     local actId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
                     inspectTitle, inspectLines = GetModItemInspectionInfo(false, actId)
                     if not inspectTitle and ITEM_SOLID_LIGHT_SHIELD and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
