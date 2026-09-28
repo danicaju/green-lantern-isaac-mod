@@ -18,6 +18,7 @@ local ITEM_POWER_BATTERY       = nil  -- Active (Hal)
 local ITEM_GIANT_FIST          = nil  -- Active 4-room
 local ITEM_COAST_CITY          = nil  -- Active 4-room (Tainted Hal)
 local ITEM_SOLID_LIGHT_SHIELD  = nil  -- Passive
+local ITEM_POWER_RING          = nil  -- Starting Passive (Green Lantern Ring)
 local TRINKET_YELLOW_IMPURITY  = nil  -- Trinket
 
 -- Character overlay costumes (keep hair & domino mask on top of picked-up item costumes)
@@ -77,6 +78,10 @@ local function GetPlayerData(player)
             -- Yellow Impurity
             fearControlTimer    = 0,
 
+            -- Ring combat flare & hand tracking
+            ringFlareTimer      = 0,
+            lastRingHandOffset  = Vector(14, -8),
+
             -- Costume & Inspection tracking
             lastCollectibleCount = -1,
             inspectTimer         = 150,
@@ -127,6 +132,7 @@ local function LoadItemIDs()
     ITEM_GIANT_FIST         = Isaac.GetItemIdByName("Construct: Giant Fist")
     ITEM_COAST_CITY         = Isaac.GetItemIdByName("The Tragedy of Coast City")
     ITEM_SOLID_LIGHT_SHIELD = Isaac.GetItemIdByName("Solid Light Shield")
+    ITEM_POWER_RING         = Isaac.GetItemIdByName("Green Lantern Ring")
     TRINKET_YELLOW_IMPURITY = Isaac.GetTrinketIdByName("Yellow Impurity")
     COSTUME_HAL             = Isaac.GetCostumeIdByPath("gfx/characters/hal_costume.anm2")
     COSTUME_TAINTED_HAL     = Isaac.GetCostumeIdByPath("gfx/characters/tainted_hal_costume.anm2")
@@ -153,6 +159,59 @@ end
 local function IsTaintedHal(player)
     if not PLAYER_TAINTED_HAL or PLAYER_TAINTED_HAL < 0 then LoadItemIDs() end
     return PLAYER_TAINTED_HAL and PLAYER_TAINTED_HAL >= 0 and player:GetPlayerType() == PLAYER_TAINTED_HAL
+end
+
+local function HasGreenLanternRing(player)
+    if IsHalJordan(player) or IsTaintedHal(player) then return true end
+    if not ITEM_POWER_RING or ITEM_POWER_RING < 0 then LoadItemIDs() end
+    return ITEM_POWER_RING and ITEM_POWER_RING > 0 and player:HasCollectible(ITEM_POWER_RING)
+end
+
+-- Compute the world-space position of the character's outstretched Power Ring hand
+local function GetRingHandOffset(player, fireVel)
+    local headDir = player:GetHeadDirection()
+    local dx, dy = 0, 1
+    if fireVel and fireVel:Length() > 0.1 then
+        local n = fireVel:Normalized()
+        dx, dy = n.X, n.Y
+    else
+        if headDir == Direction.RIGHT then dx, dy = 1, 0
+        elseif headDir == Direction.LEFT then dx, dy = -1, 0
+        elseif headDir == Direction.UP then dx, dy = 0, -1
+        else dx, dy = 0, 1 end
+    end
+
+    if math.abs(dx) >= math.abs(dy) then
+        if dx >= 0 then
+            return Vector(15, -10) -- Outstretched right ring hand
+        else
+            return Vector(-15, -10) -- Outstretched left ring hand (flipped)
+        end
+    else
+        if dy >= 0 then
+            return Vector(10, -6)  -- Outstretched ring hand aiming down
+        else
+            return Vector(10, -16) -- Outstretched ring hand aiming up
+        end
+    end
+end
+
+-- Transform a tear into an intense comic-book Green Lantern energy beam originating from the Ring
+local function ApplyRingBeamSprite(tear, scaleMult)
+    if not tear then return end
+    pcall(function()
+        local ts = tear:GetSprite()
+        ts:Load("gfx/effects/gl_ring_beam.anm2", true)
+        ts:Play("Idle", true)
+        local angle = tear.Velocity:GetAngleDegrees()
+        ts.Rotation = angle
+        local s = scaleMult or 1.0
+        ts.Scale = Vector(s, s)
+        ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
+        local td = tear:GetData()
+        td.isGLRingBeam = true
+        td.glBeamScale  = s
+    end)
 end
 
 local function RefreshCharacterCostume(player)
@@ -218,6 +277,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 if player:GetSoulHearts() < 2 then
                     player:AddSoulHearts(2) -- 1 full soul heart
                 end
+                -- Grant starting Green Lantern Ring passive equipment + Power Battery active
+                if ITEM_POWER_RING and ITEM_POWER_RING > 0 and not player:HasCollectible(ITEM_POWER_RING) then
+                    player:AddCollectible(ITEM_POWER_RING, 0, false)
+                end
                 if ITEM_POWER_BATTERY and ITEM_POWER_BATTERY > 0 and not player:HasCollectible(ITEM_POWER_BATTERY) then
                     player:AddCollectible(ITEM_POWER_BATTERY, 3, false, ActiveSlot.SLOT_PRIMARY)
                 end
@@ -225,6 +288,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED)
                 player:EvaluateItems()
             elseif IsTaintedHal(player) then
+                -- Grant starting Green Lantern Ring passive equipment + The Tragedy of Coast City active
+                if ITEM_POWER_RING and ITEM_POWER_RING > 0 and not player:HasCollectible(ITEM_POWER_RING) then
+                    player:AddCollectible(ITEM_POWER_RING, 0, false)
+                end
                 if ITEM_COAST_CITY and ITEM_COAST_CITY > 0 and not player:HasCollectible(ITEM_COAST_CITY) then
                     player:AddCollectible(ITEM_COAST_CITY, 4, false, ActiveSlot.SLOT_PRIMARY)
                 end
@@ -233,6 +300,21 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 player:EvaluateItems()
             end
         end)
+    end
+
+    -- Mid-air suspension hover + pedaling flight feel for Hal Jordan & Tainted Hal
+    if IsHalJordan(player) or IsTaintedHal(player) then
+        if player.CanFly then
+            local frame = Game():GetFrameCount()
+            local bobY = -6.5 + math.sin(frame * 0.24) * 2.2
+            player.SpriteOffset = Vector(0, bobY)
+        else
+            player.SpriteOffset = Vector.Zero
+        end
+
+        if data.ringFlareTimer and data.ringFlareTimer > 0 then
+            data.ringFlareTimer = data.ringFlareTimer - 1
+        end
     end
 
     -- Re-apply character hair/mask/suit overlay whenever the player picks up or swaps an item so costumes merge!
@@ -331,6 +413,17 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         end
     end
 
+    -- GREEN LANTERN RING (when picked up by non-Hal characters, grants +1.0 DMG, +0.20 ShotSpeed & Spectral)
+    if not IsHalJordan(player) and not IsTaintedHal(player) and HasGreenLanternRing(player) then
+        if cacheFlag == CacheFlag.CACHE_DAMAGE then
+            player.Damage = player.Damage + 1.0
+        elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
+            player.ShotSpeed = player.ShotSpeed + 0.20
+        elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
+            player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL
+        end
+    end
+
     -- TRINKET: YELLOW IMPURITY DAMAGE BUFF
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
         if TRINKET_YELLOW_IMPURITY and player:HasTrinket(TRINKET_YELLOW_IMPURITY) then
@@ -340,7 +433,7 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 6: TEAR HANDLING (Willpower drain, range, and emerald green tint)
+-- SECTION 6: GREEN LANTERN RING BEAM HANDLING (Hand origin + Energy Beam sprite)
 -- ---------------------------------------------------------------------------
 
 GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
@@ -349,17 +442,26 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     local player = spawner:ToPlayer()
     if not player then return end
 
-    -- HAL JORDAN TEARS
+    if not HasGreenLanternRing(player) then return end
+
+    local data = GetPlayerData(player)
+
+    -- 1. Snap projectile spawn position to the outstretched Power Ring hand (never from the eyes!)
+    local handOffset = GetRingHandOffset(player, tear.Velocity)
+    tear.Position = player.Position + handOffset
+    data.lastRingHandOffset = handOffset
+    data.ringFlareTimer     = 6
+
+    -- 2. HAL JORDAN WILLPOWER & BEAM SCALING
     if IsHalJordan(player) then
-        local data = GetPlayerData(player)
-
-        -- Bright green construct beam tint
-        tear:GetSprite().Color = Color(0, 0.9, 0.2, 1, 0, 0.4, 0)
-
         if data.ringDepleted then
-            -- Limited range when depleted: drop near the player
+            -- Limited range when depleted: weak sputtering spark near the ring hand
             tear.Velocity = tear.Velocity * 0.18
+            ApplyRingBeamSprite(tear, 0.55)
         else
+            local scale = data.overcharge and 1.35 or (data.surgeBuff and 1.18 or 1.0)
+            ApplyRingBeamSprite(tear, scale)
+
             -- Drain willpower
             data.willpower = math.max(0, data.willpower - WILLPOWER_PER_TEAR)
             if data.willpower <= 0 then
@@ -371,13 +473,22 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
                 player:EvaluateItems()
             end
         end
-    end
-
-    -- TAINTED HAL TEARS
-    if IsTaintedHal(player) then
-        -- Vibrant emerald green tint, enlarged tear
-        tear:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+    elseif IsTaintedHal(player) then
+        -- 3. TAINTED HAL (PARALLAX): Larger, heavy emerald construct energy blast from the ring
         tear.Scale = tear.Scale * 1.4
+        ApplyRingBeamSprite(tear, 1.30)
+    else
+        -- Any other character holding Green Lantern Ring
+        ApplyRingBeamSprite(tear, 1.05)
+    end
+end)
+
+-- Keep all Green Lantern Ring energy beams oriented along their exact flight velocity vector
+GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+    local td = tear:GetData()
+    if td and td.isGLRingBeam and tear.Velocity:Length() > 0.1 then
+        local ts = tear:GetSprite()
+        ts.Rotation = tear.Velocity:GetAngleDegrees()
     end
 end)
 
@@ -423,7 +534,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 1.0, 0, false, 1.0)
     end)
 
-    -- 4. Unleash an immediate 12-way Emerald Construct Ring Burst (using TearVariant.BLUE = 0)
+    -- 4. Unleash an immediate 12-way Emerald Construct Ring Beam Burst from the Ring
     local tearVar = (TearVariant and TearVariant.BLUE) or 0
     for i = 1, 12 do
         local angle = (i - 1) * (math.pi / 6)
@@ -441,7 +552,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
             beam.CollisionDamage = player.Damage * 2.5 + 4.0
             beam.Scale           = 1.8
             beam.TearFlags       = beam.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_HOMING
-            beam:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+            ApplyRingBeamSprite(beam, 1.25)
         end
     end
 
@@ -485,13 +596,14 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         direction = direction:Normalized()
     end
 
+    local handOffset = GetRingHandOffset(player, direction)
     local fistVelocity = direction * 20.0
     local tearVar = (TearVariant and TearVariant.TOOTH) or 0
     local ent = Isaac.Spawn(
         EntityType.ENTITY_TEAR,
         tearVar,
         0,
-        player.Position + direction * 20,
+        player.Position + handOffset + direction * 10,
         fistVelocity,
         player
     )
@@ -1096,6 +1208,11 @@ local function EnsureEIDRegistered()
             EID:addCollectible(ITEM_SOLID_LIGHT_SHIELD,
                 "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
                 "Solid Light Shield", lang)
+            if ITEM_POWER_RING and ITEM_POWER_RING > 0 then
+                EID:addCollectible(ITEM_POWER_RING,
+                    "Signature Green Lantern Power Ring worn on your hand#Projects intense emerald construct energy beams directly from the ring#Grants Spectral beams (+1.0 DMG & +0.20 Shot Speed on other characters)",
+                    "Green Lantern Ring", lang)
+            end
             if TRINKET_YELLOW_IMPURITY and TRINKET_YELLOW_IMPURITY > 0 then
                 EID:addTrinket(TRINKET_YELLOW_IMPURITY,
                     "1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage briefly inflicts Fear (reversed movement for 2s)",
@@ -1129,6 +1246,11 @@ local function GetModItemInspectionInfo(isTrinket, id)
                 "+2 Soul Hearts & orbital light shield",
                 "25%-75% chance (Luck) to reflect enemy shots"
             }
+        elseif id == ITEM_POWER_RING then
+            return "Green Lantern Ring [Starting Passive]", {
+                "Worn on hand — fires emerald construct energy beams",
+                "Spectral ring blasts (+1 DMG & +0.2 ShotSpeed)"
+            }
         end
     else
         if id == TRINKET_YELLOW_IMPURITY then
@@ -1140,6 +1262,28 @@ local function GetModItemInspectionInfo(isTrinket, id)
     end
     return nil, nil
 end
+
+-- Render a glowing emerald Power Ring flare on the character's outstretched hand during combat!
+GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
+    if not HasGreenLanternRing(player) then return end
+    local data = GetPlayerData(player)
+    if IsHalJordan(player) and data.ringDepleted then return end
+
+    local shootInput = player:GetShootingInput()
+    local isFiring = (shootInput and shootInput:Length() > 0.1) or (data.ringFlareTimer and data.ringFlareTimer > 0)
+    local handOffset = GetRingHandOffset(player, shootInput)
+    local screenPos = Isaac.WorldToScreen(player.Position + handOffset) + (player.SpriteOffset or Vector.Zero)
+
+    if isFiring then
+        -- Intense emerald construct flare right on the Power Ring hand when firing beams
+        Isaac.RenderScaledText("*", screenPos.X - 3, screenPos.Y - 6, 0.85, 0.85, 0.35, 1.0, 0.55, 0.95)
+        Isaac.RenderScaledText("o", screenPos.X - 2, screenPos.Y - 5, 0.60, 0.60, 0.85, 1.0, 0.90, 0.95)
+    else
+        -- Subtle pulsing emerald ring gleam on the outstretched hand while hovering
+        local pulse = 0.45 + 0.25 * math.sin(Game():GetFrameCount() * 0.20)
+        Isaac.RenderScaledText(".", screenPos.X - 1, screenPos.Y - 5, 0.65, 0.65, 0.15, 1.0, 0.45, pulse)
+    end
+end)
 
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     EnsureEIDRegistered()

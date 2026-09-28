@@ -40,6 +40,14 @@
         quality="3"
         />
 
+    <passive
+        id="5"
+        name="Green Lantern Ring"
+        description="Willpower made manifest — fires emerald energy beams from your hand"
+        gfx="collectible_power_ring.png"
+        quality="4"
+        />
+
     <!-- ===== TRINKETS ===== -->
     <trinket
         id="1"
