@@ -257,6 +257,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.overcharge        = false
         data.surgeBuff         = false
         data.overchargeRoomIdx = -1
+        pcall(function()
+            player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
+            player:EvaluateItems()
+        end)
         RefreshCharacterCostume(player)
     end
 
@@ -267,6 +271,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.stolenRings     = 0
         data.coastCityActive = false
         data.coastCityFrame  = 0
+        pcall(function()
+            player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
+            player:EvaluateItems()
+        end)
         RefreshCharacterCostume(player)
     end
 end)
@@ -526,6 +534,7 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, player.Position, Vector.Zero, player)
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
+                RefreshCharacterCostume(player)
             elseif newWillBucket ~= prevWillBucket then
                 player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                 player:EvaluateItems()
@@ -608,6 +617,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
                 player:AnimateSad()
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
+                RefreshCharacterCostume(player)
             elseif newWillBucket ~= prevWillBucket then
                 player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                 player:EvaluateItems()
@@ -698,6 +708,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     player:AnimateHappy()
     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
     player:EvaluateItems()
+    RefreshCharacterCostume(player)
 
     return true
 end)
@@ -1266,6 +1277,7 @@ GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collide
 
     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
     player:EvaluateItems()
+    RefreshCharacterCostume(player)
 end)
 
 -- ---------------------------------------------------------------------------
@@ -1647,6 +1659,7 @@ GL:AddCallback(ModCallbacks.MC_EXECUTE_CMD, function(_, cmd, params)
             d.ringDepleted = (pct <= 0)
             p:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
             p:EvaluateItems()
+            RefreshCharacterCostume(p)
             Isaac.ConsoleOutput(string.format("[GL] Willpower set to %.0f%%\n", pct))
         end
         return true
