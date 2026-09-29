@@ -85,6 +85,7 @@ local function GetPlayerData(player)
             spawningContinuousBeam   = false,
             continuousLaser          = nil,
             continuousBeamGraceTimer = 0,
+            allowingTapTear          = false,
 
             -- Tainted Hal
             emeraldSparks       = 0.0,
@@ -266,6 +267,162 @@ local function StopContinuousBeam(data)
     data.spawningContinuousBeam = false
 end
 
+local function GetTapTearCount(player)
+    local count = 1
+    if not (player and CollectibleType) then return count end
+    pcall(function()
+        if CollectibleType.COLLECTIBLE_QUAD_SHOT and player:HasCollectible(CollectibleType.COLLECTIBLE_QUAD_SHOT) then
+            count = 4
+        elseif CollectibleType.COLLECTIBLE_INNER_EYE and player:HasCollectible(CollectibleType.COLLECTIBLE_INNER_EYE) then
+            count = 3
+        end
+        if CollectibleType.COLLECTIBLE_20_20 and player:HasCollectible(CollectibleType.COLLECTIBLE_20_20) then
+            local n20 = (player.GetCollectibleNum and player:GetCollectibleNum(CollectibleType.COLLECTIBLE_20_20)) or 1
+            if count == 1 then
+                count = 1 + math.max(1, n20)
+            else
+                count = count + math.max(1, n20)
+            end
+        end
+        if PlayerForm and PlayerForm.PLAYERFORM_BABY and player.HasPlayerForm and player:HasPlayerForm(PlayerForm.PLAYERFORM_BABY) then
+            count = math.max(count, 3)
+        end
+    end)
+    return math.min(count, 8)
+end
+
+-- Raycast from startWorld along dir across the current Room until hitting a wall (passing spectrally over rocks/pits)
+local function ComputeContinuousBeamEndWorld(startWorld, dir)
+    if not startWorld then return Vector.Zero end
+    local d = (dir and dir:Length() > 0.001) and dir:Normalized() or Vector(1, 0)
+    local room = Game():GetRoom()
+    if not room then
+        return startWorld + d * 400.0
+    end
+
+    local function IsWallAt(p)
+        if room.IsPositionInRoom and not room:IsPositionInRoom(p, 0) then
+            return true
+        end
+        if room.GetGridCollisionAtPos and GridCollisionClass then
+            local col = room:GetGridCollisionAtPos(p)
+            if col == GridCollisionClass.COLLISION_WALL then
+                return true
+            end
+        end
+        return false
+    end
+
+    local maxDist   = 1600.0
+    local step      = 8.0
+    local lastValid = 0.0
+    local hitDist   = maxDist
+
+    local dist = step
+    while dist <= maxDist do
+        local p = startWorld + d * dist
+        if IsWallAt(p) then
+            -- If flying near the room edge and aiming inward into the room, allow exiting the boundary wall margin first
+            if dist <= 24.0 and not IsWallAt(startWorld + d * (dist + 24.0)) then
+                lastValid = dist
+            else
+                hitDist = dist
+                break
+            end
+        else
+            lastValid = dist
+        end
+        dist = dist + step
+    end
+
+    local lo = lastValid
+    local hi = hitDist
+    for _ = 1, 4 do
+        local mid = (lo + hi) * 0.5
+        if IsWallAt(startWorld + d * mid) then
+            hi = mid
+        else
+            lo = mid
+        end
+    end
+
+    local finalDist = math.max(12.0, (lo + hi) * 0.5)
+    return startWorld + d * finalDist
+end
+
+-- Perform continuous emerald laser beam hit/damage logic directly in Lua on tick frames (every 4 frames)
+local function TickContinuousBeamDamage(player, data, startWorld, endWorld)
+    local seg    = endWorld - startWorld
+    local segLen = seg:Length()
+    if segLen < 1.0 then return end
+    local segDir = seg / segLen
+
+    local beamScale  = IsTaintedHal(player) and 1.25 or (data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0))
+    local baseRadius = 18.0 * beamScale
+    local tickDmg    = (player.Damage or 3.5) * HAL_CONTINUOUS_BEAM_DMG_MULT
+    local applyFear  = IsTaintedHal(player)
+        or (TearFlags and TearFlags.TEAR_FEAR and player.TearFlags and ((player.TearFlags & TearFlags.TEAR_FEAR) ~= 0))
+
+    for _, ent in ipairs(Isaac.GetRoomEntities()) do
+        if ent and ent:Exists() and not ent:IsDead() then
+            local isEnemy = ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy()
+            local isFire  = (EntityType and ent.Type == EntityType.ENTITY_FIREPLACE)
+            if isEnemy or isFire then
+                local toEnt       = ent.Position - startWorld
+                local proj        = toEnt.X * segDir.X + toEnt.Y * segDir.Y
+                local clampedProj = math.max(0.0, math.min(segLen, proj))
+                local closestPt   = startWorld + segDir * clampedProj
+                local perpDist    = (ent.Position - closestPt):Length()
+                local entRadius   = math.max(8.0, ent.Size or 12.0)
+
+                if perpDist <= (baseRadius + entRadius) then
+                    if isEnemy then
+                        ent:TakeDamage(tickDmg, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
+                        if applyFear then
+                            pcall(function()
+                                ent:AddFear(EntityRef(player), 90)
+                                ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
+                            end)
+                        end
+                        local splashPos = closestPt * 0.4 + ent.Position * 0.6
+                        local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
+                        SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                    elseif isFire then
+                        pcall(function()
+                            ent:TakeDamage(tickDmg, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Damage destroyable grid entities (GRID_POOP, GRID_TNT) along the beam ray
+    local room = Game():GetRoom()
+    if room and GridEntityType then
+        local visitedGrid = {}
+        local d = 0.0
+        while d <= segLen do
+            local samplePos = startWorld + segDir * d
+            local gridIdx = room:GetGridIndex(samplePos)
+            if gridIdx and gridIdx >= 0 and not visitedGrid[gridIdx] then
+                visitedGrid[gridIdx] = true
+                local gridEnt = room:GetGridEntity(gridIdx)
+                if gridEnt then
+                    local gtype = gridEnt:GetType()
+                    if gtype == GridEntityType.GRID_POOP or gtype == GridEntityType.GRID_TNT then
+                        pcall(function()
+                            gridEnt:Hurt(1)
+                        end)
+                    end
+                end
+            end
+            if d >= segLen then break end
+            d = math.min(segLen, d + 20.0)
+        end
+    end
+end
+
 -- Compute the visual/screen-space offset of the character's outstretched Power Ring hand IN FRONT of the player (for lasers & flares)
 local function GetRingHandOffset(player, fireVel)
     local headDir = player:GetHeadDirection()
@@ -402,6 +559,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.spawningContinuousBeam   = false
         data.continuousLaser          = nil
         data.continuousBeamGraceTimer = 0
+        data.allowingTapTear          = false
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -426,6 +584,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.spawningContinuousBeam   = false
         data.continuousLaser          = nil
         data.continuousBeamGraceTimer = 0
+        data.allowingTapTear          = false
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -495,6 +654,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
             data.lastShootDir       = shootDir
             data.lastRingHandOffset = handOffset
 
+            if (data.shootHoldFrames or 0) == 0 then
+                data.firedSmallBeamThisPress = false
+            end
+
             -- If the player was just channeling the continuous beam and switched arrow keys (<= 5 frame gap),
             -- resume the continuous emerald beam immediately without any startup delay or discrete tear!
             if (data.continuousBeamGraceTimer or 0) > 0 then
@@ -512,59 +675,14 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 data.continuousBeamGraceTimer = 5
                 data.bufferedClickDir         = nil
                 -- Suppress discrete tear projectiles while channeling the continuous emerald laser beam
-                player.FireDelay = math.max(player.FireDelay, 5)
-
-                local angle = shootDir:GetAngleDegrees()
+                player.FireDelay    = math.max(player.FireDelay, 5)
                 data.ringFlareTimer = 4
 
-                local laser = data.continuousLaser
-                if not (laser and laser:Exists() and not laser:IsDead()) then
-                    data.spawningContinuousBeam = true
-                    local ok, spawned = pcall(function()
-                        -- Spawn continuous beam with a long timeout and keep refreshing it every frame so it never pulses or restarts!
-                        return EntityLaser.ShootAngle(2, player.Position, angle, 60, handOffset, player)
-                    end)
-                    data.spawningContinuousBeam = false
-                    if ok and spawned then
-                        laser = spawned
-                        data.continuousLaser = laser
-                    else
-                        laser = nil
-                        data.continuousLaser = nil
-                    end
-                end
-
-                if laser and laser:Exists() then
-                    local ld = laser:GetData()
-                    ld.isGLContinuousBeam = true
-                    ld.glLaserSynergyInit = true
-                    pcall(function()
-                        laser.Parent              = player
-                        laser.DisableFollowParent = false
-                        laser.ParentOffset        = Vector.Zero
-                        laser.PositionOffset      = handOffset
-                        laser.AngleDegrees        = angle
-                        laser.LastAngleDegrees    = angle
-                        laser.Timeout             = 60
-                        laser:SetTimeout(60)
-                        laser:SetOneHit(false)
-                        laser.OneHit              = false
-                        laser.DepthOffset         = 35
-                        laser.CollisionDamage     = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
-                        local flags               = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-                        if IsTaintedHal(player) then
-                            flags = flags | TearFlags.TEAR_FEAR
-                        end
-                        laser.TearFlags           = flags
-                        local beamScale           = IsTaintedHal(player) and 1.25 or (data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0))
-                        laser.SpriteScale         = Vector(beamScale, beamScale)
-                        local lSpr                = laser:GetSprite()
-                        if lSpr then
-                            -- Keep Variant 2's non-looping 4-frame animation locked on frame 0 and fully transparent so C++ never draws a secondary beam behind the player!
-                            lSpr:SetFrame(0)
-                            lSpr.Color = Color(0.1, 1.0, 0.38, 0.0, 0, 0, 0)
-                        end
-                    end)
+                -- Tick continuous emerald beam damage every HAL_CONTINUOUS_TICK_FRAMES (4) frames directly in Lua (spectral over rocks, stops at walls)
+                if frame % HAL_CONTINUOUS_TICK_FRAMES == 0 then
+                    local startWorld = player.Position + handOffset
+                    local endWorld   = ComputeContinuousBeamEndWorld(startWorld, shootDir)
+                    TickContinuousBeamDamage(player, data, startWorld, endWorld)
                 end
 
                 -- Drain Willpower smoothly when Hal Jordan channels the continuous beam
@@ -614,35 +732,51 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
 
             if data.isFiringContinuousBeam or data.continuousLaser then
                 StopContinuousBeam(data)
-                -- Allow responsive click-firing right after releasing the continuous beam
-                player.FireDelay = math.min(player.FireDelay, 2)
             end
             data.shootHoldFrames         = 0
             data.firedSmallBeamThisPress = false
+        end
 
-            -- Fire any buffered tap/click shot as soon as minimum click interval is reached
-            if data.bufferedClickDir then
-                local isDepleted = IsHalJordan(player) and data.ringDepleted
-                if frame > (data.bufferedClickExpireFrame or 0) or isDepleted or not CanUseContinuousBeam(player) then
-                    data.bufferedClickDir = nil
-                else
-                    local minClickInterval = math.max(4, math.min(8, math.floor((player.MaxFireDelay or 10) * 0.65)))
-                    if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
-                        local dir = data.bufferedClickDir
-                        data.bufferedClickDir = nil
-                        local spawnOffset = GetRingBeamTearSpawnOffset(player, dir)
-                        local shotSpeed   = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
-                        local vel         = dir * shotSpeed
-                        pcall(function()
-                            vel = vel + player:GetTearMovementInheritance(dir)
-                        end)
-                        pcall(function()
+        -- Fire any buffered tap/click shot as soon as minimum click interval is reached
+        if data.bufferedClickDir and not data.isFiringContinuousBeam then
+            local isDepleted = IsHalJordan(player) and data.ringDepleted
+            if frame > (data.bufferedClickExpireFrame or 0) or isDepleted or not CanUseContinuousBeam(player) then
+                data.bufferedClickDir = nil
+            else
+                local minClickInterval = math.max(4, math.min(8, math.floor((player.MaxFireDelay or 10) * 0.65)))
+                if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
+                    local dir = data.bufferedClickDir
+                    data.bufferedClickDir   = nil
+                    data.lastSmallBeamFrame = frame
+                    local spawnOffset = GetRingBeamTearSpawnOffset(player, dir)
+                    local shotSpeed   = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
+                    local shotCount   = GetTapTearCount(player)
+                    data.allowingTapTear = true
+                    pcall(function()
+                        for sIdx = 1, shotCount do
+                            local shotDir = dir
+                            if shotCount >= 3 and dir.Rotated then
+                                local spreadDeg = (sIdx - (shotCount + 1) * 0.5) * 3.5
+                                shotDir = dir:Rotated(spreadDeg)
+                            end
+                            local vel = shotDir * shotSpeed
+                            pcall(function()
+                                vel = vel + player:GetTearMovementInheritance(shotDir)
+                            end)
                             player:FireTear(player.Position + spawnOffset, vel, false, false, false)
-                        end)
-                        player.FireDelay = player.MaxFireDelay
-                    end
+                        end
+                    end)
+                    data.allowingTapTear         = false
+                    data.firedSmallBeamThisPress = false
+                    player.FireDelay             = math.max(player.MaxFireDelay or 10, 2)
                 end
             end
+        end
+
+        -- Always keep native FireDelay >= 2 (even while idle!) whenever CanUseContinuousBeam(player) is true,
+        -- so C++ EntityPlayer::Update() NEVER auto-fires an unbuffered discrete tear on Frame 1 when starting to hold shoot!
+        if CanUseContinuousBeam(player) then
+            player.FireDelay = math.max(player.FireDelay, 2)
         end
     end
 
@@ -791,12 +925,14 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
 
     local data = GetPlayerData(player)
 
-    -- While Hal Jordan or Tainted Hal is holding down the button to channel the continuous beam, suppress small beam tears
-    if (IsHalJordan(player) or IsTaintedHal(player)) and data.isFiringContinuousBeam then
+    -- Suppress unbuffered C++ tears when CanUseContinuousBeam(player) is active (so holding shoot never fires a Frame-1 discrete bolt!)
+    if IsHalJordan(player) or IsTaintedHal(player) then
         local td = tear:GetData()
         if not (td and td.isGiantFist) then
-            tear:Remove()
-            return
+            if data.isFiringContinuousBeam or (CanUseContinuousBeam(player) and not data.allowingTapTear) then
+                tear:Remove()
+                return
+            end
         end
     end
 
@@ -1941,37 +2077,30 @@ local function RenderGLPlayerAura(player)
 end
 
 local function RenderGLContinuousBeam(player, data, flareSpr, frame)
-    if not (data and data.isFiringContinuousBeam and data.continuousLaser and data.continuousLaser:Exists()) then
+    if not (data and data.isFiringContinuousBeam) then
         return
     end
     local beamSpr = GetGLContBeamSprite()
     if not beamSpr then return end
 
-    local laser = data.continuousLaser
     local shootInput = player:GetShootingInput()
-    local handOffset = data.lastRingHandOffset or GetRingHandOffset(player, shootInput)
-    local startWorld = player.Position + handOffset
-    local startScreen = Isaac.WorldToScreen(startWorld)
-
-    local angle = laser.AngleDegrees or 0
-    local dir = Vector.FromAngle(angle)
-    local distWorld = 280.0
-    pcall(function()
-        local calcEp = nil
-        if EntityLaser and EntityLaser.CalculateEndPoint then
-            calcEp = EntityLaser.CalculateEndPoint(player.Position, dir, handOffset, player, 1.0)
-        end
-        if calcEp and (calcEp - player.Position):Length() > 8.0 then
-            distWorld = math.max(20.0, (calcEp - player.Position):Length())
+    local dir = data.lastShootDir
+    if not (dir and dir:Length() > 0.001) then
+        if shootInput and shootInput:Length() > 0.1 then
+            dir = shootInput:Normalized()
         else
-            local ep = laser:GetEndPoint()
-            if ep and (ep - player.Position):Length() > 8.0 then
-                distWorld = math.max(20.0, (ep - player.Position):Length())
-            end
+            dir = Vector(1, 0)
         end
-    end)
+    else
+        dir = dir:Normalized()
+    end
 
-    local endScreen = Isaac.WorldToScreen(startWorld + dir * distWorld)
+    local handOffset  = data.lastRingHandOffset or GetRingHandOffset(player, dir)
+    local startWorld  = player.Position + handOffset
+    local endWorld    = ComputeContinuousBeamEndWorld(startWorld, dir)
+    local startScreen = Isaac.WorldToScreen(startWorld)
+    local endScreen   = Isaac.WorldToScreen(endWorld)
+
     local screenDelta = endScreen - startScreen
     local totalScreenLen = screenDelta:Length()
     if totalScreenLen < 4.0 then return end
@@ -1980,7 +2109,7 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
     local screenAngle = screenDir:GetAngleDegrees()
     local thickness = IsTaintedHal(player) and 1.18 or (data.overcharge and 1.28 or (data.surgeBuff and 1.12 or 1.0))
     local segWidth = 48.0
-    local segStep  = 46.0
+    local segStep  = 48.0
     local dist     = 0.0
     local segIdx   = 0
 
