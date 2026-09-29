@@ -313,31 +313,38 @@ local function ComputeContinuousBeamEndWorld(startWorld, dir)
         return false
     end
 
-    local maxDist   = 1600.0
-    local step      = 8.0
-    local lastValid = 0.0
-    local hitDist   = maxDist
+    local maxDist        = 1600.0
+    local step           = 8.0
+    local hasEnteredRoom = not IsWallAt(startWorld)
+    local lastValid      = 0.0
+    local hitDist        = maxDist
 
     local dist = step
     while dist <= maxDist do
         local p = startWorld + d * dist
         if IsWallAt(p) then
-            -- If flying near the room edge and aiming inward into the room, allow exiting the boundary wall margin first
-            if dist <= 24.0 and not IsWallAt(startWorld + d * (dist + 24.0)) then
-                lastValid = dist
-            else
+            if hasEnteredRoom then
                 hitDist = dist
+                break
+            elseif dist >= 80.0 then
+                -- Started inside a wall margin while flying and aiming outward away from the room
+                hitDist = 12.0
                 break
             end
         else
-            lastValid = dist
+            hasEnteredRoom = true
+            lastValid      = dist
         end
         dist = dist + step
     end
 
+    if not hasEnteredRoom then
+        return startWorld + d * 12.0
+    end
+
     local lo = lastValid
     local hi = hitDist
-    for _ = 1, 4 do
+    for _ = 1, 5 do
         local mid = (lo + hi) * 0.5
         if IsWallAt(startWorld + d * mid) then
             hi = mid
@@ -362,11 +369,13 @@ local function TickContinuousBeamDamage(player, data, startWorld, endWorld)
     local tickDmg    = (player.Damage or 3.5) * HAL_CONTINUOUS_BEAM_DMG_MULT
     local applyFear  = IsTaintedHal(player)
         or (TearFlags and TearFlags.TEAR_FEAR and player.TearFlags and ((player.TearFlags & TearFlags.TEAR_FEAR) ~= 0))
+    local frame      = Game():GetFrameCount()
 
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         if ent and ent:Exists() and not ent:IsDead() then
             local isEnemy = ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy()
             local isFire  = (EntityType and ent.Type == EntityType.ENTITY_FIREPLACE)
+                and (not ent.HitPoints or ent.HitPoints > 1.0)
             if isEnemy or isFire then
                 local toEnt       = ent.Position - startWorld
                 local proj        = toEnt.X * segDir.X + toEnt.Y * segDir.Y
@@ -377,16 +386,22 @@ local function TickContinuousBeamDamage(player, data, startWorld, endWorld)
 
                 if perpDist <= (baseRadius + entRadius) then
                     if isEnemy then
-                        ent:TakeDamage(tickDmg, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
-                        if applyFear then
-                            pcall(function()
-                                ent:AddFear(EntityRef(player), 90)
-                                ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
-                            end)
+                        local ed = ent.GetData and ent:GetData()
+                        if not (ed and ed.lastGLContBeamTickFrame == frame) then
+                            if ed then ed.lastGLContBeamTickFrame = frame end
+                            local tookDmg = ent:TakeDamage(tickDmg, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
+                            if tookDmg ~= false then
+                                if applyFear then
+                                    pcall(function()
+                                        ent:AddFear(EntityRef(player), 90)
+                                        ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
+                                    end)
+                                end
+                                local splashPos = closestPt * 0.4 + ent.Position * 0.6
+                                local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
+                                SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                            end
                         end
-                        local splashPos = closestPt * 0.4 + ent.Position * 0.6
-                        local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
-                        SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
                     elseif isFire then
                         pcall(function()
                             ent:TakeDamage(tickDmg, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
@@ -397,23 +412,29 @@ local function TickContinuousBeamDamage(player, data, startWorld, endWorld)
         end
     end
 
-    -- Damage destroyable grid entities (GRID_POOP, GRID_TNT) along the beam ray
+    -- Damage destroyable grid entities (GRID_POOP, GRID_TNT) along the beam ray (including lateral beam width)
     local room = Game():GetRoom()
     if room and GridEntityType then
         local visitedGrid = {}
-        local d = 0.0
+        local perp        = Vector(-segDir.Y, segDir.X)
+        local edgeOffset  = baseRadius * 0.75
+        local offsets     = { Vector.Zero, perp * edgeOffset, perp * (-edgeOffset) }
+        local d           = 0.0
         while d <= segLen do
-            local samplePos = startWorld + segDir * d
-            local gridIdx = room:GetGridIndex(samplePos)
-            if gridIdx and gridIdx >= 0 and not visitedGrid[gridIdx] then
-                visitedGrid[gridIdx] = true
-                local gridEnt = room:GetGridEntity(gridIdx)
-                if gridEnt then
-                    local gtype = gridEnt:GetType()
-                    if gtype == GridEntityType.GRID_POOP or gtype == GridEntityType.GRID_TNT then
-                        pcall(function()
-                            gridEnt:Hurt(1)
-                        end)
+            local basePos = startWorld + segDir * d
+            for _, off in ipairs(offsets) do
+                local samplePos = basePos + off
+                local gridIdx = room:GetGridIndex(samplePos)
+                if gridIdx and gridIdx >= 0 and not visitedGrid[gridIdx] then
+                    visitedGrid[gridIdx] = true
+                    local gridEnt = room:GetGridEntity(gridIdx)
+                    if gridEnt then
+                        local gtype = gridEnt:GetType()
+                        if gtype == GridEntityType.GRID_POOP or gtype == GridEntityType.GRID_TNT then
+                            pcall(function()
+                                gridEnt:Hurt(1)
+                            end)
+                        end
                     end
                 end
             end
@@ -737,8 +758,8 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
             data.firedSmallBeamThisPress = false
         end
 
-        -- Fire any buffered tap/click shot as soon as minimum click interval is reached
-        if data.bufferedClickDir and not data.isFiringContinuousBeam then
+        -- Fire any buffered tap/click shot as soon as minimum click interval is reached (only while not actively holding shoot)
+        if data.bufferedClickDir and not isHoldingShoot and not data.isFiringContinuousBeam then
             local isDepleted = IsHalJordan(player) and data.ringDepleted
             if frame > (data.bufferedClickExpireFrame or 0) or isDepleted or not CanUseContinuousBeam(player) then
                 data.bufferedClickDir = nil
@@ -751,9 +772,13 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     local spawnOffset = GetRingBeamTearSpawnOffset(player, dir)
                     local shotSpeed   = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
                     local shotCount   = GetTapTearCount(player)
-                    data.allowingTapTear = true
+                    data.allowingTapTear  = true
+                    data.tapBurstCount    = shotCount
+                    data.tapBurstBaseDir  = dir
+                    data.tapBurstDepleted = isDepleted
                     pcall(function()
                         for sIdx = 1, shotCount do
+                            data.tapBurstIndex = sIdx
                             local shotDir = dir
                             if shotCount >= 3 and dir.Rotated then
                                 local spreadDeg = (sIdx - (shotCount + 1) * 0.5) * 3.5
@@ -767,6 +792,10 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                         end
                     end)
                     data.allowingTapTear         = false
+                    data.tapBurstCount           = nil
+                    data.tapBurstIndex           = nil
+                    data.tapBurstBaseDir         = nil
+                    data.tapBurstDepleted        = nil
                     data.firedSmallBeamThisPress = false
                     player.FireDelay             = math.max(player.MaxFireDelay or 10, 2)
                 end
@@ -952,10 +981,16 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     end
 
     -- 1. Snap projectile spawn position to the outstretched Power Ring hand IN FRONT of the player!
-    local handOffset  = GetRingHandOffset(player, tear.Velocity)
-    local spawnOffset = GetRingBeamTearSpawnOffset(player, tear.Velocity)
+    local baseDir     = (data.allowingTapTear and data.tapBurstBaseDir) or tear.Velocity
+    local handOffset  = GetRingHandOffset(player, baseDir)
+    local spawnOffset = GetRingBeamTearSpawnOffset(player, baseDir)
     local perpOffset  = Vector.Zero
-    if data.multiShotIndex > 0 and tear.Velocity:Length() > 0.1 then
+    if data.allowingTapTear and (data.tapBurstCount or 1) > 1 and baseDir:Length() > 0.1 then
+        local dir        = baseDir:Normalized()
+        local perp       = Vector(-dir.Y, dir.X)
+        local laneOffset = (data.tapBurstIndex or 1) - ((data.tapBurstCount or 1) + 1) * 0.5
+        perpOffset       = perp * math.max(-14.0, math.min(14.0, laneOffset * 5.5))
+    elseif data.multiShotIndex > 0 and tear.Velocity:Length() > 0.1 then
         local dir = tear.Velocity:Normalized()
         local perp = Vector(-dir.Y, dir.X)
         local side = (data.multiShotIndex % 2 == 1) and 1 or -1
@@ -968,8 +1003,13 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     data.lastRingHandOffset = handOffset
     data.ringFlareTimer     = 6
 
+    local isDepletedShot = IsHalJordan(player) and data.ringDepleted
+    if data.allowingTapTear and data.tapBurstDepleted == false then
+        isDepletedShot = false
+    end
+
     -- Grant ONLY Piercing (pass through enemies) + Spectral (pass through rocks/objects)
-    if not (IsHalJordan(player) and data.ringDepleted) then
+    if not isDepletedShot then
         tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
     end
     if IsTaintedHal(player) then
@@ -981,7 +1021,7 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
 
     -- 2. HAL JORDAN WILLPOWER & BEAM SCALING
     if IsHalJordan(player) then
-        if data.ringDepleted then
+        if isDepletedShot then
             -- Limited range when depleted: weak sputtering spark near the ring hand
             tear.Velocity = tear.Velocity * 0.18
             ApplyRingBeamSprite(tear, 0.55)
@@ -1004,7 +1044,8 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
             data.willpower = math.max(0, data.willpower - drain)
             local newWillBucket = math.floor(data.willpower + 0.5)
 
-            if data.willpower <= 0 then
+            local isFinalBurstTear = (not data.allowingTapTear) or ((data.tapBurstIndex or 1) >= (data.tapBurstCount or 1))
+            if data.willpower <= 0 and isFinalBurstTear then
                 data.ringDepleted = true
                 data.willpower = 0
                 player:AnimateSad()
@@ -1012,7 +1053,7 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
                 RefreshCharacterCostume(player)
-            elseif newWillBucket ~= prevWillBucket then
+            elseif newWillBucket ~= prevWillBucket and isFinalBurstTear then
                 player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                 player:EvaluateItems()
             end
@@ -1159,21 +1200,14 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
     end
 end)
 
--- Throttle Hal Jordan & Tainted Hal continuous beam hit frequency (once every HAL_CONTINUOUS_TICK_FRAMES = 4 frames per enemy)
--- so continuous beam DPS (1.50x DMG/sec) and per-tick damage (0.20x DMG) are always strictly lower than discrete Ring Beams!
+-- Throttle any legacy continuous beam EntityLaser hit frequency (once every HAL_CONTINUOUS_TICK_FRAMES = 4 frames per enemy)
 GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flags, source)
     if not entity or not entity:IsActiveEnemy(false) then return end
     if (flags & DamageFlag.DAMAGE_LASER) == 0 then return end
     if not (source and source.Entity) then return end
 
-    local player = source.Entity:ToPlayer()
-    if not player and source.Entity.SpawnerEntity then
-        player = source.Entity.SpawnerEntity:ToPlayer()
-    end
-    if not (player and (IsHalJordan(player) or IsTaintedHal(player))) then return end
-
-    local data = GetPlayerData(player)
-    if not data.isFiringContinuousBeam then return end
+    local srcData = source.Entity.GetData and source.Entity:GetData()
+    if not (srcData and srcData.isGLContinuousBeam) then return end
 
     local ed = entity:GetData()
     local frame = Game():GetFrameCount()
@@ -2182,7 +2216,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOff
     if flareSpr then
         local shootInput = player:GetShootingInput()
         local isFiring = (shootInput and shootInput:Length() > 0.1) or (data.ringFlareTimer and data.ringFlareTimer > 0) or data.isFiringContinuousBeam
-        local handOffset = GetRingHandOffset(player, shootInput)
+        local handOffset = (data.isFiringContinuousBeam and data.lastRingHandOffset) or GetRingHandOffset(player, shootInput)
         local handScreenPos = Isaac.WorldToScreen(player.Position + handOffset)
 
         local flareFrame = math.floor(frame / (isFiring and 2 or 4)) % 4
