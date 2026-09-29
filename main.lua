@@ -37,8 +37,9 @@ local HAL_SHOT_SPEED_BONUS    =  0.30  -- high shot speed for ring beams
 -- Willpower meter & Hal Jordan beam mode constants
 local WILLPOWER_MAX                 = 100.0
 local WILLPOWER_PER_TEAR            =  0.5   -- each small beam tear costs 0.5% willpower
-local HAL_CONTINUOUS_HOLD_FRAMES    =  8     -- holding fire >= 8 frames (~0.26s) channels continuous beam; clicking (<8 frames) fires small beams
-local HAL_CONTINUOUS_BEAM_DMG_MULT  =  0.16  -- continuous beam deals 16% of small-beam damage per tick (lower damage than small beams)
+local HAL_CONTINUOUS_HOLD_FRAMES    =  9     -- holding fire >= 9 frames (0.30s) channels continuous beam; clicking (<9 frames) fires small beams
+local HAL_CONTINUOUS_BEAM_DMG_MULT  =  0.20  -- each continuous beam tick deals 20% of small-beam damage
+local HAL_CONTINUOUS_TICK_FRAMES    =  4     -- continuous beam ticks once every 4 frames (7.5/sec -> 1.5x DMG/sec vs 2.73-5.0x DMG/sec for small beams)
 local HAL_CONTINUOUS_WILL_DRAIN     =  0.06  -- willpower drained per frame while holding continuous beam
 
 -- Tainted Hal stats
@@ -51,8 +52,8 @@ local SPARK_PER_KILL           =  10.0  -- each picked-up Green Lantern emblem g
 local SPARK_LIFETIME_FRAMES    = 240    -- emblems last 8 seconds (240 frames at 30fps) on the floor before vanishing on their own
 local SPARK_BLINK_FRAMES       =  60    -- emblems blink during their final 2 seconds on the floor
 local SPARK_PICKUP_RANGE       =  20.0  -- must walk directly over the Green Lantern emblem to pick it up (reduced from 60)
-local SPARK_DROP_CHANCE_FEARED =  0.22  -- 22% drop rate from killed Feared enemies (significantly reduced from 100%)
-local SPARK_DROP_CHANCE_NORMAL =  0.10  -- 10% drop rate from killed normal enemies (significantly reduced from 40%)
+local SPARK_DROP_CHANCE_FEARED =  0.14  -- 14% drop rate from killed Feared enemies (significantly reduced from 100%; Tainted Hal tears inflict Fear)
+local SPARK_DROP_CHANCE_NORMAL =  0.08  -- 8% drop rate from killed normal enemies (significantly reduced from 40%)
 
 -- Coast City construct duration (frames, 30 fps base)
 local COAST_CITY_DURATION  = 300  -- 10 seconds
@@ -66,17 +67,22 @@ local function GetPlayerData(player)
     if not d.GreenLantern then
         d.GreenLantern = {
             -- Hal Jordan
-            willpower              = WILLPOWER_MAX,
-            ringDepleted           = false,
-            overcharge             = false,
-            surgeBuff              = false,
-            overchargeRoomIdx      = -1,
-            oathTextTimer          = 0,
-            oathText               = "",
-            shootHoldFrames        = 0,
-            isFiringContinuousBeam = false,
-            spawningContinuousBeam = false,
-            continuousLaser        = nil,
+            willpower               = WILLPOWER_MAX,
+            ringDepleted            = false,
+            overcharge              = false,
+            surgeBuff               = false,
+            overchargeRoomIdx       = -1,
+            oathTextTimer           = 0,
+            oathText                = "",
+            shootHoldFrames         = 0,
+            lastSmallBeamFrame      = -999,
+            firedSmallBeamThisPress = false,
+            lastShootDir            = nil,
+            bufferedClickDir        = nil,
+            bufferedClickExpireFrame = 0,
+            isFiringContinuousBeam  = false,
+            spawningContinuousBeam  = false,
+            continuousLaser         = nil,
 
             -- Tainted Hal
             emeraldSparks       = 0.0,
@@ -114,72 +120,41 @@ local activeCoastCity = {
     sparkBonus = 1.0,
 }
 
--- Active floor Green Lantern Emblem drops for Tainted Hal (never spawned as coins/pickups so they never persist as pennies!)
+-- Active floor Green Lantern Emblem drops for Tainted Hal
+-- Rendered directly via gl_lantern_spark.anm2 Sprite so they never spawn as coins/pickups or trigger C++ EffectVariant 0 explosions!
 local activeEmeraldSparks = {}
-
-local function CreateLanternEmblemEffect(pos)
-    local eff = Isaac.Spawn(
-        EntityType.ENTITY_EFFECT,
-        0,
-        0,
-        pos,
-        Vector.Zero,
-        nil
-    )
-    if eff then
-        pcall(function()
-            local spr = eff:GetSprite()
-            spr:Load("gfx/effects/gl_lantern_spark.anm2", true)
-            spr:Play("Idle", true)
-            eff.DepthOffset = -10
-        end)
-        eff:GetData().isEmeraldSparkEffect = true
-    end
-    return eff
-end
 
 local function SpawnLanternEmblemDrop(pos)
     local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
-    local eff = CreateLanternEmblemEffect(pos)
     table.insert(activeEmeraldSparks, {
         pos        = Vector(pos.X, pos.Y),
         spawnFrame = Game():GetFrameCount(),
         roomIdx    = roomIdx,
-        effect     = eff,
     })
 end
 
 local function ClearAllLanternEmblemDrops()
-    for _, sp in ipairs(activeEmeraldSparks) do
-        if sp.effect and sp.effect:Exists() then
-            sp.effect:Remove()
-        end
-    end
     activeEmeraldSparks = {}
-    for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, 0, -1, false)) do
-        local ed = ent:GetData()
-        if ed and ed.isEmeraldSparkEffect then
-            ent:Remove()
-        end
-    end
 end
 
 local function CanUseHalContinuousBeam(player)
     if not IsHalJordan(player) then return false end
     local data = GetPlayerData(player)
     if data.ringDepleted then return false end
-    -- Allow charge/override weapons (Brimstone, Mom's Knife, Tech X, Monstro's Lung, etc.) to use their own hold-to-charge mechanics
+    -- Allow charge/override weapons (Brimstone, Mom's Knife, Tech X, Technology, Monstro's Lung, etc.) to use their own mechanics
     if CollectibleType then
         local overrideItems = {
             CollectibleType.COLLECTIBLE_BRIMSTONE,
             CollectibleType.COLLECTIBLE_MOMS_KNIFE,
             CollectibleType.COLLECTIBLE_TECH_X,
+            CollectibleType.COLLECTIBLE_TECHNOLOGY,
             CollectibleType.COLLECTIBLE_MONSTROS_LUNG,
             CollectibleType.COLLECTIBLE_CHOCOLATE_MILK,
             CollectibleType.COLLECTIBLE_CURSED_EYE,
             CollectibleType.COLLECTIBLE_EPIC_FETUS,
             CollectibleType.COLLECTIBLE_DR_FETUS,
             CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE,
+            CollectibleType.COLLECTIBLE_SPIRIT_SWORD,
         }
         for _, itemId in ipairs(overrideItems) do
             if itemId and player:HasCollectible(itemId) then
@@ -349,15 +324,20 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
     -- HAL JORDAN INIT
     if IsHalJordan(player) then
         local data = GetPlayerData(player)
-        data.willpower              = WILLPOWER_MAX
-        data.ringDepleted           = false
-        data.overcharge             = false
-        data.surgeBuff              = false
-        data.overchargeRoomIdx      = -1
-        data.shootHoldFrames        = 0
-        data.isFiringContinuousBeam = false
-        data.spawningContinuousBeam = false
-        data.continuousLaser        = nil
+        data.willpower                = WILLPOWER_MAX
+        data.ringDepleted             = false
+        data.overcharge               = false
+        data.surgeBuff                = false
+        data.overchargeRoomIdx        = -1
+        data.shootHoldFrames          = 0
+        data.lastSmallBeamFrame       = -999
+        data.firedSmallBeamThisPress  = false
+        data.lastShootDir             = nil
+        data.bufferedClickDir         = nil
+        data.bufferedClickExpireFrame = 0
+        data.isFiringContinuousBeam   = false
+        data.spawningContinuousBeam   = false
+        data.continuousLaser          = nil
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -427,19 +407,30 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
     -- 1) Clicking / tapping (< HAL_CONTINUOUS_HOLD_FRAMES): fires small high-damage Ring Beams as before.
     -- 2) Holding the button (>= HAL_CONTINUOUS_HOLD_FRAMES): channels a continuous emerald laser beam that deals lower damage.
     if IsHalJordan(player) then
+        local frame = Game():GetFrameCount()
+        if data.lastSmallBeamFrame and frame < data.lastSmallBeamFrame then
+            data.lastSmallBeamFrame = -999
+        end
+
         local shootInput = player:GetShootingInput()
         local isHoldingShoot = shootInput and shootInput:Length() > 0.1
 
         if isHoldingShoot and CanUseHalContinuousBeam(player) then
             data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
+            data.lastShootDir    = shootInput:Normalized()
 
-            -- Make single-click / tap-shooting crisp and responsive when clicking repeatedly
-            if data.shootHoldFrames == 1 and player.FireDelay > 0 and player.FireDelay <= 2 then
-                player.FireDelay = 0
-            end
+            -- Minimum frames between clicked small beams (scales with tear delay, 3-6 frames)
+            local minClickInterval = math.max(3, math.min(6, math.floor((player.MaxFireDelay or 10) * 0.55)))
+            local framesSinceLastBeam = frame - (data.lastSmallBeamFrame or -999)
 
-            if data.shootHoldFrames >= HAL_CONTINUOUS_HOLD_FRAMES then
+            if data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES then
+                -- Ensure every click/tap fires a small beam responsively as soon as minClickInterval allows
+                if not data.firedSmallBeamThisPress and framesSinceLastBeam >= minClickInterval and player.FireDelay > 0 then
+                    player.FireDelay = 0
+                end
+            else
                 data.isFiringContinuousBeam = true
+                data.bufferedClickDir       = nil
                 -- Suppress small beam tears while holding the continuous beam
                 player.FireDelay = math.max(player.FireDelay, 5)
 
@@ -453,7 +444,8 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 if not (laser and laser:Exists() and not laser:IsDead()) then
                     data.spawningContinuousBeam = true
                     local ok, spawned = pcall(function()
-                        return EntityLaser.ShootAngle(1, player.Position, angle, 4, handOffset, player)
+                        -- Variant 2 (Thin Tech Laser) gives a sleek, focused continuous Green Lantern beam without Brimstone blood effects
+                        return EntityLaser.ShootAngle(2, player.Position, angle, 4, handOffset, player)
                     end)
                     data.spawningContinuousBeam = false
                     if ok and spawned then
@@ -469,17 +461,22 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     local ld = laser:GetData()
                     ld.isGLContinuousBeam = true
                     ld.glLaserSynergyInit = true
-                    laser.Parent              = player
-                    laser.DisableFollowParent = false
-                    laser.PositionOffset      = handOffset
-                    laser.AngleDegrees        = angle
-                    laser.Angle               = angle
-                    laser.Timeout             = 4
-                    pcall(function() laser:SetTimeout(4) end)
-                    laser.CollisionDamage     = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
-                    laser.TearFlags           = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-                    laser.Scale               = data.overcharge and 1.25 or (data.surgeBuff and 1.10 or 0.90)
-                    laser:GetSprite().Color   = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+                    pcall(function()
+                        laser.Parent              = player
+                        laser.DisableFollowParent = false
+                        laser.ParentOffset        = Vector.Zero
+                        laser.PositionOffset      = handOffset
+                        laser.AngleDegrees        = angle
+                        laser.LastAngleDegrees    = angle
+                        laser.Timeout             = 4
+                        laser:SetTimeout(4)
+                        laser:SetOneHit(false)
+                        laser.OneHit              = false
+                        laser.CollisionDamage     = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
+                        laser.TearFlags           = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+                        laser.Scale               = data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0)
+                        laser:GetSprite().Color   = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+                    end)
                 end
 
                 -- Drain willpower smoothly while channeling the continuous beam
@@ -509,12 +506,47 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 end
             end
         else
+            -- If player clicked & released (< HAL_CONTINUOUS_HOLD_FRAMES) while still in cooldown, buffer the click so it fires when ready
+            if (data.shootHoldFrames or 0) > 0
+                and data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES
+                and not data.firedSmallBeamThisPress
+                and data.lastShootDir
+                and CanUseHalContinuousBeam(player)
+            then
+                data.bufferedClickDir         = data.lastShootDir
+                data.bufferedClickExpireFrame = frame + 8
+            end
+
             if data.isFiringContinuousBeam or data.continuousLaser then
                 StopHalContinuousBeam(data)
                 -- Allow immediate click-firing of small beams right after releasing the continuous beam
                 player.FireDelay = math.min(player.FireDelay, 2)
             end
-            data.shootHoldFrames = 0
+            data.shootHoldFrames         = 0
+            data.firedSmallBeamThisPress = false
+
+            -- Fire any buffered click shot as soon as the minimum click interval is reached
+            if data.bufferedClickDir then
+                if frame > (data.bufferedClickExpireFrame or 0) or data.ringDepleted or not CanUseHalContinuousBeam(player) then
+                    data.bufferedClickDir = nil
+                else
+                    local minClickInterval = math.max(3, math.min(6, math.floor((player.MaxFireDelay or 10) * 0.55)))
+                    if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
+                        local dir = data.bufferedClickDir
+                        data.bufferedClickDir = nil
+                        local handOffset = GetRingHandOffset(player, dir)
+                        local shotSpeed  = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
+                        local vel        = dir * shotSpeed
+                        pcall(function()
+                            vel = vel + player:GetTearMovementInheritance(dir)
+                        end)
+                        pcall(function()
+                            player:FireTear(player.Position + handOffset, vel, false, false, false)
+                        end)
+                        player.FireDelay = player.MaxFireDelay
+                    end
+                end
+            end
         end
     end
 
@@ -673,6 +705,11 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     end
 
     local frame = Game():GetFrameCount()
+    if IsHalJordan(player) then
+        data.lastSmallBeamFrame      = frame
+        data.firedSmallBeamThisPress = true
+        data.bufferedClickDir        = nil
+    end
 
     -- Multi-shot fan offset (20/20, Inner Eye, Mutant Spider, Monstro's Lung, Conjoined)
     if data.multiShotFrame == frame then
@@ -801,9 +838,11 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
     if data.spawningContinuousBeam or ld.isGLContinuousBeam then
         ld.isGLContinuousBeam   = true
         ld.glLaserSynergyInit   = true
-        laser.CollisionDamage   = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
-        laser.TearFlags         = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-        laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+        pcall(function()
+            laser.CollisionDamage   = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
+            laser.TearFlags         = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+        end)
         data.ringFlareTimer     = 4
         return
     end
@@ -853,12 +892,38 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
     local data = GetPlayerData(player)
     data.ringFlareTimer = 4
     if ld and ld.isGLContinuousBeam then
-        laser.CollisionDamage   = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
-        laser.TearFlags         = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-        laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+        pcall(function()
+            laser.CollisionDamage   = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
+            laser.TearFlags         = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+            laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1.0, 0.12, 0.88, 0.25)
+        end)
     else
         laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
     end
+end)
+
+-- Throttle Hal Jordan's continuous beam hit frequency (once every HAL_CONTINUOUS_TICK_FRAMES = 4 frames per enemy)
+-- so continuous beam DPS (1.50x DMG/sec) and per-tick damage (0.20x DMG) are always strictly lower than small beams!
+GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flags, source)
+    if not entity or not entity:IsActiveEnemy(false) then return end
+    if (flags & DamageFlag.DAMAGE_LASER) == 0 then return end
+    if not (source and source.Entity) then return end
+
+    local player = source.Entity:ToPlayer()
+    if not player and source.Entity.SpawnerEntity then
+        player = source.Entity.SpawnerEntity:ToPlayer()
+    end
+    if not (player and IsHalJordan(player)) then return end
+
+    local data = GetPlayerData(player)
+    if not data.isFiringContinuousBeam then return end
+
+    local ed = entity:GetData()
+    local frame = Game():GetFrameCount()
+    if ed.lastGLContBeamHitFrame and frame >= ed.lastGLContBeamHitFrame and (frame - ed.lastGLContBeamHitFrame) < HAL_CONTINUOUS_TICK_FRAMES then
+        return false
+    end
+    ed.lastGLContBeamHitFrame = frame
 end)
 
 -- 2. MOM'S KNIFE SYNERGY: Hard-Light Emerald Energy Blade
@@ -1275,9 +1340,9 @@ end)
 -- ---------------------------------------------------------------------------
 
 -- Only spawn Green Lantern Emblem drops on actual enemy deaths (never on room transitions),
--- with a significantly reduced drop rate (22% on Feared enemies, 10% on normal enemies).
+-- with a significantly reduced drop rate (14% on Feared enemies, 8% on normal enemies).
 GL:AddCallback(ModCallbacks.MC_POST_NPC_DEATH, function(_, npc)
-    if not npc or not npc:IsEnemy() or (npc.MaxHitPoints and npc.MaxHitPoints <= 1) then return end
+    if not npc or not npc:IsEnemy() or not npc:IsActiveEnemy(true) or (npc.MaxHitPoints and npc.MaxHitPoints <= 1) then return end
 
     local hasTaintedHal = false
     for i = 0, Game():GetNumPlayers() - 1 do
@@ -1303,9 +1368,6 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     for idx = #activeEmeraldSparks, 1, -1 do
         local sp = activeEmeraldSparks[idx]
         if not sp or sp.roomIdx ~= currentRoomIdx then
-            if sp and sp.effect and sp.effect:Exists() then
-                sp.effect:Remove()
-            end
             table.remove(activeEmeraldSparks, idx)
         else
             -- 1. Check walk-over pickup FIRST so any visible emblem on the floor ALWAYS grants its percentage when walked over!
@@ -1337,32 +1399,12 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                     SFXManager():Play(SoundEffect.SOUND_BEEP, 0.65, 0, false, 1.35)
                 end)
 
-                if sp.effect and sp.effect:Exists() then
-                    sp.effect:Remove()
-                end
                 table.remove(activeEmeraldSparks, idx)
             else
-                -- 2. If not walked over yet, check floor lifetime & blink during final 2 seconds before vanishing on its own
+                -- 2. If not walked over yet, check floor lifetime & vanish on the floor after SPARK_LIFETIME_FRAMES (8s)
                 local ageFrames = currentFrame - (sp.spawnFrame or currentFrame)
-                if ageFrames >= SPARK_LIFETIME_FRAMES then
-                    if sp.effect and sp.effect:Exists() then
-                        sp.effect:Remove()
-                    end
+                if ageFrames < 0 or ageFrames >= SPARK_LIFETIME_FRAMES then
                     table.remove(activeEmeraldSparks, idx)
-                else
-                    if not (sp.effect and sp.effect:Exists() and not sp.effect:IsDead()) then
-                        sp.effect = CreateLanternEmblemEffect(sp.pos)
-                    end
-                    if sp.effect and sp.effect:Exists() then
-                        sp.effect.Position = sp.pos
-                        sp.effect.Velocity = Vector.Zero
-                        if ageFrames >= (SPARK_LIFETIME_FRAMES - SPARK_BLINK_FRAMES) then
-                            local alpha = (math.floor(ageFrames / 3) % 2 == 0) and 0.95 or 0.25
-                            sp.effect:GetSprite().Color = Color(1.0, 1.0, 1.0, alpha, 0, 0, 0)
-                        else
-                            sp.effect:GetSprite().Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
-                        end
-                    end
                 end
             end
         end
@@ -1535,7 +1577,9 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
         local data = GetPlayerData(player)
         if IsHalJordan(player) then
             StopHalContinuousBeam(data)
-            data.shootHoldFrames = 0
+            data.shootHoldFrames         = 0
+            data.firedSmallBeamThisPress = false
+            data.bufferedClickDir        = nil
         end
         local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
         local needsEval = false
@@ -1654,9 +1698,10 @@ local function GetModItemInspectionInfo(isTrinket, id)
     return nil, nil
 end
 
--- Cached custom Sprite instances for the Green Lantern / Parallax aura and Power Ring hand flare
-local glAuraSprite = nil
+-- Cached custom Sprite instances for the Green Lantern / Parallax aura, Power Ring hand flare, and Green Lantern Emblem drops
+local glAuraSprite  = nil
 local glFlareSprite = nil
+local glSparkSprite = nil
 
 local function GetGLAuraSprites()
     if not glAuraSprite and Sprite then
@@ -1680,6 +1725,47 @@ local function GetGLAuraSprites()
         end
     end
     return glAuraSprite, glFlareSprite
+end
+
+local function GetGLSparkSprite()
+    if not glSparkSprite and Sprite then
+        local s3 = Sprite()
+        local ok3 = pcall(function()
+            s3:Load("gfx/effects/gl_lantern_spark.anm2", true)
+            s3:Play("Idle", true)
+        end)
+        if ok3 then
+            glSparkSprite = s3
+        end
+    end
+    return glSparkSprite
+end
+
+local function RenderGLSparkDrops()
+    if #activeEmeraldSparks == 0 then return end
+    local sparkSpr = GetGLSparkSprite()
+    if not sparkSpr then return end
+
+    local frame = Game():GetFrameCount()
+    local currentRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    for _, sp in ipairs(activeEmeraldSparks) do
+        if sp and sp.roomIdx == currentRoomIdx then
+            local ageFrames = math.max(0, frame - (sp.spawnFrame or frame))
+            if ageFrames < SPARK_LIFETIME_FRAMES then
+                local animFrame = math.floor(ageFrames / 4) % 4
+                sparkSpr:SetFrame("Idle", animFrame)
+                sparkSpr.Scale = Vector(1.0, 1.0)
+                if ageFrames >= (SPARK_LIFETIME_FRAMES - SPARK_BLINK_FRAMES) then
+                    local alpha = (math.floor(ageFrames / 3) % 2 == 0) and 0.95 or 0.25
+                    sparkSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0, 0, 0)
+                else
+                    sparkSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
+                end
+                local screenPos = Isaac.WorldToScreen(sp.pos)
+                sparkSpr:Render(screenPos, Vector.Zero, Vector.Zero)
+            end
+        end
+    end
 end
 
 local function RenderGLPlayerAura(player)
@@ -1711,10 +1797,14 @@ local function RenderGLPlayerAura(player)
     auraSpr:Render(bodyScreenPos, Vector.Zero, Vector.Zero)
 end
 
--- 1. Render the animated Emerald Lantern / Parallax hover ring & aura BEHIND the player boots/body
+-- 1. Render floor Green Lantern Emblem drops & animated Emerald Lantern / Parallax hover ring BEHIND the player boots/body
 if ModCallbacks.MC_PRE_PLAYER_RENDER then
     GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
         if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+        local p0 = Isaac.GetPlayer(0)
+        if not p0 or player.Index == p0.Index then
+            RenderGLSparkDrops()
+        end
         RenderGLPlayerAura(player)
         return nil
     end)
@@ -1723,6 +1813,12 @@ end
 -- 2. Render crisp 4-point Power Ring star flare on the character's outstretched ring hand IN FRONT of the player
 GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
     if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+    if not ModCallbacks.MC_PRE_PLAYER_RENDER then
+        local p0 = Isaac.GetPlayer(0)
+        if not p0 or player.Index == p0.Index then
+            RenderGLSparkDrops()
+        end
+    end
     if not HasGreenLanternRing(player) then return end
     local data = GetPlayerData(player)
     if IsHalJordan(player) and data.ringDepleted then return end
