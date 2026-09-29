@@ -4,9 +4,9 @@
     <active
         id="1"
         name="Power Battery"
-        description="Recharges Willpower + emerald construct blast &amp; DMG buff"
+        description="Recharges Willpower + emerald shockwave &amp; +25% Overcharge DMG"
         gfx="collectible_power_battery.png"
-        maxcharges="3"
+        maxcharges="4"
         chargetype="normal"
         quality="3"
         />
@@ -24,11 +24,11 @@
     <active
         id="3"
         name="The Tragedy of Coast City"
-        description="Fears all enemies, pulls them in &amp; deals massive vortex DMG"
+        description="Fears enemies &amp; pulls them into a 5s emerald vortex"
         gfx="collectible_coast_city.png"
         maxcharges="4"
         chargetype="normal"
-        quality="4"
+        quality="3"
         />
 
     <!-- ===== PASSIVE ITEMS ===== -->
