@@ -4,7 +4,7 @@
     <active
         id="1"
         name="Power Battery"
-        description="Recharges Willpower + emerald shockwave &amp; +25% Overcharge DMG"
+        description="Recharges Willpower + emerald pulse &amp; +15% Overcharge DMG"
         gfx="collectible_power_battery.png"
         maxcharges="4"
         chargetype="normal"

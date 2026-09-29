@@ -484,7 +484,7 @@ local function GetRingHandOffset(player, fireVel)
         if dy >= 0 then
             return Vector(6, -6)    -- Outstretched ring hand aiming down in front of body
         else
-            return Vector(6, -34)   -- Outstretched ring hand aiming up behind top of head (never cuts across body/head!)
+            return Vector(0, -32)   -- Centered behind the head when aiming up so the beam never overlaps or bleeds past the head/neck
         end
     end
 end
@@ -518,7 +518,7 @@ local function GetRingBeamTearSpawnOffset(player, fireVel)
         if dy >= 0 then
             return Vector(6, 12) + dir * 4
         else
-            return Vector(6, -20) + dir * 6
+            return Vector(0, -24) + dir * 6
         end
     end
 end
@@ -527,7 +527,7 @@ end
 local function ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
     pcall(function()
-        tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -15 or 25
+        tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
         local ts = tear:GetSprite()
         ts:Load("gfx/effects/gl_ring_beam.anm2", true)
         ts:Play("Idle", true)
@@ -546,14 +546,17 @@ end
 local function EnforceTaintedHalNoRedHearts(player)
     if not IsTaintedHal(player) then return end
     pcall(function()
+        local removedContainer = false
         local maxHearts = player:GetMaxHearts()
         if maxHearts and maxHearts > 0 then
             player:AddMaxHearts(-maxHearts, true)
+            removedContainer = true
         end
         if player.GetBoneHearts and player.AddBoneHearts then
             local boneHearts = player:GetBoneHearts()
             if boneHearts and boneHearts > 0 then
                 player:AddBoneHearts(-boneHearts)
+                removedContainer = true
             end
         end
         local redHearts = player:GetHearts()
@@ -566,7 +569,9 @@ local function EnforceTaintedHalNoRedHearts(player)
                 player:AddRottenHearts(-rottenHearts)
             end
         end
-        if (player:GetSoulHearts() or 0) <= 0 then
+        -- Only grant a safety Black Heart if stripping a Red/Bone Heart Container left the player with 0 Soul/Black hearts
+        -- (never trigger during normal combat death when removedContainer is false!)
+        if removedContainer and (player:GetSoulHearts() or 0) <= 0 then
             player:AddBlackHearts(2)
         end
     end)
@@ -684,6 +689,9 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 player:EvaluateItems()
             elseif IsTaintedHal(player) then
                 EnforceTaintedHalNoRedHearts(player)
+                if (player:GetSoulHearts() or 0) <= 0 then
+                    player:AddBlackHearts(6) -- Ensure 3 starting Black Hearts if spawned/switched via console
+                end
                 -- Grant starting Green Lantern Ring passive equipment + The Tragedy of Coast City active
                 if ITEM_POWER_RING and ITEM_POWER_RING > 0 and not player:HasCollectible(ITEM_POWER_RING) then
                     player:AddCollectible(ITEM_POWER_RING, 0, false)
@@ -753,7 +761,8 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 if frame % HAL_CONTINUOUS_TICK_FRAMES == 0 then
                     local startWorld = player.Position + handOffset
                     local endWorld   = ComputeContinuousBeamEndWorld(startWorld, shootDir)
-                    TickContinuousBeamDamage(player, data, startWorld, endWorld)
+                    local dmgStart   = IsAimingUp(player, shootDir) and (player.Position + Vector(0, -8)) or startWorld
+                    TickContinuousBeamDamage(player, data, dmgStart, endWorld)
                 end
 
                 -- Drain Willpower smoothly when Hal Jordan channels the continuous beam
@@ -951,10 +960,10 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         end
     end
 
-    -- POWER BATTERY OVERCHARGE (applies to Hal Jordan or any character who activates Power Battery at >=50% Willpower)
+    -- POWER BATTERY OVERCHARGE (applies to Hal Jordan when activating Power Battery at >=50% Willpower)
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
-        if data.overcharge and data.overchargeRoomIdx == roomIdx then
-            player.Damage = player.Damage * 1.25
+        if IsHalJordan(player) and data.overcharge and data.overchargeRoomIdx == roomIdx then
+            player.Damage = player.Damage * 1.15
         end
     elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
         if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx == roomIdx then
@@ -1040,7 +1049,8 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     end
 
     tear.Position           = player.Position + spawnOffset + perpOffset
-    tear.DepthOffset        = IsAimingUp(player, baseDir) and -15 or 25
+    tear.DepthOffset        = IsAimingUp(player, baseDir) and -20 or 25
+    data.lastShootDir       = (baseDir and baseDir:Length() > 0.01) and baseDir:Normalized() or data.lastShootDir
     data.lastRingHandOffset = handOffset
     data.ringFlareTimer     = 6
 
@@ -1067,7 +1077,7 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
             tear.Velocity = tear.Velocity * 0.18
             ApplyRingBeamSprite(tear, 0.55)
         else
-            local baseScale = data.overcharge and 1.25 or (data.surgeBuff and 1.12 or 1.0)
+            local baseScale = data.overcharge and 1.20 or (data.surgeBuff and 1.10 or 1.0)
             ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
 
             -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
@@ -1114,7 +1124,7 @@ GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
     if not td then return end
 
     if td.isGLRingBeam then
-        tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -15 or 25
+        tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
         if tear.Velocity:Length() > 0.1 then
             local ts = tear:GetSprite()
             ts.Rotation = tear.Velocity:GetAngleDegrees()
@@ -1289,13 +1299,13 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
     data.ringFlareTimer    = 14
 
-    -- 2. If used at >= 50% Willpower (and not depleted), grant modest OVERCHARGE (+25% DMG for the room).
+    -- 2. If used by Hal Jordan at >= 50% Willpower (and not depleted), grant modest OVERCHARGE (+15% DMG for the room).
     --    Otherwise, simply restore Willpower & Ring capabilities without a bonus damage multiplier.
-    if not wasDepleted and prevWill >= 50.0 then
+    if IsHalJordan(player) and (not wasDepleted) and prevWill >= 50.0 then
         data.overcharge = true
         data.surgeBuff  = false
         data.oathTextTimer = 90
-        data.oathText = "OVERCHARGE! (+25% DMG)"
+        data.oathText = "OVERCHARGE! (+15% DMG)"
     else
         data.overcharge = false
         data.surgeBuff  = true
@@ -1304,19 +1314,19 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     end
 
     pcall(function()
-        SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.9, 0, false, 1.0)
+        SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 1.0)
     end)
 
     -- 3. Modest close-range pulse: light damage & knockback to nearby enemies and clear close projectiles
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         local dist = (ent.Position - player.Position):Length()
-        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 120 then
-            ent:TakeDamage(player.Damage * 1.5 + 4.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 105 then
+            ent:TakeDamage(player.Damage * 1.0 + 3.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
             local push = (ent.Position - player.Position)
             if push:Length() > 0.1 then
-                ent.Velocity = ent.Velocity + push:Normalized() * 10.0
+                ent.Velocity = ent.Velocity + push:Normalized() * 9.0
             end
-        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 130 then
+        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 115 then
             ent:Die()
         end
     end
@@ -1362,7 +1372,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     local fist = ent and ent:ToTear()
 
     if fist then
-        fist.DepthOffset     = IsAimingUp(player, direction) and -15 or 25
+        fist.DepthOffset     = IsAimingUp(player, direction) and -20 or 25
         fist.CollisionDamage = player.Damage * 10
         fist.Scale           = 3.5
         fist.TearFlags       = fist.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_MEGA
@@ -1407,7 +1417,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
 
     -- Stored Green Lantern Emblems slightly extend vortex duration & pull (NEVER increases player Damage!)
     local sparkRatio = math.max(0.0, math.min(1.0, (data.emeraldSparks or 0.0) / SPARK_MAX))
-    local sparkBonus = 1.0 + sparkRatio * 0.25
+    local sparkBonus = 1.0 + sparkRatio * 0.20
     local durationBonus = math.floor(sparkRatio * 45) -- up to +1.5s vortex duration at full meter
     data.coastCityBoost  = 1.0
     data.emeraldSparks   = 0.0
@@ -1429,12 +1439,12 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 0.88)
     end)
 
-    -- Inflict Fear (4s) and a light 0.75x DMG pulse to vulnerable enemies in the room
+    -- Inflict Fear (3s) and a light 0.50x DMG pulse to vulnerable enemies in the room
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
-            ent:AddFear(EntityRef(player), 120)
+            ent:AddFear(EntityRef(player), 90)
             ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
-            ent:TakeDamage(player.Damage * 0.75, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+            ent:TakeDamage(player.Damage * 0.50, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
         end
     end
 
@@ -1473,18 +1483,18 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
             local toCenter = (center - enemy.Position)
             local dist     = toCenter:Length()
 
-            -- Pull vulnerable enemies within 260px gently toward the center
-            if dist > 18 and dist <= 260 then
+            -- Pull vulnerable enemies within 250px gently toward the center
+            if dist > 18 and dist <= 250 then
                 local pullMult = isFeared and 1.15 or 1.0
-                local pullStr  = math.min(4.2, 150.0 / math.max(dist, 22)) * pullMult * sparkBonus
-                enemy.Velocity = enemy.Velocity * 0.84 + toCenter:Normalized() * pullStr
+                local pullStr  = math.min(3.8, 140.0 / math.max(dist, 22)) * pullMult * sparkBonus
+                enemy.Velocity = enemy.Velocity * 0.85 + toCenter:Normalized() * pullStr
             end
 
-            -- Deal light vortex damage every 20 frames
-            if age > 0 and age % 20 == 0 and ownerPlayer and dist <= 240 then
-                enemy:AddFear(EntityRef(ownerPlayer), 60)
+            -- Deal light vortex damage every 25 frames
+            if age > 0 and age % 25 == 0 and ownerPlayer and dist <= 220 then
+                enemy:AddFear(EntityRef(ownerPlayer), 45)
                 enemy:AddEntityFlags(EntityFlag.FLAG_FEAR)
-                local distMult = (dist <= 100) and 0.55 or 0.35
+                local distMult = (dist <= 100) and 0.35 or 0.20
                 local dmg = ownerPlayer.Damage * distMult * sparkBonus
                 enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(ownerPlayer), 0)
             end
@@ -1590,7 +1600,7 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     end
 end)
 
--- Block Tainted Hal from ever picking up red hearts on the ground
+-- Block Tainted Hal from ever picking up red or bone hearts on the ground
 GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collider, low)
     if pickup.Variant ~= PickupVariant.PICKUP_HEART then return end
     local player = collider and collider:ToPlayer()
@@ -1604,6 +1614,7 @@ GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collide
         or (sub == HeartSubType.HEART_DOUBLEPACK)
         or (HeartSubType.HEART_SCARED and sub == HeartSubType.HEART_SCARED)
         or (HeartSubType.HEART_ROTTEN and sub == HeartSubType.HEART_ROTTEN)
+        or (HeartSubType.HEART_BONE and sub == HeartSubType.HEART_BONE)
 
     if isRedOnlyHeart then
         return true
@@ -1923,13 +1934,13 @@ local function EnsureEIDRegistered()
     pcall(function()
         for _, lang in ipairs({"en_us", "en_us_detailed", "es"}) do
             EID:addCollectible(ITEM_POWER_BATTERY,
-                "Refills Willpower to 100% and unleashes a close-range emerald pulse#At >=50% Willpower: Overcharge (+25% DMG + Piercing + Spectral for the room)#Below 50%: Restores Willpower & Ring capabilities",
+                "Refills Willpower to 100% and unleashes a close-range emerald pulse#At >=50% Willpower: Overcharge (+15% DMG + Piercing + Spectral for the room)#Below 50%: Restores Willpower & Ring capabilities",
                 "Power Battery", lang)
             EID:addCollectible(ITEM_GIANT_FIST,
                 "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
                 "Construct: Giant Fist", lang)
             EID:addCollectible(ITEM_COAST_CITY,
-                "Inflicts Fear (4s) and spawns a 5s Emerald Vortex that pulls nearby enemies toward the center#Collecting Green Lantern Emblems recharges the item and extends vortex duration",
+                "Inflicts Fear (3s) and spawns a 5s Emerald Vortex that pulls nearby enemies toward the center#Collecting Green Lantern Emblems recharges the item and extends vortex duration",
                 "The Tragedy of Coast City", lang)
             EID:addCollectible(ITEM_SOLID_LIGHT_SHIELD,
                 "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
@@ -1955,7 +1966,7 @@ local function GetModItemInspectionInfo(isTrinket, id)
         if id == ITEM_POWER_BATTERY then
             return "Power Battery [4R Active]", {
                 "Refills 100% Willpower + close emerald pulse",
-                ">=50% Will: +25% Overcharge DMG for room"
+                ">=50% Will: +15% Overcharge DMG for room"
             }
         elseif id == ITEM_GIANT_FIST then
             return "Construct: Giant Fist [4R Active]", {
@@ -2167,7 +2178,7 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
         beamSpr:SetFrame("ContinuousBeam", animFrame)
         beamSpr.Rotation = screenAngle
         beamSpr.Scale = Vector(xScale, thickness)
-        beamSpr.Color = Color(1.0, 1.0, 1.0, 0.98, 0.06, 0.28, 0.10)
+        beamSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
         beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
         if rem <= segWidth then
             break
@@ -2185,7 +2196,8 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
 end
 
 local function IsPlayerAimingUpForRender(player, data)
-    local shootDir = (data and data.isFiringContinuousBeam and data.lastShootDir) or player:GetShootingInput()
+    local activeFlare = data and (data.isFiringContinuousBeam or (data.ringFlareTimer and data.ringFlareTimer > 0))
+    local shootDir = (activeFlare and data.lastShootDir) or player:GetShootingInput()
     return IsAimingUp(player, shootDir)
 end
 
@@ -2195,18 +2207,31 @@ local function RenderGLBeamAndFlareForPlayer(player, data, frame)
 
     if flareSpr then
         local shootInput = player:GetShootingInput()
-        local isFiring = (shootInput and shootInput:Length() > 0.1) or (data.ringFlareTimer and data.ringFlareTimer > 0) or data.isFiringContinuousBeam
-        local handOffset = (data.isFiringContinuousBeam and data.lastRingHandOffset) or GetRingHandOffset(player, shootInput)
+        local hasActiveFlare = data.isFiringContinuousBeam or (data.ringFlareTimer and data.ringFlareTimer > 0)
+        local isFiring = (shootInput and shootInput:Length() > 0.1) or hasActiveFlare
+        local aimingUp = IsPlayerAimingUpForRender(player, data)
+
+        -- When facing UP without firing, the ring hand is in front of the torso (hidden behind the head/body from camera view)
+        if aimingUp and not isFiring then
+            return
+        end
+
+        local handOffset = (hasActiveFlare and data.lastRingHandOffset) or GetRingHandOffset(player, shootInput)
+        if aimingUp then
+            handOffset = Vector(0, -38)
+        end
         local handScreenPos = Isaac.WorldToScreen(player.Position + handOffset)
 
         local flareFrame = math.floor(frame / (isFiring and 2 or 4)) % 4
         flareSpr:SetFrame("RingFlare", flareFrame)
 
         if data.isFiringContinuousBeam then
-            flareSpr.Scale = Vector(1.05, 1.05)
+            local fScale = aimingUp and 0.78 or 1.05
+            flareSpr.Scale = Vector(fScale, fScale)
             flareSpr.Color = Color(1.0, 1.0, 1.0, 0.98, 0.15, 0.50, 0.18)
         elseif isFiring then
-            flareSpr.Scale = Vector(0.85, 0.85)
+            local fScale = aimingUp and 0.68 or 0.85
+            flareSpr.Scale = Vector(fScale, fScale)
             flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0.10, 0.35, 0.12)
         else
             local pulse = 0.45 + 0.20 * math.sin(frame * 0.20)
@@ -2303,9 +2328,7 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                 if data.ringDepleted then
                     label = "EMPTY"
                 elseif data.overcharge then
-                    label = string.format("%.0f%% +25%%DMG", data.willpower)
-                elseif pct >= 0.995 then
-                    label = "100% +25%DMG"
+                    label = string.format("%.0f%% +15%%DMG", data.willpower)
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
