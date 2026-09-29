@@ -37,7 +37,7 @@ local HAL_SHOT_SPEED_BONUS    =  0.30  -- high shot speed for ring beams
 -- Willpower meter & continuous emerald beam mode constants (Hal Jordan & Tainted Hal)
 local WILLPOWER_MAX                 = 100.0
 local WILLPOWER_PER_TEAR            =  0.5   -- each small beam tear costs 0.5% willpower
-local HAL_CONTINUOUS_HOLD_FRAMES    =  8     -- holding fire >= 8 frames (0.26s) channels continuous emerald laser; clicking (<8 frames) fires discrete beams
+local HAL_CONTINUOUS_HOLD_FRAMES    =  6     -- holding fire >= 6 frames (0.20s) channels continuous emerald laser; clicking (<6 frames) fires discrete beams
 local HAL_CONTINUOUS_BEAM_DMG_MULT  =  0.20  -- each continuous beam tick deals 20% of small-beam damage
 local HAL_CONTINUOUS_TICK_FRAMES    =  4     -- continuous beam ticks once every 4 frames (7.5/sec -> 1.5x DMG/sec)
 local HAL_CONTINUOUS_WILL_DRAIN     =  0.06  -- willpower drained per frame while Hal Jordan channels continuous beam
@@ -51,7 +51,7 @@ local SPARK_MAX                = 100.0
 local SPARK_PER_KILL           =  10.0  -- each picked-up Green Lantern emblem grants 10% meter
 local SPARK_LIFETIME_FRAMES    = 180    -- emblems last 6 seconds (180 frames at 30fps) on the floor before vanishing on their own
 local SPARK_BLINK_FRAMES       =  60    -- emblems blink during their final 2 seconds on the floor
-local SPARK_COLLECT_FRAMES     =  10    -- 10-frame coin/bomb style pickup animation when walked over
+local SPARK_COLLECT_FRAMES     =  12    -- 12-frame coin/bomb style pickup animation when walked over
 local SPARK_PICKUP_RANGE       =  22.0  -- walk-over pickup radius
 local SPARK_DROP_CHANCE_FEARED =  0.14  -- 14% drop rate from killed Feared enemies
 local SPARK_DROP_CHANCE_NORMAL =  0.08  -- 8% drop rate from killed normal enemies
@@ -84,6 +84,7 @@ local function GetPlayerData(player)
             isFiringContinuousBeam   = false,
             spawningContinuousBeam   = false,
             continuousLaser          = nil,
+            continuousBeamGraceTimer = 0,
 
             -- Tainted Hal
             emeraldSparks       = 0.0,
@@ -97,7 +98,7 @@ local function GetPlayerData(player)
 
             -- Ring combat flare & hand tracking
             ringFlareTimer      = 0,
-            lastRingHandOffset  = Vector(14, -12),
+            lastRingHandOffset  = Vector(18, -14),
 
             -- Costume & Inspection tracking
             lastCollectibleCount = -1,
@@ -165,18 +166,20 @@ local function RegisterStageAPIGraphics()
     if StageAPI and StageAPI.Loaded and StageAPI.AddPlayerGraphicsInfo then
         if PLAYER_HAL and PLAYER_HAL >= 0 then
             StageAPI.AddPlayerGraphicsInfo(PLAYER_HAL, {
-                Portrait    = "gfx/ui/boss/portrait_hal_jordan.png",
-                Name        = "gfx/ui/boss/name_hal_jordan.png",
-                PortraitBig = "gfx/ui/stage/stage_hal_jordan.png",
-                NoShake     = false,
+                Portrait     = "gfx/ui/stage/stage_hal_jordan.png",
+                BossPortrait = "gfx/ui/boss/portrait_hal_jordan.png",
+                PortraitBig  = "gfx/ui/stage/stage_hal_jordan.png",
+                Name         = "gfx/ui/boss/name_hal_jordan.png",
+                NoShake      = false,
             })
         end
         if PLAYER_TAINTED_HAL and PLAYER_TAINTED_HAL >= 0 then
             StageAPI.AddPlayerGraphicsInfo(PLAYER_TAINTED_HAL, {
-                Portrait    = "gfx/ui/boss/portrait_tainted_hal.png",
-                Name        = "gfx/ui/boss/name_tainted_hal.png",
-                PortraitBig = "gfx/ui/stage/stage_tainted_hal.png",
-                NoShake     = false,
+                Portrait     = "gfx/ui/stage/stage_tainted_hal.png",
+                BossPortrait = "gfx/ui/boss/portrait_tainted_hal.png",
+                PortraitBig  = "gfx/ui/stage/stage_tainted_hal.png",
+                Name         = "gfx/ui/boss/name_tainted_hal.png",
+                NoShake      = false,
             })
         end
         stageApiRegistered = true
@@ -263,7 +266,7 @@ local function StopContinuousBeam(data)
     data.spawningContinuousBeam = false
 end
 
--- Compute the visual/screen-space offset of the character's outstretched Power Ring hand (for lasers & flares)
+-- Compute the visual/screen-space offset of the character's outstretched Power Ring hand IN FRONT of the player (for lasers & flares)
 local function GetRingHandOffset(player, fireVel)
     local headDir = player:GetHeadDirection()
     local dx, dy = 0, 1
@@ -279,23 +282,22 @@ local function GetRingHandOffset(player, fireVel)
 
     if math.abs(dx) >= math.abs(dy) then
         if dx >= 0 then
-            return Vector(15, -12) -- Outstretched right ring hand in front of player
+            return Vector(18, -14) -- Outstretched right ring hand clearly in front of player
         else
-            return Vector(-15, -12) -- Outstretched left ring hand in front of player
+            return Vector(-18, -14) -- Outstretched left ring hand clearly in front of player
         end
     else
         if dy >= 0 then
-            return Vector(9, -6)   -- Outstretched ring hand aiming down in front of body
+            return Vector(6, -6)   -- Outstretched ring hand aiming down in front of body
         else
-            return Vector(9, -18)  -- Outstretched ring hand aiming up in front of head
+            return Vector(6, -24)  -- Outstretched ring hand aiming up in front of head
         end
     end
 end
 
 -- Compute the ground-plane spawn offset for EntityTear beams.
--- Note: EntityTear already renders at (Position.Y + Height * 0.65) where Height = -23.75 (~-15px screen Y).
--- Placing ground Y at +2 makes the tear sprite render at -13px screen Y (right at the outstretched hand)
--- AND pushes it forward along the firing direction so the beam always emerges IN FRONT of the player!
+-- Note: EntityTear already renders at (Position.Y + Height * 0.65) where Height = -23.75 (~-15.4px screen Y).
+-- Combined with XPivot=5 in gl_ring_beam.anm2, these offsets ensure 100% of the beam emerges IN FRONT of the player!
 local function GetRingBeamTearSpawnOffset(player, fireVel)
     local headDir = player:GetHeadDirection()
     local dx, dy = 0, 1
@@ -317,13 +319,13 @@ local function GetRingBeamTearSpawnOffset(player, fireVel)
     end
 
     if math.abs(dx) >= math.abs(dy) then
-        local sideX = (dx >= 0) and 16 or -16
-        return Vector(sideX, 2) + dir * 6
+        local sideX = (dx >= 0) and 18 or -18
+        return Vector(sideX, 3) + dir * 4
     else
         if dy >= 0 then
-            return Vector(9, 8) + dir * 6
+            return Vector(6, 12) + dir * 4
         else
-            return Vector(9, -4) + dir * 8
+            return Vector(6, -8) + dir * 6
         end
     end
 end
@@ -399,6 +401,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.isFiringContinuousBeam   = false
         data.spawningContinuousBeam   = false
         data.continuousLaser          = nil
+        data.continuousBeamGraceTimer = 0
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -422,6 +425,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
         data.isFiringContinuousBeam   = false
         data.spawningContinuousBeam   = false
         data.continuousLaser          = nil
+        data.continuousBeamGraceTimer = 0
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -486,20 +490,32 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         local isHoldingShoot = shootInput and shootInput:Length() > 0.1
 
         if isHoldingShoot and CanUseContinuousBeam(player) then
-            data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
-            data.lastShootDir    = shootInput:Normalized()
+            local shootDir   = shootInput:Normalized()
+            local handOffset = GetRingHandOffset(player, shootDir)
+            data.lastShootDir       = shootDir
+            data.lastRingHandOffset = handOffset
 
-            if data.shootHoldFrames >= HAL_CONTINUOUS_HOLD_FRAMES then
-                data.isFiringContinuousBeam = true
-                data.bufferedClickDir       = nil
+            -- If the player was just channeling the continuous beam and switched arrow keys (<= 5 frame gap),
+            -- resume the continuous emerald beam immediately without any startup delay or discrete tear!
+            if (data.continuousBeamGraceTimer or 0) > 0 then
+                data.shootHoldFrames = math.max((data.shootHoldFrames or 0) + 1, HAL_CONTINUOUS_HOLD_FRAMES)
+            else
+                data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
+            end
+
+            if data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES then
+                -- Hold native FireDelay during the brief tap-vs-hold detection window so holding NEVER fires a discrete tear bolt first!
+                player.FireDelay    = math.max(player.FireDelay, 2)
+                data.ringFlareTimer = math.max(data.ringFlareTimer or 0, 3)
+            else
+                data.isFiringContinuousBeam   = true
+                data.continuousBeamGraceTimer = 5
+                data.bufferedClickDir         = nil
                 -- Suppress discrete tear projectiles while channeling the continuous emerald laser beam
                 player.FireDelay = math.max(player.FireDelay, 5)
 
-                local shootDir   = shootInput:Normalized()
-                local angle      = shootDir:GetAngleDegrees()
-                local handOffset = GetRingHandOffset(player, shootDir)
-                data.lastRingHandOffset = handOffset
-                data.ringFlareTimer     = 4
+                local angle = shootDir:GetAngleDegrees()
+                data.ringFlareTimer = 4
 
                 local laser = data.continuousLaser
                 if not (laser and laser:Exists() and not laser:IsDead()) then
@@ -533,7 +549,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                         laser:SetTimeout(60)
                         laser:SetOneHit(false)
                         laser.OneHit              = false
-                        laser.DepthOffset         = 25
+                        laser.DepthOffset         = 35
                         laser.CollisionDamage     = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
                         local flags               = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
                         if IsTaintedHal(player) then
@@ -544,9 +560,9 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                         laser.SpriteScale         = Vector(beamScale, beamScale)
                         local lSpr                = laser:GetSprite()
                         if lSpr then
-                            -- Keep Variant 2's non-looping 4-frame animation locked on frame 0 so the C++ laser never auto-expires!
+                            -- Keep Variant 2's non-looping 4-frame animation locked on frame 0 and fully transparent so C++ never draws a secondary beam behind the player!
                             lSpr:SetFrame(0)
-                            lSpr.Color = Color(0.1, 1.0, 0.38, 0.65, 0.12, 0.88, 0.25)
+                            lSpr.Color = Color(0.1, 1.0, 0.38, 0.0, 0, 0, 0)
                         end
                     end)
                 end
@@ -565,8 +581,9 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     local newWillBucket = math.floor(data.willpower + 0.5)
 
                     if data.willpower <= 0 then
-                        data.ringDepleted = true
-                        data.willpower    = 0
+                        data.ringDepleted             = true
+                        data.willpower                = 0
+                        data.continuousBeamGraceTimer = 0
                         StopContinuousBeam(data)
                         player:AnimateSad()
                         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, player.Position, Vector.Zero, player)
@@ -580,7 +597,11 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 end
             end
         else
-            -- If player clicked & released (< HAL_CONTINUOUS_HOLD_FRAMES) while still in cooldown, buffer the click so it fires when ready
+            if (data.continuousBeamGraceTimer or 0) > 0 then
+                data.continuousBeamGraceTimer = data.continuousBeamGraceTimer - 1
+            end
+
+            -- If player tapped & released (< HAL_CONTINUOUS_HOLD_FRAMES), buffer the discrete Ring Beam shot so it fires immediately
             if (data.shootHoldFrames or 0) > 0
                 and data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES
                 and not data.firedSmallBeamThisPress
@@ -588,7 +609,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 and CanUseContinuousBeam(player)
             then
                 data.bufferedClickDir         = data.lastShootDir
-                data.bufferedClickExpireFrame = frame + 10
+                data.bufferedClickExpireFrame = frame + 12
             end
 
             if data.isFiringContinuousBeam or data.continuousLaser then
@@ -916,7 +937,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
         ld.isGLContinuousBeam   = true
         ld.glLaserSynergyInit   = true
         pcall(function()
-            laser.DepthOffset       = 25
+            laser.DepthOffset       = 35
             laser.CollisionDamage   = player.Damage * HAL_CONTINUOUS_BEAM_DMG_MULT
             local flags             = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
             if IsTaintedHal(player) then
@@ -926,7 +947,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
             local lSpr              = laser:GetSprite()
             if lSpr then
                 lSpr:SetFrame(0)
-                lSpr.Color = Color(0.1, 1.0, 0.38, 0.65, 0.12, 0.88, 0.25)
+                lSpr.Color = Color(0.1, 1.0, 0.38, 0.0, 0, 0, 0)
             end
         end)
         data.ringFlareTimer     = 4
@@ -939,7 +960,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
     data.ringFlareTimer = 8
 
     -- Tint all player lasers into blazing Hard-Light Emerald Construct Beams!
-    laser.DepthOffset     = 25
+    laser.DepthOffset     = 35
     laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
     laser.CollisionDamage = laser.CollisionDamage * 1.25
     laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
@@ -978,7 +999,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
     local ld = laser:GetData()
     local data = GetPlayerData(player)
     data.ringFlareTimer = 4
-    laser.DepthOffset   = 25
+    laser.DepthOffset   = 35
     if ld and ld.isGLContinuousBeam then
         pcall(function()
             laser.Timeout           = 60
@@ -994,7 +1015,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
             local lSpr              = laser:GetSprite()
             if lSpr then
                 lSpr:SetFrame(0)
-                lSpr.Color = Color(0.1, 1.0, 0.38, 0.65, 0.12, 0.88, 0.25)
+                lSpr.Color = Color(0.1, 1.0, 0.38, 0.0, 0, 0, 0)
             end
         end)
     else
@@ -1482,11 +1503,10 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                 pickedUpBy:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                 pickedUpBy:EvaluateItems()
 
-                -- Subtle emerald flash & pickup chime on collecting the Green Lantern emblem
-                local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, sp.pos, Vector.Zero, pickedUpBy)
-                SetEntityScaleAndColor(fx, 0.55, Color(0.1, 1.0, 0.35, 0.9, 0.15, 0.85, 0.25))
+                -- Play crisp coin-style pickup chime while the emblem's Collect squash-and-stretch animation plays in front of the player
                 pcall(function()
-                    SFXManager():Play(SoundEffect.SOUND_BEEP, 0.65, 0, false, 1.35)
+                    local sfx = (SoundEffect and (SoundEffect.SOUND_PENNYPICKUP or SoundEffect.SOUND_PLOP or SoundEffect.SOUND_BEEP)) or 24
+                    SFXManager():Play(sfx, 0.75, 0, false, 1.18)
                 end)
             else
                 -- 2. If not walked over yet, check floor lifetime & vanish on the floor after SPARK_LIFETIME_FRAMES (6s)
@@ -1666,9 +1686,10 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
         local data = GetPlayerData(player)
         if IsHalJordan(player) or IsTaintedHal(player) then
             StopContinuousBeam(data)
-            data.shootHoldFrames         = 0
-            data.firedSmallBeamThisPress = false
-            data.bufferedClickDir        = nil
+            data.shootHoldFrames          = 0
+            data.firedSmallBeamThisPress  = false
+            data.bufferedClickDir         = nil
+            data.continuousBeamGraceTimer = 0
         end
         local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
         local needsEval = false
@@ -1845,7 +1866,7 @@ local function GetGLSparkSprite()
     return glSparkSprite
 end
 
-local function RenderGLSparkDrops()
+local function RenderGLSparkDrops(onlyCollected)
     if #activeEmeraldSparks == 0 then return end
     local sparkSpr = GetGLSparkSprite()
     if not sparkSpr then return end
@@ -1854,19 +1875,20 @@ local function RenderGLSparkDrops()
     local currentRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
     for _, sp in ipairs(activeEmeraldSparks) do
         if sp and sp.roomIdx == currentRoomIdx then
-            local screenPos = Isaac.WorldToScreen(sp.pos)
-            if sp.collected then
-                -- Render coin/bomb-style squash-and-upward-stretch pickup animation!
+            if sp.collected and (onlyCollected == true or onlyCollected == nil) then
+                -- Render coin/bomb-style squash-and-upward-stretch pickup animation IN FRONT OF the player!
                 local collectAge = math.max(0, frame - (sp.collectFrame or frame))
                 if collectAge < SPARK_COLLECT_FRAMES then
+                    local screenPos = Isaac.WorldToScreen(sp.pos)
                     sparkSpr:SetFrame("Collect", collectAge)
                     sparkSpr.Scale = Vector(1.0, 1.0)
                     sparkSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
                     sparkSpr:Render(screenPos, Vector.Zero, Vector.Zero)
                 end
-            else
+            elseif (not sp.collected) and (onlyCollected == false or onlyCollected == nil) then
                 local ageFrames = math.max(0, frame - (sp.spawnFrame or frame))
                 if ageFrames < SPARK_LIFETIME_FRAMES then
+                    local screenPos = Isaac.WorldToScreen(sp.pos)
                     local animFrame = math.floor(ageFrames / 4) % 4
                     sparkSpr:SetFrame("Idle", animFrame)
                     local rem = SPARK_LIFETIME_FRAMES - ageFrames
@@ -1933,11 +1955,19 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
 
     local angle = laser.AngleDegrees or 0
     local dir = Vector.FromAngle(angle)
-    local distWorld = 260.0
+    local distWorld = 280.0
     pcall(function()
-        local ep = laser:GetEndPoint()
-        if ep then
-            distWorld = math.max(20.0, (ep - player.Position):Length())
+        local calcEp = nil
+        if EntityLaser and EntityLaser.CalculateEndPoint then
+            calcEp = EntityLaser.CalculateEndPoint(player.Position, dir, handOffset, player, 1.0)
+        end
+        if calcEp and (calcEp - player.Position):Length() > 8.0 then
+            distWorld = math.max(20.0, (calcEp - player.Position):Length())
+        else
+            local ep = laser:GetEndPoint()
+            if ep and (ep - player.Position):Length() > 8.0 then
+                distWorld = math.max(20.0, (ep - player.Position):Length())
+            end
         end
     end)
 
@@ -1948,21 +1978,28 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
 
     local screenDir = screenDelta / totalScreenLen
     local screenAngle = screenDir:GetAngleDegrees()
-    local thickness = IsTaintedHal(player) and 1.15 or (data.overcharge and 1.25 or (data.surgeBuff and 1.10 or 0.95))
-    local segLen = 36.0
-    local dist = 0.0
-    local segIdx = 0
+    local thickness = IsTaintedHal(player) and 1.18 or (data.overcharge and 1.28 or (data.surgeBuff and 1.12 or 1.0))
+    local segWidth = 48.0
+    local segStep  = 46.0
+    local dist     = 0.0
+    local segIdx   = 0
 
     while dist < totalScreenLen do
         local rem = totalScreenLen - dist
-        local xScale = math.min(1.05, math.max(0.20, rem / segLen))
+        local xScale = 1.0
+        if rem < segWidth then
+            xScale = math.max(0.05, rem / segWidth)
+        end
         local animFrame = (math.floor(frame / 2) + segIdx) % 4
         beamSpr:SetFrame("ContinuousBeam", animFrame)
         beamSpr.Rotation = screenAngle
         beamSpr.Scale = Vector(xScale, thickness)
-        beamSpr.Color = Color(1.0, 1.0, 1.0, 0.96, 0.08, 0.35, 0.12)
+        beamSpr.Color = Color(1.0, 1.0, 1.0, 0.98, 0.06, 0.28, 0.10)
         beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
-        dist = dist + segLen
+        if rem <= segWidth then
+            break
+        end
+        dist = dist + segStep
         segIdx = segIdx + 1
     end
 
@@ -1975,26 +2012,28 @@ local function RenderGLContinuousBeam(player, data, flareSpr, frame)
     end
 end
 
--- 1. Render floor Green Lantern Emblem drops & animated Emerald Lantern / Parallax hover ring BEHIND the player boots/body
+-- 1. Render uncollected floor Green Lantern Emblem drops & animated Emerald Lantern / Parallax hover ring BEHIND the player boots/body
 if ModCallbacks.MC_PRE_PLAYER_RENDER then
     GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
         if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
         local p0 = Isaac.GetPlayer(0)
         if not p0 or player.Index == p0.Index then
-            RenderGLSparkDrops()
+            RenderGLSparkDrops(false)
         end
         RenderGLPlayerAura(player)
         return nil
     end)
 end
 
--- 2. Render continuous emerald laser beam & crisp 4-point Power Ring star flare on the character's outstretched ring hand IN FRONT of the player
+-- 2. Render collected Green Lantern Emblem pickup animation, continuous emerald laser beam & Power Ring flare IN FRONT of the player
 GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
     if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
-    if not ModCallbacks.MC_PRE_PLAYER_RENDER then
-        local p0 = Isaac.GetPlayer(0)
-        if not p0 or player.Index == p0.Index then
-            RenderGLSparkDrops()
+    local p0 = Isaac.GetPlayer(0)
+    if not p0 or player.Index == p0.Index then
+        if ModCallbacks.MC_PRE_PLAYER_RENDER then
+            RenderGLSparkDrops(true)
+        else
+            RenderGLSparkDrops(nil)
         end
     end
     if not HasGreenLanternRing(player) then return end
