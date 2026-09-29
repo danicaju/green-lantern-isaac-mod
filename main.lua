@@ -37,10 +37,14 @@ local HAL_SHOT_SPEED_BONUS    =  0.30  -- high shot speed for ring beams
 -- Willpower meter & continuous emerald beam mode constants (Hal Jordan & Tainted Hal)
 local WILLPOWER_MAX                 = 100.0
 local WILLPOWER_PER_TEAR            =  0.5   -- each small beam tear costs 0.5% willpower
-local HAL_CONTINUOUS_HOLD_FRAMES    =  6     -- holding fire >= 6 frames (0.20s) channels continuous emerald laser; clicking (<6 frames) fires discrete beams
+local WILLPOWER_REBOOT_THRESHOLD    = 20.0   -- willpower needed to reboot the Ring after hitting 0%
+local WILLPOWER_PASSIVE_REBOOT_RATE =  0.085 -- passive willpower recovery per 30fps frame (~2.5%/sec -> ~8s reboot) while Ring is offline
+local WILLPOWER_KILL_REBOOT_BONUS   =  5.0   -- +5% willpower per enemy killed while fighting without the Ring
+local WILLPOWER_ROOM_REBOOT_BONUS   = 15.0   -- +15% willpower on clearing a room while Ring is offline
+local HAL_CONTINUOUS_HOLD_FRAMES    = 24     -- must hold fire continuously >= 24 player-update ticks (~0.40s) to channel continuous emerald laser; clicking/spamming fires discrete beams
 local HAL_CONTINUOUS_BEAM_DMG_MULT  =  0.20  -- each continuous beam tick deals 20% of small-beam damage
 local HAL_CONTINUOUS_TICK_FRAMES    =  4     -- continuous beam ticks once every 4 frames (7.5/sec -> 1.5x DMG/sec)
-local HAL_CONTINUOUS_WILL_DRAIN     =  0.06  -- willpower drained per frame while Hal Jordan channels continuous beam
+local HAL_CONTINUOUS_WILL_DRAIN     =  0.06  -- willpower drained per update tick while Hal Jordan channels continuous beam
 
 -- Tainted Hal stats
 local TAINTED_DMG_MULTIPLIER   = 1.5    -- massive damage multiplier
@@ -229,10 +233,19 @@ local function HasGreenLanternRing(player)
     return ITEM_POWER_RING and ITEM_POWER_RING > 0 and player:HasCollectible(ITEM_POWER_RING)
 end
 
+-- Returns true only when the player has a Green Lantern Ring AND it is currently powered/online
+local function IsRingActive(player)
+    if not HasGreenLanternRing(player) then return false end
+    if IsHalJordan(player) then
+        local data = GetPlayerData(player)
+        if data.ringDepleted then return false end
+    end
+    return true
+end
+
 local function CanUseContinuousBeam(player)
     if not (IsHalJordan(player) or IsTaintedHal(player)) then return false end
-    local data = GetPlayerData(player)
-    if IsHalJordan(player) and data.ringDepleted then return false end
+    if not IsRingActive(player) then return false end
     -- Allow charge/override weapons (Brimstone, Mom's Knife, Tech X, Technology, Monstro's Lung, etc.) to use their own mechanics
     if CollectibleType then
         local overrideItems = {
@@ -527,6 +540,15 @@ end
 local function ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
     pcall(function()
+        -- Ensure piercing tear variant is set BEFORE loading gl_ring_beam.anm2 so C++ EntityTear::Update()
+        -- never calls ChangeVariant(CUPID_BLUE) on Frame 1 and overwrites gl_ring_beam.anm2 with a vanilla circle tear!
+        if TearVariant and TearVariant.CUPID_BLUE and TearVariant.BLUE and tear.Variant == TearVariant.BLUE then
+            if tear.ChangeVariant then
+                tear:ChangeVariant(TearVariant.CUPID_BLUE)
+            else
+                tear.Variant = TearVariant.CUPID_BLUE
+            end
+        end
         tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
         local ts = tear:GetSprite()
         ts:Load("gfx/effects/gl_ring_beam.anm2", true)
@@ -539,6 +561,9 @@ local function ApplyRingBeamSprite(tear, scaleMult)
         local td = tear:GetData()
         td.isGLRingBeam = true
         td.glBeamScale  = s
+        if tear.Velocity and tear.Velocity:Length() > 0.1 then
+            td.glBeamVel = Vector(tear.Velocity.X, tear.Velocity.Y)
+        end
     end)
 end
 
@@ -597,6 +622,73 @@ local function RefreshCharacterCostume(player)
             end
         end
     end)
+end
+
+-- Power down Hal Jordan's Green Lantern Ring when Willpower reaches 0% (loses ring construct capabilities, fights with normal un-nerfed human tears)
+local function TriggerHalRingDepleted(player)
+    if not player or not IsHalJordan(player) then return end
+    local data = GetPlayerData(player)
+    data.ringDepleted             = true
+    data.willpower                = 0
+    data.overcharge               = false
+    data.surgeBuff                = false
+    data.continuousBeamGraceTimer = 0
+    data.shootHoldFrames          = 0
+    data.firedSmallBeamThisPress  = false
+    data.bufferedClickDir         = nil
+    data.allowingTapTear          = false
+    data.ringFlareTimer           = 0
+    data.oathTextTimer            = 95
+    data.oathText                 = "RING OFFLINE! FIGHT ON!"
+    StopContinuousBeam(data)
+    pcall(function()
+        local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYDISCHARGE or SoundEffect.SOUND_THUMBS_DOWN)) or 0
+        if sfx > 0 then
+            SFXManager():Play(sfx, 0.85, 0, false, 0.95)
+        end
+        local handPos = player.Position + (data.lastRingHandOffset or Vector(18, -14))
+        local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, handPos, Vector.Zero, player)
+        SetEntityScaleAndColor(fx, 0.65, Color(0.2, 1.0, 0.4, 0.9, 0.15, 0.65, 0.2))
+    end)
+    pcall(function()
+        player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
+        player:EvaluateItems()
+    end)
+    RefreshCharacterCostume(player)
+end
+
+-- Restore Hal Jordan's Green Lantern Ring power and cleanly reset shooting state so discrete left-click beams fire straight & true
+local function RestoreHalRingPower(player, newWillpower, statusText)
+    if not player or not IsHalJordan(player) then return end
+    local data = GetPlayerData(player)
+    local wasDepleted = data.ringDepleted
+    data.willpower    = math.max(0.0, math.min(WILLPOWER_MAX, newWillpower or WILLPOWER_MAX))
+    data.ringDepleted = (data.willpower <= 0)
+    if wasDepleted and not data.ringDepleted then
+        data.shootHoldFrames          = 0
+        data.firedSmallBeamThisPress  = false
+        data.bufferedClickDir         = nil
+        data.allowingTapTear          = false
+        data.continuousBeamGraceTimer = 0
+        data.ringFlareTimer           = 16
+        data.oathTextTimer            = 90
+        data.oathText                 = statusText or "RING REBOOTED!"
+        StopContinuousBeam(data)
+        pcall(function()
+            local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYCHARGE or SoundEffect.SOUND_SUPERHOLY)) or 0
+            if sfx > 0 then
+                SFXManager():Play(sfx, 0.85, 0, false, 1.08)
+            end
+            local handPos = player.Position + (data.lastRingHandOffset or Vector(18, -14))
+            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, handPos, Vector.Zero, player)
+            SetEntityScaleAndColor(fx, 0.70, Color(0.15, 1.0, 0.45, 0.95, 0.2, 0.85, 0.3))
+        end)
+    end
+    pcall(function()
+        player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
+        player:EvaluateItems()
+    end)
+    RefreshCharacterCostume(player)
 end
 
 -- ---------------------------------------------------------------------------
@@ -685,7 +777,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     player:AddCollectible(ITEM_POWER_BATTERY, 4, false, ActiveSlot.SLOT_PRIMARY)
                 end
                 RefreshCharacterCostume(player)
-                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED)
+                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
                 player:EvaluateItems()
             elseif IsTaintedHal(player) then
                 EnforceTaintedHalNoRedHearts(player)
@@ -715,9 +807,24 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         end
     end
 
+    -- HAL JORDAN RING LOCKOUT & WILLPOWER REBOOT MECHANIC:
+    -- At 0% Willpower, Hal loses the ability to use the Power Ring (human mode, normal un-nerfed tears)
+    -- while his Willpower steadily recharges through resolve (+passive regen, +enemy kills, +room clears, or battery).
+    -- Once Willpower reaches WILLPOWER_REBOOT_THRESHOLD (20%), the Power Ring automatically reboots!
+    if IsHalJordan(player) and data.ringDepleted then
+        local frame = Game():GetFrameCount()
+        if data.lastDepletedRegenFrame ~= frame then
+            data.lastDepletedRegenFrame = frame
+            data.willpower = math.min(WILLPOWER_MAX, (data.willpower or 0) + WILLPOWER_PASSIVE_REBOOT_RATE)
+            if data.willpower >= WILLPOWER_REBOOT_THRESHOLD then
+                RestoreHalRingPower(player, data.willpower, "RING REBOOTED!")
+            end
+        end
+    end
+
     -- DUAL FIRING MODE FOR BOTH HAL JORDAN AND TAINTED HAL (PARALLAX):
     -- 1) Clicking / tapping (< HAL_CONTINUOUS_HOLD_FRAMES): fires high-damage discrete Ring Beam constructs.
-    -- 2) Holding the shoot button (>= HAL_CONTINUOUS_HOLD_FRAMES): channels an unbroken continuous emerald laser beam that deals lower per-tick damage.
+    -- 2) Genuinely holding the shoot button (>= HAL_CONTINUOUS_HOLD_FRAMES): channels an unbroken continuous emerald laser beam.
     if IsHalJordan(player) or IsTaintedHal(player) then
         local frame = Game():GetFrameCount()
         if data.lastSmallBeamFrame and frame < data.lastSmallBeamFrame then
@@ -728,7 +835,8 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         local isHoldingShoot = shootInput and shootInput:Length() > 0.1
 
         if isHoldingShoot and CanUseContinuousBeam(player) then
-            local shootDir   = shootInput:Normalized()
+            local rawDir     = shootInput:Normalized()
+            local shootDir   = Vector(rawDir.X, rawDir.Y)
             local handOffset = GetRingHandOffset(player, shootDir)
             data.lastShootDir       = shootDir
             data.lastRingHandOffset = handOffset
@@ -737,21 +845,30 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 data.firedSmallBeamThisPress = false
             end
 
-            -- If the player was just channeling the continuous beam and switched arrow keys (<= 5 frame gap),
-            -- resume the continuous emerald beam immediately without any startup delay or discrete tear!
-            if (data.continuousBeamGraceTimer or 0) > 0 then
+            -- Only skip hold warmup if the player was actively channeling the continuous beam and switched to a DIFFERENT
+            -- cardinal shoot direction within 4 ticks (never when spamming clicks in the same direction!).
+            local switchedBeamDir = false
+            if (data.continuousBeamGraceTimer or 0) > 0 and data.lastContinuousBeamDir then
+                local dot = shootDir.X * data.lastContinuousBeamDir.X + shootDir.Y * data.lastContinuousBeamDir.Y
+                if dot < 0.75 then
+                    switchedBeamDir = true
+                end
+            end
+
+            if switchedBeamDir then
                 data.shootHoldFrames = math.max((data.shootHoldFrames or 0) + 1, HAL_CONTINUOUS_HOLD_FRAMES)
             else
                 data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
             end
 
             if data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES then
-                -- Hold native FireDelay during the brief tap-vs-hold detection window so holding NEVER fires a discrete tear bolt first!
+                -- Hold native FireDelay during the tap-vs-hold detection window so holding NEVER fires a discrete tear bolt first!
                 player.FireDelay    = math.max(player.FireDelay, 2)
                 data.ringFlareTimer = math.max(data.ringFlareTimer or 0, 3)
             else
                 data.isFiringContinuousBeam   = true
-                data.continuousBeamGraceTimer = 5
+                data.continuousBeamGraceTimer = 4
+                data.lastContinuousBeamDir    = Vector(shootDir.X, shootDir.Y)
                 data.bufferedClickDir         = nil
                 -- Suppress discrete tear projectiles while channeling the continuous emerald laser beam
                 player.FireDelay    = math.max(player.FireDelay, 5)
@@ -779,14 +896,7 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     local newWillBucket = math.floor(data.willpower + 0.5)
 
                     if data.willpower <= 0 then
-                        data.ringDepleted             = true
-                        data.willpower                = 0
-                        data.continuousBeamGraceTimer = 0
-                        StopContinuousBeam(data)
-                        player:AnimateSad()
-                        player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-                        player:EvaluateItems()
-                        RefreshCharacterCostume(player)
+                        TriggerHalRingDepleted(player)
                     elseif newWillBucket ~= prevWillBucket then
                         player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                         player:EvaluateItems()
@@ -796,17 +906,20 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         else
             if (data.continuousBeamGraceTimer or 0) > 0 then
                 data.continuousBeamGraceTimer = data.continuousBeamGraceTimer - 1
+                if data.continuousBeamGraceTimer <= 0 then
+                    data.lastContinuousBeamDir = nil
+                end
             end
 
-            -- If player tapped & released (< HAL_CONTINUOUS_HOLD_FRAMES), buffer the discrete Ring Beam shot so it fires immediately
+            -- If player clicked/tapped & released (< HAL_CONTINUOUS_HOLD_FRAMES), buffer the discrete Ring Beam shot so it fires cleanly
             if (data.shootHoldFrames or 0) > 0
                 and data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES
                 and not data.firedSmallBeamThisPress
                 and data.lastShootDir
                 and CanUseContinuousBeam(player)
             then
-                data.bufferedClickDir         = data.lastShootDir
-                data.bufferedClickExpireFrame = frame + 12
+                data.bufferedClickDir         = Vector(data.lastShootDir.X, data.lastShootDir.Y)
+                data.bufferedClickExpireFrame = frame + 15
             end
 
             if data.isFiringContinuousBeam or data.continuousLaser then
@@ -816,24 +929,23 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
             data.firedSmallBeamThisPress = false
         end
 
-        -- Fire any buffered tap/click shot as soon as minimum click interval is reached (only while not actively holding shoot)
-        if data.bufferedClickDir and not isHoldingShoot and not data.isFiringContinuousBeam then
-            local isDepleted = IsHalJordan(player) and data.ringDepleted
-            if frame > (data.bufferedClickExpireFrame or 0) or isDepleted or not CanUseContinuousBeam(player) then
+        -- Fire any buffered tap/click shot as soon as minimum click interval is reached (even if rapid-clicking started the next press!)
+        if data.bufferedClickDir and not data.isFiringContinuousBeam then
+            if frame > (data.bufferedClickExpireFrame or 0) or not CanUseContinuousBeam(player) then
                 data.bufferedClickDir = nil
             else
-                local minClickInterval = math.max(4, math.min(8, math.floor((player.MaxFireDelay or 10) * 0.65)))
+                local minClickInterval = math.max(3, math.min(7, math.floor((player.MaxFireDelay or 10) * 0.55)))
                 if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
-                    local dir = data.bufferedClickDir
-                    data.bufferedClickDir   = nil
-                    data.lastSmallBeamFrame = frame
-                    local spawnOffset = GetRingBeamTearSpawnOffset(player, dir)
-                    local shotSpeed   = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
-                    local shotCount   = GetTapTearCount(player)
-                    data.allowingTapTear  = true
-                    data.tapBurstCount    = shotCount
-                    data.tapBurstBaseDir  = dir
-                    data.tapBurstDepleted = isDepleted
+                    local dir = Vector(data.bufferedClickDir.X, data.bufferedClickDir.Y)
+                    data.bufferedClickDir    = nil
+                    data.lastSmallBeamFrame  = frame
+                    local spawnOffset        = GetRingBeamTearSpawnOffset(player, dir)
+                    local shotSpeed          = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
+                    local shotCount          = GetTapTearCount(player)
+                    data.allowingTapTear     = true
+                    data.firingBufferedClick = true
+                    data.tapBurstCount       = shotCount
+                    data.tapBurstBaseDir     = dir
                     pcall(function()
                         for sIdx = 1, shotCount do
                             data.tapBurstIndex = sIdx
@@ -849,13 +961,12 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                             player:FireTear(player.Position + spawnOffset, vel, false, false, false)
                         end
                     end)
-                    data.allowingTapTear         = false
-                    data.tapBurstCount           = nil
-                    data.tapBurstIndex           = nil
-                    data.tapBurstBaseDir         = nil
-                    data.tapBurstDepleted        = nil
-                    data.firedSmallBeamThisPress = false
-                    player.FireDelay             = math.max(player.MaxFireDelay or 10, 2)
+                    data.allowingTapTear     = false
+                    data.firingBufferedClick = false
+                    data.tapBurstCount       = nil
+                    data.tapBurstIndex       = nil
+                    data.tapBurstBaseDir     = nil
+                    player.FireDelay         = math.max(player.MaxFireDelay or 10, 2)
                 end
             end
         end
@@ -908,23 +1019,23 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
         end
 
         if cacheFlag == CacheFlag.CACHE_DAMAGE then
-            -- Scale Hal Jordan's damage with current Willpower (0.85x at 0% -> 1.15x near full, +0.10 peak bonus = 1.25x at 100%)
-            local will = data.willpower or WILLPOWER_MAX
-            local willRatio = math.max(0.0, math.min(1.0, will / WILLPOWER_MAX))
-            local willMult = 0.85 + (0.30 * willRatio)
-            if will >= 99.5 then
-                willMult = willMult + 0.10 -- 1.25x DMG at 100% Willpower!
+            if not data.ringDepleted then
+                -- While the Power Ring is active, scale damage from 1.00x -> 1.15x (+0.10 peak bonus = 1.25x at 100% Willpower)
+                local will = data.willpower or WILLPOWER_MAX
+                local willRatio = math.max(0.0, math.min(1.0, will / WILLPOWER_MAX))
+                local willMult = 1.00 + (0.15 * willRatio)
+                if will >= 99.5 then
+                    willMult = willMult + 0.10 -- 1.25x DMG at 100% Willpower!
+                end
+                player.Damage = player.Damage * willMult
             end
-            player.Damage = player.Damage * willMult
-
-            -- Ring depleted: 50% damage penalty
-            if data.ringDepleted then
-                player.Damage = player.Damage * 0.5
-            end
+            -- When ringDepleted is true, Hal loses the ability to use the Ring (no ring bonus, but NO harsh 50% damage nerf!)
         end
 
         if cacheFlag == CacheFlag.CACHE_SHOTSPEED then
-            player.ShotSpeed = player.ShotSpeed + HAL_SHOT_SPEED_BONUS
+            if not data.ringDepleted then
+                player.ShotSpeed = player.ShotSpeed + HAL_SHOT_SPEED_BONUS
+            end
         end
 
         if cacheFlag == CacheFlag.CACHE_FLYING then
@@ -962,11 +1073,11 @@ GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
 
     -- POWER BATTERY OVERCHARGE (applies to Hal Jordan when activating Power Battery at >=50% Willpower)
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
-        if IsHalJordan(player) and data.overcharge and data.overchargeRoomIdx == roomIdx then
+        if IsHalJordan(player) and not data.ringDepleted and data.overcharge and data.overchargeRoomIdx == roomIdx then
             player.Damage = player.Damage * 1.15
         end
     elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
-        if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx == roomIdx then
+        if not (IsHalJordan(player) and data.ringDepleted) and (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx == roomIdx then
             player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         end
     end
@@ -1000,7 +1111,8 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     local player = spawner:ToPlayer()
     if not player then return end
 
-    if not HasGreenLanternRing(player) then return end
+    -- When Hal's ring is depleted (0% Willpower lockout), he loses the ability to use the Power Ring and fires normal tears!
+    if not IsRingActive(player) then return end
 
     local data = GetPlayerData(player)
 
@@ -1017,9 +1129,11 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
 
     local frame = Game():GetFrameCount()
     if IsHalJordan(player) or IsTaintedHal(player) then
-        data.lastSmallBeamFrame      = frame
-        data.firedSmallBeamThisPress = true
-        data.bufferedClickDir        = nil
+        data.lastSmallBeamFrame = frame
+        if not data.firingBufferedClick then
+            data.firedSmallBeamThisPress = true
+            data.bufferedClickDir        = nil
+        end
     end
 
     -- Multi-shot fan offset (20/20, Inner Eye, Mutant Spider, Monstro's Lung, Conjoined)
@@ -1048,21 +1162,17 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
         perpOffset = perp * (side * math.min(tier * 5.5, 14.0))
     end
 
-    tear.Position           = player.Position + spawnOffset + perpOffset
-    tear.DepthOffset        = IsAimingUp(player, baseDir) and -20 or 25
-    data.lastShootDir       = (baseDir and baseDir:Length() > 0.01) and baseDir:Normalized() or data.lastShootDir
+    tear.Position     = player.Position + spawnOffset + perpOffset
+    tear.DepthOffset  = IsAimingUp(player, baseDir) and -20 or 25
+    if baseDir and baseDir:Length() > 0.01 then
+        local normDir = baseDir:Normalized()
+        data.lastShootDir = Vector(normDir.X, normDir.Y)
+    end
     data.lastRingHandOffset = handOffset
     data.ringFlareTimer     = 6
 
-    local isDepletedShot = IsHalJordan(player) and data.ringDepleted
-    if data.allowingTapTear and data.tapBurstDepleted == false then
-        isDepletedShot = false
-    end
-
-    -- Grant ONLY Piercing (pass through enemies) + Spectral (pass through rocks/objects)
-    if not isDepletedShot then
-        tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
-    end
+    -- Grant Piercing (pass through enemies) + Spectral (pass through rocks/objects)
+    tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
     if IsTaintedHal(player) then
         tear.TearFlags = tear.TearFlags | TearFlags.TEAR_FEAR
     end
@@ -1072,41 +1182,30 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
 
     -- 2. HAL JORDAN WILLPOWER & BEAM SCALING
     if IsHalJordan(player) then
-        if isDepletedShot then
-            -- Limited range when depleted: weak sputtering spark near the ring hand
-            tear.Velocity = tear.Velocity * 0.18
-            ApplyRingBeamSprite(tear, 0.55)
-        else
-            local baseScale = data.overcharge and 1.20 or (data.surgeBuff and 1.10 or 1.0)
-            ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
+        local baseScale = data.overcharge and 1.20 or (data.surgeBuff and 1.10 or 1.0)
+        ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
 
-            -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
-            local drain = WILLPOWER_PER_TEAR
-            if data.multiShotIndex > 0 then
-                drain = drain * 0.25 -- Multi-shot / Monstro's Lung extra beams cost 75% less willpower
-            end
-            if CollectibleType.COLLECTIBLE_SOY_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_SOY_MILK) then
-                drain = drain * 0.20
-            elseif CollectibleType.COLLECTIBLE_ALMOND_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_ALMOND_MILK) then
-                drain = drain * 0.25
-            end
+        -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
+        local drain = WILLPOWER_PER_TEAR
+        if data.multiShotIndex > 0 then
+            drain = drain * 0.25 -- Multi-shot / Monstro's Lung extra beams cost 75% less willpower
+        end
+        if CollectibleType.COLLECTIBLE_SOY_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_SOY_MILK) then
+            drain = drain * 0.20
+        elseif CollectibleType.COLLECTIBLE_ALMOND_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_ALMOND_MILK) then
+            drain = drain * 0.25
+        end
 
-            local prevWillBucket = math.floor((data.willpower or WILLPOWER_MAX) + 0.5)
-            data.willpower = math.max(0, data.willpower - drain)
-            local newWillBucket = math.floor(data.willpower + 0.5)
+        local prevWillBucket = math.floor((data.willpower or WILLPOWER_MAX) + 0.5)
+        data.willpower = math.max(0, (data.willpower or WILLPOWER_MAX) - drain)
+        local newWillBucket = math.floor(data.willpower + 0.5)
 
-            local isFinalBurstTear = (not data.allowingTapTear) or ((data.tapBurstIndex or 1) >= (data.tapBurstCount or 1))
-            if data.willpower <= 0 and isFinalBurstTear then
-                data.ringDepleted = true
-                data.willpower = 0
-                player:AnimateSad()
-                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-                player:EvaluateItems()
-                RefreshCharacterCostume(player)
-            elseif newWillBucket ~= prevWillBucket and isFinalBurstTear then
-                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
-                player:EvaluateItems()
-            end
+        local isFinalBurstTear = (not data.allowingTapTear) or ((data.tapBurstIndex or 1) >= (data.tapBurstCount or 1))
+        if data.willpower <= 0 and isFinalBurstTear then
+            TriggerHalRingDepleted(player)
+        elseif newWillBucket ~= prevWillBucket and isFinalBurstTear then
+            player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+            player:EvaluateItems()
         end
     elseif IsTaintedHal(player) then
         -- 3. TAINTED HAL (PARALLAX): Larger, heavy emerald construct energy blast from the ring
@@ -1118,15 +1217,42 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     end
 end)
 
--- Keep all Green Lantern Ring energy beams oriented along their exact flight velocity vector
+-- Keep all Green Lantern Ring energy beams oriented along their straight flight vector and prevent C++ sprite/variant resets
 GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
     local td = tear:GetData()
-    if not td then return end
+    if not (td and td.isGLRingBeam) then return end
 
-    if td.isGLRingBeam then
-        tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
+    tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
+
+    -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
+    local flags = tear.TearFlags
+    local hasCurvingSynergy = false
+    if TearFlags then
+        if (TearFlags.TEAR_HOMING and (flags & TearFlags.TEAR_HOMING) ~= 0)
+            or (TearFlags.TEAR_ORBIT and (flags & TearFlags.TEAR_ORBIT) ~= 0)
+            or (TearFlags.TEAR_BOOMERANG and (flags & TearFlags.TEAR_BOOMERANG) ~= 0)
+            or (TearFlags.TEAR_SPIRAL and (flags & TearFlags.TEAR_SPIRAL) ~= 0)
+            or (TearFlags.TEAR_WIGGLE and (flags & TearFlags.TEAR_WIGGLE) ~= 0)
+        then
+            hasCurvingSynergy = true
+        end
+    end
+    if not hasCurvingSynergy and td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
+        local currentSpeed = tear.Velocity:Length()
+        tear.Velocity = td.glBeamVel:Normalized() * currentSpeed
+    end
+
+    local ts = tear:GetSprite()
+    if ts then
+        if ts:GetAnimation() ~= "Idle" then
+            ts:Load("gfx/effects/gl_ring_beam.anm2", true)
+            ts:Play("Idle", true)
+        end
+        if td.glBeamScale then
+            ts.Scale = Vector(td.glBeamScale, td.glBeamScale)
+        end
+        ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
         if tear.Velocity:Length() > 0.1 then
-            local ts = tear:GetSprite()
             ts.Rotation = tear.Velocity:GetAngleDegrees()
         end
     end
@@ -1154,7 +1280,7 @@ end)
 GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
     local spawner = laser.SpawnerEntity
     local player = spawner and spawner:ToPlayer()
-    if not player or not HasGreenLanternRing(player) then return end
+    if not player or not IsRingActive(player) then return end
 
     local ld = laser:GetData()
     local data = GetPlayerData(player)
@@ -1204,12 +1330,7 @@ GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
             data.willpower = math.max(0, data.willpower - 1.2)
             local newWillBucket = math.floor(data.willpower + 0.5)
             if data.willpower <= 0 then
-                data.ringDepleted = true
-                data.willpower = 0
-                player:AnimateSad()
-                player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-                player:EvaluateItems()
-                RefreshCharacterCostume(player)
+                TriggerHalRingDepleted(player)
             elseif newWillBucket ~= prevWillBucket then
                 player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                 player:EvaluateItems()
@@ -1221,7 +1342,7 @@ end)
 GL:AddCallback(ModCallbacks.MC_POST_LASER_UPDATE, function(_, laser)
     local spawner = laser.SpawnerEntity
     local player = spawner and spawner:ToPlayer()
-    if not player or not HasGreenLanternRing(player) then return end
+    if not player or not IsRingActive(player) then return end
 
     local ld = laser:GetData()
     local data = GetPlayerData(player)
@@ -1271,7 +1392,7 @@ end)
 GL:AddCallback(ModCallbacks.MC_POST_KNIFE_UPDATE, function(_, knife)
     local spawner = knife.SpawnerEntity
     local player = spawner and spawner:ToPlayer()
-    if not player or not HasGreenLanternRing(player) then return end
+    if not player or not IsRingActive(player) then return end
 
     knife:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.10, 0.85, 0.25)
     if knife:IsFlying() then
@@ -1293,29 +1414,21 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     local prevWill = data.willpower or WILLPOWER_MAX
     local wasDepleted = data.ringDepleted
 
-    -- 1. Always refill Willpower to 100% and restore ring power
-    data.willpower         = WILLPOWER_MAX
-    data.ringDepleted      = false
+    -- 1. Always refill Willpower to 100% and restore ring power cleanly
     data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
-    data.ringFlareTimer    = 14
 
     -- 2. If used by Hal Jordan at >= 50% Willpower (and not depleted), grant modest OVERCHARGE (+15% DMG for the room).
     --    Otherwise, simply restore Willpower & Ring capabilities without a bonus damage multiplier.
+    local statusMsg = "WILLPOWER RESTORED!"
     if IsHalJordan(player) and (not wasDepleted) and prevWill >= 50.0 then
         data.overcharge = true
         data.surgeBuff  = false
-        data.oathTextTimer = 90
-        data.oathText = "OVERCHARGE! (+15% DMG)"
+        statusMsg       = "OVERCHARGE! (+15% DMG)"
     else
         data.overcharge = false
         data.surgeBuff  = true
-        data.oathTextTimer = 90
-        data.oathText = "WILLPOWER RESTORED!"
     end
-
-    pcall(function()
-        SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 1.0)
-    end)
+    RestoreHalRingPower(player, WILLPOWER_MAX, statusMsg)
 
     -- 3. Modest close-range pulse: light damage & knockback to nearby enemies and clear close projectiles
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
@@ -1332,10 +1445,6 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     end
 
     player:AnimateHappy()
-    player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-    player:EvaluateItems()
-    RefreshCharacterCostume(player)
-
     return true
 end)
 
@@ -1627,14 +1736,23 @@ end)
 
 -- Only spawn Green Lantern Emblem drops on actual enemy deaths (never on room transitions),
 -- with a significantly reduced drop rate (14% on Feared enemies, 8% on normal enemies).
+-- Also: if Hal Jordan's ring is depleted, defeating enemies with normal tears fuels his resolve (+5% Willpower per kill) to reboot the ring faster!
 GL:AddCallback(ModCallbacks.MC_POST_NPC_DEATH, function(_, npc)
     if not npc or not npc:IsEnemy() or not npc:IsActiveEnemy(true) or (npc.MaxHitPoints and npc.MaxHitPoints <= 1) then return end
 
     local hasTaintedHal = false
     for i = 0, Game():GetNumPlayers() - 1 do
-        if IsTaintedHal(Isaac.GetPlayer(i)) then
+        local p = Isaac.GetPlayer(i)
+        if IsTaintedHal(p) then
             hasTaintedHal = true
-            break
+        elseif IsHalJordan(p) then
+            local d = GetPlayerData(p)
+            if d.ringDepleted then
+                d.willpower = math.min(WILLPOWER_MAX, (d.willpower or 0) + WILLPOWER_KILL_REBOOT_BONUS)
+                if d.willpower >= WILLPOWER_REBOOT_THRESHOLD then
+                    RestoreHalRingPower(p, d.willpower, "RING REBOOTED!")
+                end
+            end
         end
     end
     if not hasTaintedHal then return end
@@ -1644,6 +1762,24 @@ GL:AddCallback(ModCallbacks.MC_POST_NPC_DEATH, function(_, npc)
         SpawnLanternEmblemDrop(npc.Position)
     end
 end)
+
+-- Clearing a room while Hal's ring is depleted surges his willpower (+15%) to immediately help reboot the Power Ring!
+if ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD then
+    GL:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, function(_)
+        for i = 0, Game():GetNumPlayers() - 1 do
+            local p = Isaac.GetPlayer(i)
+            if IsHalJordan(p) then
+                local d = GetPlayerData(p)
+                if d.ringDepleted then
+                    d.willpower = math.min(WILLPOWER_MAX, (d.willpower or 0) + WILLPOWER_ROOM_REBOOT_BONUS)
+                    if d.willpower >= WILLPOWER_REBOOT_THRESHOLD then
+                        RestoreHalRingPower(p, d.willpower, "RING REBOOTED!")
+                    end
+                end
+            end
+        end
+    end)
+end
 
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     if #activeEmeraldSparks == 0 then return end
@@ -1853,12 +1989,8 @@ GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collide
         refillAmount = 25.0
     end
 
-    data.willpower    = math.min(WILLPOWER_MAX, data.willpower + refillAmount)
-    data.ringDepleted = (data.willpower <= 0)
-
-    player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-    player:EvaluateItems()
-    RefreshCharacterCostume(player)
+    local newWill = math.min(WILLPOWER_MAX, (data.willpower or 0) + refillAmount)
+    RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
 end)
 
 -- ---------------------------------------------------------------------------
@@ -1882,6 +2014,7 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
             data.firedSmallBeamThisPress  = false
             data.bufferedClickDir         = nil
             data.continuousBeamGraceTimer = 0
+            data.lastContinuousBeamDir    = nil
         end
         local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
         local needsEval = false
@@ -2252,9 +2385,9 @@ if ModCallbacks.MC_PRE_PLAYER_RENDER then
         end
         RenderGLPlayerAura(player)
 
-        if HasGreenLanternRing(player) then
+        if IsRingActive(player) then
             local data = GetPlayerData(player)
-            if not (IsHalJordan(player) and data.ringDepleted) and IsPlayerAimingUpForRender(player, data) then
+            if IsPlayerAimingUpForRender(player, data) then
                 RenderGLBeamAndFlareForPlayer(player, data, Game():GetFrameCount())
             end
         end
@@ -2273,9 +2406,8 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOff
             RenderGLSparkDrops(nil)
         end
     end
-    if not HasGreenLanternRing(player) then return end
+    if not IsRingActive(player) then return end
     local data = GetPlayerData(player)
-    if IsHalJordan(player) and data.ringDepleted then return end
 
     if not ModCallbacks.MC_PRE_PLAYER_RENDER then
         RenderGLPlayerAura(player)
@@ -2304,14 +2436,14 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
 
             -- HAL JORDAN HUD (Top-left below hearts)
             if IsHalJordan(player) then
-                local pct  = math.max(0.0, math.min(1.0, data.willpower / WILLPOWER_MAX))
+                local pct  = math.max(0.0, math.min(1.0, (data.willpower or 0) / WILLPOWER_MAX))
                 local BAR_W = 36
 
                 Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
 
                 local r, g, b = 0.1, 0.95, 0.3
                 if data.ringDepleted then
-                    r, g, b = 0.95, 0.2, 0.2
+                    r, g, b = 1.0, 0.45, 0.15
                 elseif data.overcharge then
                     r, g, b = 1.0, 0.88, 0.15
                 elseif data.surgeBuff then
@@ -2324,16 +2456,21 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
                     Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
                 end
 
-                local label = string.format("%.0f%%", data.willpower)
+                local label = string.format("%.0f%%", data.willpower or 0)
                 if data.ringDepleted then
-                    label = "EMPTY"
+                    label = string.format("REBOOT %.0f%%/%.0f%%", data.willpower or 0, WILLPOWER_REBOOT_THRESHOLD)
                 elseif data.overcharge then
-                    label = string.format("%.0f%% +15%%DMG", data.willpower)
+                    label = string.format("%.0f%% +15%%DMG", data.willpower or 0)
                 end
                 DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
 
                 if data.oathTextTimer and data.oathTextTimer > 0 then
                     data.oathTextTimer = data.oathTextTimer - 1
+                    if data.oathText then
+                        local headPos = Isaac.WorldToScreen(player.Position + Vector(0, -48))
+                        local textAlpha = math.min(0.95, data.oathTextTimer / 20.0)
+                        DrawHudText(data.oathText, math.floor(headPos.X - 38), math.floor(headPos.Y), r, g, b, textAlpha)
+                    end
                 end
             end
 
@@ -2426,12 +2563,11 @@ GL:AddCallback(ModCallbacks.MC_EXECUTE_CMD, function(_, cmd, params)
         local p = Isaac.GetPlayer(0)
         if IsHalJordan(p) then
             local pct = tonumber(params) or 100
-            local d = GetPlayerData(p)
-            d.willpower    = pct
-            d.ringDepleted = (pct <= 0)
-            p:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_TEARFLAG)
-            p:EvaluateItems()
-            RefreshCharacterCostume(p)
+            if pct <= 0 then
+                TriggerHalRingDepleted(p)
+            else
+                RestoreHalRingPower(p, pct, "WILLPOWER RESTORED!")
+            end
             Isaac.ConsoleOutput(string.format("[GL] Willpower set to %.0f%%\n", pct))
         end
         return true
