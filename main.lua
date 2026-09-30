@@ -2628,17 +2628,40 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOff
     end
 end)
 
+local lastRenderGameFrame = -1
+local frozenRenderFrames = 0
+local imVisibleBeforeFreeze = false
+
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     EnsureEIDRegistered()
     RegisterStageAPIGraphics()
 
+    local currentGameFrame = Game():GetFrameCount()
+    if currentGameFrame == lastRenderGameFrame then
+        frozenRenderFrames = frozenRenderFrames + 1
+    else
+        lastRenderGameFrame = currentGameFrame
+        frozenRenderFrames = 0
+        if _G.Onseshigo and _G.Onseshigo.ItemMenu and _G.Onseshigo.ItemMenu.Vars then
+            imVisibleBeforeFreeze = _G.Onseshigo.ItemMenu.Vars.isVisible and true or false
+        end
+    end
+
     -- Compatibility guard for Workshop mod "Item Menu" (2988078839):
-    -- Item Menu's KEY_G handler omits checking `mod.Vars.isVisible`, which causes typing 'g' in the
-    -- Debug Console (e.g. "Light", "Giant", "Ring") while Item Menu is closed to silently grant the
-    -- player whatever Page 1 item the cursor last hovered over (such as ID 14: Roid Rage / green syringe).
+    -- 1. Item Menu's KEY_G handler omits checking `mod.Vars.isVisible`, which causes typing 'g' in the
+    --    Debug Console (e.g. "Light", "Giant", "Ring") while Item Menu is closed to silently grant the
+    --    player whatever Page 1 item the cursor last hovered over (such as ID 14: Roid Rage / green syringe).
+    -- 2. Opening the Debug Console freezes Game():GetFrameCount() without setting Game():IsPaused() = true,
+    --    so typing 'h' followed by 'g' (e.g. "spawn The Tragedy of Coast City") would otherwise toggle
+    --    `isVisible = true` on 'h' and grant Roid Rage on 'g'.
     if _G.Onseshigo and _G.Onseshigo.ItemMenu and _G.Onseshigo.ItemMenu.Vars then
         local imVars = _G.Onseshigo.ItemMenu.Vars
-        if not imVars.isVisible then
+        if frozenRenderFrames > 2 then
+            if not imVisibleBeforeFreeze then
+                imVars.isVisible = false
+            end
+            imVars.editModes = true
+        elseif not imVars.isVisible then
             imVars.editModes = true
         end
     end
