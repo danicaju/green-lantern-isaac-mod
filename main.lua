@@ -41,7 +41,8 @@ local WILLPOWER_REBOOT_THRESHOLD    = 20.0   -- willpower needed to reboot the R
 local WILLPOWER_PASSIVE_REBOOT_RATE =  0.085 -- passive willpower recovery per 30fps frame (~2.5%/sec -> ~8s reboot) while Ring is offline
 local WILLPOWER_KILL_REBOOT_BONUS   =  5.0   -- +5% willpower per enemy killed while fighting without the Ring
 local WILLPOWER_ROOM_REBOOT_BONUS   = 15.0   -- +15% willpower on clearing a room while Ring is offline
-local HAL_CONTINUOUS_HOLD_FRAMES    = 24     -- must hold fire continuously >= 24 player-update ticks (~0.40s) to channel continuous emerald laser; clicking/spamming fires discrete beams
+local HAL_CONTINUOUS_HOLD_FRAMES    = 15     -- must hold shoot uninterrupted >= 15 update ticks at 30Hz (0.50s) to channel continuous beam
+local HAL_SPAM_EXTRA_HOLD_FRAMES    =  5     -- extra hold ticks required (+5 -> 20 ticks = 0.67s) right after releasing a discrete click
 local HAL_CONTINUOUS_BEAM_DMG_MULT  =  0.20  -- each continuous beam tick deals 20% of small-beam damage
 local HAL_CONTINUOUS_TICK_FRAMES    =  4     -- continuous beam ticks once every 4 frames (7.5/sec -> 1.5x DMG/sec)
 local HAL_CONTINUOUS_WILL_DRAIN     =  0.06  -- willpower drained per update tick while Hal Jordan channels continuous beam
@@ -72,24 +73,32 @@ local function GetPlayerData(player)
     if not d.GreenLantern then
         d.GreenLantern = {
             -- Hal Jordan
-            willpower                = WILLPOWER_MAX,
-            ringDepleted             = false,
-            overcharge               = false,
-            surgeBuff                = false,
-            overchargeRoomIdx        = -1,
-            oathTextTimer            = 0,
-            oathText                 = "",
-            shootHoldFrames          = 0,
-            lastSmallBeamFrame       = -999,
-            firedSmallBeamThisPress  = false,
-            lastShootDir             = nil,
-            bufferedClickDir         = nil,
-            bufferedClickExpireFrame = 0,
-            isFiringContinuousBeam   = false,
-            spawningContinuousBeam   = false,
-            continuousLaser          = nil,
-            continuousBeamGraceTimer = 0,
-            allowingTapTear          = false,
+            willpower                    = WILLPOWER_MAX,
+            ringDepleted                 = false,
+            overcharge                   = false,
+            surgeBuff                    = false,
+            overchargeRoomIdx            = -1,
+            oathTextTimer                = 0,
+            oathText                     = "",
+            shootHoldFrames              = 0,
+            lastShootUpdateFrame         = -1,
+            lastSmallBeamFrame           = -999,
+            lastDiscreteClickReleaseFrame = -999,
+            firedSmallBeamThisPress      = false,
+            lastShootDir                 = nil,
+            renderLastShootDir           = nil,
+            wasHoldingShootOnRender      = false,
+            sawShootReleaseBetweenFrames = false,
+            sawShootPressBetweenFrames   = false,
+            bufferedClickDir             = nil,
+            bufferedClickExpireFrame     = 0,
+            humanTapShootDir             = nil,
+            humanTapExpireFrame          = 0,
+            isFiringContinuousBeam       = false,
+            spawningContinuousBeam       = false,
+            continuousLaser              = nil,
+            continuousBeamGraceTimer     = 0,
+            allowingTapTear              = false,
 
             -- Tainted Hal
             emeraldSparks       = 0.0,
@@ -117,6 +126,30 @@ end
 -- ---------------------------------------------------------------------------
 -- SECTION 3: HELPER UTILITIES
 -- ---------------------------------------------------------------------------
+
+-- Safe TearFlags bitmask test supporting both Repentance BitSet128 userdata and numeric bitmasks.
+-- (In Lua, comparing BitSet128 userdata to number 0 with `~= 0` is ALWAYS true!)
+local function HasTearFlag(flags, flag)
+    if not flags or not flag then return false end
+    local ok, res = pcall(function() return flags & flag end)
+    if not ok or res == nil then return false end
+    if type(res) == "number" then
+        return res ~= 0
+    end
+    if TearFlags and TearFlags.TEAR_NONE ~= nil then
+        local okEq, isNone = pcall(function() return res == TearFlags.TEAR_NONE end)
+        if okEq then
+            return not isNone
+        end
+    end
+    if BitSet128 then
+        local okBs, isZero = pcall(function() return res == BitSet128(0, 0) end)
+        if okBs then
+            return not isZero
+        end
+    end
+    return false
+end
 
 -- Persistent state for The Tragedy of Coast City 10-second Emerald Vortex
 local activeCoastCity = {
@@ -381,7 +414,7 @@ local function TickContinuousBeamDamage(player, data, startWorld, endWorld)
     local baseRadius = 18.0 * beamScale
     local tickDmg    = (player.Damage or 3.5) * HAL_CONTINUOUS_BEAM_DMG_MULT
     local applyFear  = IsTaintedHal(player)
-        or (TearFlags and TearFlags.TEAR_FEAR and player.TearFlags and ((player.TearFlags & TearFlags.TEAR_FEAR) ~= 0))
+        or (TearFlags and TearFlags.TEAR_FEAR and HasTearFlag(player.TearFlags, TearFlags.TEAR_FEAR))
     local frame      = Game():GetFrameCount()
 
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
@@ -540,20 +573,13 @@ end
 local function ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
     pcall(function()
-        -- Ensure piercing tear variant is set BEFORE loading gl_ring_beam.anm2 so C++ EntityTear::Update()
-        -- never calls ChangeVariant(CUPID_BLUE) on Frame 1 and overwrites gl_ring_beam.anm2 with a vanilla circle tear!
-        if TearVariant and TearVariant.CUPID_BLUE and TearVariant.BLUE and tear.Variant == TearVariant.BLUE then
-            if tear.ChangeVariant then
-                tear:ChangeVariant(TearVariant.CUPID_BLUE)
-            else
-                tear.Variant = TearVariant.CUPID_BLUE
-            end
-        end
         tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
+        tear.FallingAcceleration = -0.04
+        tear.FallingSpeed = 0.0
         local ts = tear:GetSprite()
         ts:Load("gfx/effects/gl_ring_beam.anm2", true)
         ts:Play("Idle", true)
-        local angle = tear.Velocity:GetAngleDegrees()
+        local angle = (tear.Velocity and tear.Velocity:Length() > 0.01) and tear.Velocity:GetAngleDegrees() or 0.0
         ts.Rotation = angle
         local s = scaleMult or 1.0
         ts.Scale = Vector(s, s)
@@ -628,18 +654,22 @@ end
 local function TriggerHalRingDepleted(player)
     if not player or not IsHalJordan(player) then return end
     local data = GetPlayerData(player)
-    data.ringDepleted             = true
-    data.willpower                = 0
-    data.overcharge               = false
-    data.surgeBuff                = false
-    data.continuousBeamGraceTimer = 0
-    data.shootHoldFrames          = 0
-    data.firedSmallBeamThisPress  = false
-    data.bufferedClickDir         = nil
-    data.allowingTapTear          = false
-    data.ringFlareTimer           = 0
-    data.oathTextTimer            = 95
-    data.oathText                 = "RING OFFLINE! FIGHT ON!"
+    data.ringDepleted              = true
+    data.willpower                 = 0
+    data.overcharge                = false
+    data.surgeBuff                 = false
+    data.continuousBeamGraceTimer  = 0
+    data.lastContinuousBeamDir     = nil
+    data.shootHoldFrames           = 0
+    data.firedSmallBeamThisPress   = false
+    data.sawShootReleaseBetweenFrames = false
+    data.sawShootPressBetweenFrames   = false
+    data.bufferedClickDir          = nil
+    data.humanTapShootDir          = nil
+    data.allowingTapTear           = false
+    data.ringFlareTimer            = 0
+    data.oathTextTimer             = 95
+    data.oathText                  = "RING OFFLINE! FIGHT ON!"
     StopContinuousBeam(data)
     pcall(function()
         local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYDISCHARGE or SoundEffect.SOUND_THUMBS_DOWN)) or 0
@@ -665,15 +695,40 @@ local function RestoreHalRingPower(player, newWillpower, statusText)
     data.willpower    = math.max(0.0, math.min(WILLPOWER_MAX, newWillpower or WILLPOWER_MAX))
     data.ringDepleted = (data.willpower <= 0)
     if wasDepleted and not data.ringDepleted then
-        data.shootHoldFrames          = 0
-        data.firedSmallBeamThisPress  = false
-        data.bufferedClickDir         = nil
-        data.allowingTapTear          = false
-        data.continuousBeamGraceTimer = 0
-        data.ringFlareTimer           = 16
-        data.oathTextTimer            = 90
-        data.oathText                 = statusText or "RING REBOOTED!"
+        data.shootHoldFrames              = 0
+        data.firedSmallBeamThisPress      = false
+        data.sawShootReleaseBetweenFrames = false
+        data.sawShootPressBetweenFrames   = false
+        data.bufferedClickDir             = nil
+        data.humanTapShootDir             = nil
+        data.allowingTapTear              = false
+        data.continuousBeamGraceTimer     = 0
+        data.lastContinuousBeamDir        = nil
+        data.ringFlareTimer               = 16
+        data.oathTextTimer                = 90
+        data.oathText                     = statusText or "RING REBOOTED!"
         StopContinuousBeam(data)
+        -- Immediately clamp FireDelay >= 2 so C++ EntityPlayer::Update() cannot fire an unbuffered native circle tear
+        -- before MC_POST_PLAYER_UPDATE runs!
+        if CanUseContinuousBeam(player) then
+            player.FireDelay = math.max(player.FireDelay or 0, 2)
+        end
+        -- Convert any in-flight normal human tears fired right before/on the reboot frame into full Ring Beams
+        pcall(function()
+            local baseScale = data.overcharge and 1.20 or (data.surgeBuff and 1.10 or 1.0)
+            for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_TEAR, -1, -1, false)) do
+                local tear = ent and ent:ToTear()
+                if tear then
+                    local td = tear:GetData()
+                    local spawner = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+                    if spawner and spawner.Index == player.Index and not (td and (td.isGLRingBeam or td.isGiantFist)) then
+                        tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
+                        local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
+                        ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
+                    end
+                end
+            end
+        end)
         pcall(function()
             local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYCHARGE or SoundEffect.SOUND_SUPERHOLY)) or 0
             if sfx > 0 then
@@ -688,6 +743,9 @@ local function RestoreHalRingPower(player, newWillpower, statusText)
         player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
         player:EvaluateItems()
     end)
+    if CanUseContinuousBeam(player) then
+        player.FireDelay = math.max(player.FireDelay or 0, 2)
+    end
     RefreshCharacterCostume(player)
 end
 
@@ -707,22 +765,30 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
     -- HAL JORDAN INIT
     if IsHalJordan(player) then
         local data = GetPlayerData(player)
-        data.willpower                = WILLPOWER_MAX
-        data.ringDepleted             = false
-        data.overcharge               = false
-        data.surgeBuff                = false
-        data.overchargeRoomIdx        = -1
-        data.shootHoldFrames          = 0
-        data.lastSmallBeamFrame       = -999
-        data.firedSmallBeamThisPress  = false
-        data.lastShootDir             = nil
-        data.bufferedClickDir         = nil
-        data.bufferedClickExpireFrame = 0
-        data.isFiringContinuousBeam   = false
-        data.spawningContinuousBeam   = false
-        data.continuousLaser          = nil
-        data.continuousBeamGraceTimer = 0
-        data.allowingTapTear          = false
+        data.willpower                    = WILLPOWER_MAX
+        data.ringDepleted                 = false
+        data.overcharge                   = false
+        data.surgeBuff                    = false
+        data.overchargeRoomIdx            = -1
+        data.shootHoldFrames              = 0
+        data.lastShootUpdateFrame         = -1
+        data.lastSmallBeamFrame           = -999
+        data.lastDiscreteClickReleaseFrame = -999
+        data.firedSmallBeamThisPress      = false
+        data.lastShootDir                 = nil
+        data.renderLastShootDir           = nil
+        data.wasHoldingShootOnRender      = false
+        data.sawShootReleaseBetweenFrames = false
+        data.sawShootPressBetweenFrames   = false
+        data.bufferedClickDir             = nil
+        data.bufferedClickExpireFrame     = 0
+        data.humanTapShootDir             = nil
+        data.humanTapExpireFrame          = 0
+        data.isFiringContinuousBeam       = false
+        data.spawningContinuousBeam       = false
+        data.continuousLaser              = nil
+        data.continuousBeamGraceTimer     = 0
+        data.allowingTapTear              = false
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
             player:EvaluateItems()
@@ -733,21 +799,29 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
     -- TAINTED HAL INIT
     if IsTaintedHal(player) then
         local data = GetPlayerData(player)
-        data.emeraldSparks            = 0.0
-        data.stolenRings              = 0
-        data.coastCityActive          = false
-        data.coastCityFrame           = 0
-        data.shootHoldFrames          = 0
-        data.lastSmallBeamFrame       = -999
-        data.firedSmallBeamThisPress  = false
-        data.lastShootDir             = nil
-        data.bufferedClickDir         = nil
-        data.bufferedClickExpireFrame = 0
-        data.isFiringContinuousBeam   = false
-        data.spawningContinuousBeam   = false
-        data.continuousLaser          = nil
-        data.continuousBeamGraceTimer = 0
-        data.allowingTapTear          = false
+        data.emeraldSparks                = 0.0
+        data.stolenRings                  = 0
+        data.coastCityActive              = false
+        data.coastCityFrame               = 0
+        data.shootHoldFrames              = 0
+        data.lastShootUpdateFrame         = -1
+        data.lastSmallBeamFrame           = -999
+        data.lastDiscreteClickReleaseFrame = -999
+        data.firedSmallBeamThisPress      = false
+        data.lastShootDir                 = nil
+        data.renderLastShootDir           = nil
+        data.wasHoldingShootOnRender      = false
+        data.sawShootReleaseBetweenFrames = false
+        data.sawShootPressBetweenFrames   = false
+        data.bufferedClickDir             = nil
+        data.bufferedClickExpireFrame     = 0
+        data.humanTapShootDir             = nil
+        data.humanTapExpireFrame          = 0
+        data.isFiringContinuousBeam       = false
+        data.spawningContinuousBeam       = false
+        data.continuousLaser              = nil
+        data.continuousBeamGraceTimer     = 0
+        data.allowingTapTear              = false
         EnforceTaintedHalNoRedHearts(player)
         pcall(function()
             player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
@@ -823,18 +897,72 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
     end
 
     -- DUAL FIRING MODE FOR BOTH HAL JORDAN AND TAINTED HAL (PARALLAX):
-    -- 1) Clicking / tapping (< HAL_CONTINUOUS_HOLD_FRAMES): fires high-damage discrete Ring Beam constructs.
-    -- 2) Genuinely holding the shoot button (>= HAL_CONTINUOUS_HOLD_FRAMES): channels an unbroken continuous emerald laser beam.
+    -- 1) Clicking / tapping (< holdThreshold): fires high-damage discrete Ring Beam constructs.
+    -- 2) Genuinely holding the shoot button uninterrupted (>= holdThreshold): channels an unbroken continuous emerald laser beam.
     if IsHalJordan(player) or IsTaintedHal(player) then
         local frame = Game():GetFrameCount()
         if data.lastSmallBeamFrame and frame < data.lastSmallBeamFrame then
-            data.lastSmallBeamFrame = -999
+            data.lastSmallBeamFrame            = -999
+            data.lastDiscreteClickReleaseFrame = -999
         end
 
-        local shootInput = player:GetShootingInput()
-        local isHoldingShoot = shootInput and shootInput:Length() > 0.1
+        local shootInput     = player:GetShootingInput()
+        local isHoldingShoot = (shootInput and shootInput:Length() > 0.1) or false
+        local canUseBeam     = CanUseContinuousBeam(player)
 
-        if isHoldingShoot and CanUseContinuousBeam(player) then
+        -- Require extra hold frames if the player has been clicking/spamming recently so rapid clicks NEVER merge into a continuous beam
+        local recentClickSpam = (frame - (data.lastDiscreteClickReleaseFrame or -999)) <= 12
+        local holdThreshold   = HAL_CONTINUOUS_HOLD_FRAMES + (recentClickSpam and HAL_SPAM_EXTRA_HOLD_FRAMES or 0)
+
+        -- If 60Hz MC_POST_RENDER detected a button release on an intermediate render frame between two 30Hz update ticks,
+        -- process the completed click and reset shootHoldFrames BEFORE evaluating the new press!
+        if data.sawShootReleaseBetweenFrames then
+            data.sawShootReleaseBetweenFrames = false
+            local releaseDir = data.lastShootDir or data.renderLastShootDir
+            if (data.shootHoldFrames or 0) > 0
+                and data.shootHoldFrames < holdThreshold
+                and not data.firedSmallBeamThisPress
+                and releaseDir
+            then
+                if canUseBeam then
+                    data.bufferedClickDir              = Vector(releaseDir.X, releaseDir.Y)
+                    data.bufferedClickExpireFrame      = frame + 15
+                    data.lastDiscreteClickReleaseFrame = frame
+                elseif IsHalJordan(player) and data.ringDepleted then
+                    data.humanTapShootDir    = Vector(releaseDir.X, releaseDir.Y)
+                    data.humanTapExpireFrame = frame + 12
+                end
+            end
+            if data.isFiringContinuousBeam or data.continuousLaser then
+                StopContinuousBeam(data)
+            end
+            data.shootHoldFrames          = 0
+            data.firedSmallBeamThisPress  = false
+            data.continuousBeamGraceTimer = 0
+            data.lastContinuousBeamDir    = nil
+            recentClickSpam               = (frame - (data.lastDiscreteClickReleaseFrame or -999)) <= 12
+            holdThreshold                 = HAL_CONTINUOUS_HOLD_FRAMES + (recentClickSpam and HAL_SPAM_EXTRA_HOLD_FRAMES or 0)
+        end
+
+        -- If a sub-33ms click was pressed AND released entirely between two 30Hz update ticks, buffer the discrete click shot!
+        if not isHoldingShoot and data.sawShootPressBetweenFrames then
+            data.sawShootPressBetweenFrames = false
+            local tapDir = data.renderLastShootDir or data.lastShootDir
+            if tapDir then
+                if canUseBeam then
+                    data.bufferedClickDir              = Vector(tapDir.X, tapDir.Y)
+                    data.bufferedClickExpireFrame      = frame + 15
+                    data.lastDiscreteClickReleaseFrame = frame
+                elseif IsHalJordan(player) and data.ringDepleted then
+                    data.humanTapShootDir    = Vector(tapDir.X, tapDir.Y)
+                    data.humanTapExpireFrame = frame + 12
+                end
+            end
+        else
+            data.sawShootPressBetweenFrames = false
+        end
+
+        if isHoldingShoot and canUseBeam then
             local rawDir     = shootInput:Normalized()
             local shootDir   = Vector(rawDir.X, rawDir.Y)
             local handOffset = GetRingHandOffset(player, shootDir)
@@ -845,23 +973,26 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 data.firedSmallBeamThisPress = false
             end
 
-            -- Only skip hold warmup if the player was actively channeling the continuous beam and switched to a DIFFERENT
-            -- cardinal shoot direction within 4 ticks (never when spamming clicks in the same direction!).
+            -- Only skip hold warmup if the player was actively channeling the continuous beam (not clicking/spamming!)
+            -- and switched to a DIFFERENT cardinal shoot direction within 4 ticks.
             local switchedBeamDir = false
-            if (data.continuousBeamGraceTimer or 0) > 0 and data.lastContinuousBeamDir then
+            if (not recentClickSpam) and (data.continuousBeamGraceTimer or 0) > 0 and data.lastContinuousBeamDir then
                 local dot = shootDir.X * data.lastContinuousBeamDir.X + shootDir.Y * data.lastContinuousBeamDir.Y
                 if dot < 0.75 then
                     switchedBeamDir = true
                 end
             end
 
-            if switchedBeamDir then
-                data.shootHoldFrames = math.max((data.shootHoldFrames or 0) + 1, HAL_CONTINUOUS_HOLD_FRAMES)
-            else
-                data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
+            if data.lastShootUpdateFrame ~= frame then
+                data.lastShootUpdateFrame = frame
+                if switchedBeamDir then
+                    data.shootHoldFrames = math.max((data.shootHoldFrames or 0) + 1, holdThreshold)
+                else
+                    data.shootHoldFrames = (data.shootHoldFrames or 0) + 1
+                end
             end
 
-            if data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES then
+            if data.shootHoldFrames < holdThreshold then
                 -- Hold native FireDelay during the tap-vs-hold detection window so holding NEVER fires a discrete tear bolt first!
                 player.FireDelay    = math.max(player.FireDelay, 2)
                 data.ringFlareTimer = math.max(data.ringFlareTimer or 0, 3)
@@ -903,6 +1034,15 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                     end
                 end
             end
+        elseif isHoldingShoot and IsHalJordan(player) and data.ringDepleted then
+            -- Human mode (0% Willpower lockout): record shoot direction so quick left-click taps also fire normal tears responsively
+            local rawDir   = shootInput:Normalized()
+            local shootDir = Vector(rawDir.X, rawDir.Y)
+            data.lastShootDir = shootDir
+            if data.lastShootUpdateFrame ~= frame then
+                data.lastShootUpdateFrame = frame
+                data.shootHoldFrames      = (data.shootHoldFrames or 0) + 1
+            end
         else
             if (data.continuousBeamGraceTimer or 0) > 0 then
                 data.continuousBeamGraceTimer = data.continuousBeamGraceTimer - 1
@@ -911,15 +1051,21 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
                 end
             end
 
-            -- If player clicked/tapped & released (< HAL_CONTINUOUS_HOLD_FRAMES), buffer the discrete Ring Beam shot so it fires cleanly
+            -- If player clicked/tapped & released (< holdThreshold), buffer the discrete shot so it fires cleanly
+            local releaseDir = data.lastShootDir or data.renderLastShootDir
             if (data.shootHoldFrames or 0) > 0
-                and data.shootHoldFrames < HAL_CONTINUOUS_HOLD_FRAMES
+                and data.shootHoldFrames < holdThreshold
                 and not data.firedSmallBeamThisPress
-                and data.lastShootDir
-                and CanUseContinuousBeam(player)
+                and releaseDir
             then
-                data.bufferedClickDir         = Vector(data.lastShootDir.X, data.lastShootDir.Y)
-                data.bufferedClickExpireFrame = frame + 15
+                if canUseBeam then
+                    data.bufferedClickDir              = Vector(releaseDir.X, releaseDir.Y)
+                    data.bufferedClickExpireFrame      = frame + 15
+                    data.lastDiscreteClickReleaseFrame = frame
+                elseif IsHalJordan(player) and data.ringDepleted then
+                    data.humanTapShootDir    = Vector(releaseDir.X, releaseDir.Y)
+                    data.humanTapExpireFrame = frame + 12
+                end
             end
 
             if data.isFiringContinuousBeam or data.continuousLaser then
@@ -929,7 +1075,24 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
             data.firedSmallBeamThisPress = false
         end
 
-        -- Fire any buffered tap/click shot as soon as minimum click interval is reached (even if rapid-clicking started the next press!)
+        -- Fire any buffered human-mode tap shot while Hal's ring is offline (0% Willpower) once FireDelay reaches 0
+        if IsHalJordan(player) and data.ringDepleted and data.humanTapShootDir then
+            if frame > (data.humanTapExpireFrame or 0) then
+                data.humanTapShootDir = nil
+            elseif (player.FireDelay or 0) <= 0 then
+                local dir = Vector(data.humanTapShootDir.X, data.humanTapShootDir.Y)
+                data.humanTapShootDir = nil
+                local shotSpeed = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
+                local vel       = dir * shotSpeed
+                pcall(function()
+                    vel = vel + player:GetTearMovementInheritance(dir)
+                    player:FireTear(player.Position, vel, false, false, false)
+                end)
+                player.FireDelay = math.max(player.MaxFireDelay or 10, 5)
+            end
+        end
+
+        -- Fire any buffered tap/click Ring Beam shot as soon as minimum click interval is reached (even if rapid-clicking started the next press!)
         if data.bufferedClickDir and not data.isFiringContinuousBeam then
             if frame > (data.bufferedClickExpireFrame or 0) or not CanUseContinuousBeam(player) then
                 data.bufferedClickDir = nil
@@ -1121,6 +1284,14 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
         local td = tear:GetData()
         if not (td and td.isGiantFist) then
             if data.isFiringContinuousBeam or (CanUseContinuousBeam(player) and not data.allowingTapTear) then
+                if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
+                    local rawDir = tear.Velocity:Normalized()
+                    data.lastShootDir = Vector(rawDir.X, rawDir.Y)
+                    if (data.shootHoldFrames or 0) == 0 then
+                        data.shootHoldFrames         = 1
+                        data.firedSmallBeamThisPress = false
+                    end
+                end
                 tear:Remove()
                 return
             end
@@ -1217,31 +1388,7 @@ GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
     end
 end)
 
--- Keep all Green Lantern Ring energy beams oriented along their straight flight vector and prevent C++ sprite/variant resets
-GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
-    local td = tear:GetData()
-    if not (td and td.isGLRingBeam) then return end
-
-    tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
-
-    -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
-    local flags = tear.TearFlags
-    local hasCurvingSynergy = false
-    if TearFlags then
-        if (TearFlags.TEAR_HOMING and (flags & TearFlags.TEAR_HOMING) ~= 0)
-            or (TearFlags.TEAR_ORBIT and (flags & TearFlags.TEAR_ORBIT) ~= 0)
-            or (TearFlags.TEAR_BOOMERANG and (flags & TearFlags.TEAR_BOOMERANG) ~= 0)
-            or (TearFlags.TEAR_SPIRAL and (flags & TearFlags.TEAR_SPIRAL) ~= 0)
-            or (TearFlags.TEAR_WIGGLE and (flags & TearFlags.TEAR_WIGGLE) ~= 0)
-        then
-            hasCurvingSynergy = true
-        end
-    end
-    if not hasCurvingSynergy and td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
-        local currentSpeed = tear.Velocity:Length()
-        tear.Velocity = td.glBeamVel:Normalized() * currentSpeed
-    end
-
+local function EnforceRingBeamTearSprite(tear, td)
     local ts = tear:GetSprite()
     if ts then
         if ts:GetAnimation() ~= "Idle" then
@@ -1252,11 +1399,55 @@ GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
             ts.Scale = Vector(td.glBeamScale, td.glBeamScale)
         end
         ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
-        if tear.Velocity:Length() > 0.1 then
+        if tear.Velocity and tear.Velocity:Length() > 0.1 then
             ts.Rotation = tear.Velocity:GetAngleDegrees()
+        elseif td.glBeamVel and td.glBeamVel:Length() > 0.1 then
+            ts.Rotation = td.glBeamVel:GetAngleDegrees()
         end
     end
+end
+
+-- Keep all Green Lantern Ring energy beams oriented along their straight flight vector and prevent C++ sprite/variant resets
+GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+    local td = tear:GetData()
+    if not (td and td.isGLRingBeam) then return end
+
+    tear.DepthOffset = IsAimingUp(nil, tear.Velocity) and -20 or 25
+
+    -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
+    local flags = tear.TearFlags
+    local hasCurvingSynergy = false
+    if TearFlags and flags then
+        if HasTearFlag(flags, TearFlags.TEAR_HOMING)
+            or HasTearFlag(flags, TearFlags.TEAR_ORBIT)
+            or HasTearFlag(flags, TearFlags.TEAR_BOOMERANG)
+            or HasTearFlag(flags, TearFlags.TEAR_SPIRAL)
+            or HasTearFlag(flags, TearFlags.TEAR_WIGGLE)
+        then
+            hasCurvingSynergy = true
+        end
+    end
+    if not hasCurvingSynergy then
+        if td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
+            local currentSpeed = tear.Velocity:Length()
+            tear.Velocity = td.glBeamVel:Normalized() * currentSpeed
+        end
+        tear.FallingAcceleration = -0.04
+        if tear.FallingSpeed and tear.FallingSpeed > 0 then
+            tear.FallingSpeed = 0.0
+        end
+    end
+
+    EnforceRingBeamTearSprite(tear, td)
 end)
+
+if ModCallbacks.MC_POST_TEAR_RENDER then
+    GL:AddCallback(ModCallbacks.MC_POST_TEAR_RENDER, function(_, tear, renderOffset)
+        local td = tear:GetData()
+        if not (td and td.isGLRingBeam) then return end
+        EnforceRingBeamTearSprite(tear, td)
+    end)
+end
 
 -- Spawn a crisp emerald energy flash when a piercing Ring Beam slices through an enemy
 GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
@@ -1453,6 +1644,20 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     if not ITEM_GIANT_FIST or ITEM_GIANT_FIST < 0 then LoadItemIDs() end
     if itemID ~= ITEM_GIANT_FIST then return end
 
+    -- When Hal's ring is offline at 0% Willpower, he cannot project Ring constructs!
+    if IsHalJordan(player) and GetPlayerData(player).ringDepleted then
+        local data = GetPlayerData(player)
+        data.oathText      = "RING OFFLINE!"
+        data.oathTextTimer = 60
+        pcall(function()
+            local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYDISCHARGE or SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ)) or 0
+            if sfx > 0 then
+                SFXManager():Play(sfx, 0.80, 0, false, 1.0)
+            end
+        end)
+        return { Discharge = false, Remove = false, ShowAnim = false }
+    end
+
     local direction = player:GetShootingInput()
     if direction:Length() < 0.01 then
         local headDir = player:GetHeadDirection()
@@ -1619,6 +1824,7 @@ GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flag
     if entity.Type ~= EntityType.ENTITY_PLAYER then return end
     local player = entity:ToPlayer()
     if not player then return end
+    if IsHalJordan(player) and GetPlayerData(player).ringDepleted then return end
     if not ITEM_SOLID_LIGHT_SHIELD or ITEM_SOLID_LIGHT_SHIELD < 0 then LoadItemIDs() end
     if not (ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD)) then return end
 
@@ -2010,11 +2216,15 @@ GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
         local data = GetPlayerData(player)
         if IsHalJordan(player) or IsTaintedHal(player) then
             StopContinuousBeam(data)
-            data.shootHoldFrames          = 0
-            data.firedSmallBeamThisPress  = false
-            data.bufferedClickDir         = nil
-            data.continuousBeamGraceTimer = 0
-            data.lastContinuousBeamDir    = nil
+            data.shootHoldFrames              = 0
+            data.firedSmallBeamThisPress      = false
+            data.sawShootReleaseBetweenFrames = false
+            data.sawShootPressBetweenFrames   = false
+            data.wasHoldingShootOnRender      = false
+            data.bufferedClickDir             = nil
+            data.humanTapShootDir             = nil
+            data.continuousBeamGraceTimer     = 0
+            data.lastContinuousBeamDir        = nil
         end
         local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
         local needsEval = false
@@ -2421,6 +2631,33 @@ end)
 GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     EnsureEIDRegistered()
     RegisterStageAPIGraphics()
+
+    -- Poll shooting input at 60Hz (every render frame) so brief button releases between rapid left-clicks
+    -- are NEVER missed between 30Hz MC_POST_PLAYER_UPDATE ticks!
+    for i = 0, Game():GetNumPlayers() - 1 do
+        local p = Isaac.GetPlayer(i)
+        if p and (IsHalJordan(p) or IsTaintedHal(p)) then
+            local d = GetPlayerData(p)
+            local shootIn = p:GetShootingInput()
+            local holdingNow = (shootIn and shootIn:Length() > 0.1) or false
+            if holdingNow then
+                local rawDir = shootIn:Normalized()
+                d.renderLastShootDir = Vector(rawDir.X, rawDir.Y)
+                if d.wasHoldingShootOnRender == false then
+                    d.sawShootPressBetweenFrames = true
+                end
+            else
+                if d.wasHoldingShootOnRender == true or (d.shootHoldFrames or 0) > 0 then
+                    d.sawShootReleaseBetweenFrames = true
+                end
+                if d.isFiringContinuousBeam then
+                    StopContinuousBeam(d)
+                end
+            end
+            d.wasHoldingShootOnRender = holdingNow
+        end
+    end
+
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
 
     local hudOffset = (Options and Options.HUDOffset) or 0
