@@ -2632,6 +2632,17 @@ GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     EnsureEIDRegistered()
     RegisterStageAPIGraphics()
 
+    -- Compatibility guard for Workshop mod "Item Menu" (2988078839):
+    -- Item Menu's KEY_G handler omits checking `mod.Vars.isVisible`, which causes typing 'g' in the
+    -- Debug Console (e.g. "Light", "Giant", "Ring") while Item Menu is closed to silently grant the
+    -- player whatever Page 1 item the cursor last hovered over (such as ID 14: Roid Rage / green syringe).
+    if _G.Onseshigo and _G.Onseshigo.ItemMenu and _G.Onseshigo.ItemMenu.Vars then
+        local imVars = _G.Onseshigo.ItemMenu.Vars
+        if not imVars.isVisible then
+            imVars.editModes = true
+        end
+    end
+
     -- Poll shooting input at 60Hz (every render frame) so brief button releases between rapid left-clicks
     -- are NEVER missed between 30Hz MC_POST_PLAYER_UPDATE ticks!
     for i = 0, Game():GetNumPlayers() - 1 do
