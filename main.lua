@@ -629,23 +629,14 @@ local function EnforceTaintedHalNoRedHearts(player)
 end
 
 local function RefreshCharacterCostume(player)
+    -- Remove any legacy null costumes so that standard Isaac item costumes and mod visual effects
+    -- render directly and interact naturally with Hal Jordan and Tainted Hal sprites
     pcall(function()
-        if IsHalJordan(player) then
-            if not COSTUME_HAL or COSTUME_HAL < 0 then
-                COSTUME_HAL = Isaac.GetCostumeIdByPath("gfx/characters/hal_costume.anm2")
-            end
-            if COSTUME_HAL and COSTUME_HAL >= 0 then
-                player:TryRemoveNullCostume(COSTUME_HAL)
-                player:AddNullCostume(COSTUME_HAL)
-            end
-        elseif IsTaintedHal(player) then
-            if not COSTUME_TAINTED_HAL or COSTUME_TAINTED_HAL < 0 then
-                COSTUME_TAINTED_HAL = Isaac.GetCostumeIdByPath("gfx/characters/tainted_hal_costume.anm2")
-            end
-            if COSTUME_TAINTED_HAL and COSTUME_TAINTED_HAL >= 0 then
-                player:TryRemoveNullCostume(COSTUME_TAINTED_HAL)
-                player:AddNullCostume(COSTUME_TAINTED_HAL)
-            end
+        if COSTUME_HAL and COSTUME_HAL >= 0 then
+            player:TryRemoveNullCostume(COSTUME_HAL)
+        end
+        if COSTUME_TAINTED_HAL and COSTUME_TAINTED_HAL >= 0 then
+            player:TryRemoveNullCostume(COSTUME_TAINTED_HAL)
         end
     end)
 end
@@ -1141,30 +1132,40 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         end
     end
 
-    -- Re-apply character hair/mask/suit overlay whenever the player picks up or swaps an item so costumes merge!
-    if IsHalJordan(player) or IsTaintedHal(player) then
-        local count = player:GetCollectibleCount()
-        local activeId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
-        local queueEmpty = player:IsItemQueueEmpty()
+    -- Handle item pickup / swap: strip legacy null costumes & trigger item acquisition effects
+    local count = player:GetCollectibleCount()
+    local activeId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
+    local queueEmpty = player:IsItemQueueEmpty()
 
-        if data.lastCollectibleCount ~= count
-            or data.lastActiveItem ~= activeId
-            or (data.wasQueueEmpty == false and queueEmpty == true)
-        then
-            data.lastCollectibleCount = count
-            data.lastActiveItem = activeId
-            data.costumeRefreshTimer = 6
-            RefreshCharacterCostume(player)
+    if data.lastCollectibleCount ~= count
+        or data.lastActiveItem ~= activeId
+        or (data.wasQueueEmpty == false and queueEmpty == true)
+    then
+        data.lastCollectibleCount = count
+        data.lastActiveItem = activeId
+        RefreshCharacterCostume(player)
+
+        -- SOLID LIGHT SHIELD: grant 2 Soul Hearts (1 full container) upon acquisition as stated in item description
+        if ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
+            if not data.grantedSolidShieldHearts then
+                data.grantedSolidShieldHearts = true
+                player:AddSoulHearts(2)
+                pcall(function()
+                    SFXManager():Play(SoundEffect.SOUND_HOLY, 1.0, 0, false, 1.0)
+                end)
+                data.shieldDeflectTimer = 16
+            end
         end
-        data.wasQueueEmpty = queueEmpty
 
-        if data.costumeRefreshTimer and data.costumeRefreshTimer > 0 then
-            data.costumeRefreshTimer = data.costumeRefreshTimer - 1
-            if data.costumeRefreshTimer == 4 or data.costumeRefreshTimer == 0 then
-                RefreshCharacterCostume(player)
+        -- GREEN LANTERN RING: trigger ring acquisition flare
+        if ITEM_POWER_RING and ITEM_POWER_RING > 0 and player:HasCollectible(ITEM_POWER_RING) then
+            if not data.grantedRingVisual then
+                data.grantedRingVisual = true
+                data.ringFlareTimer = 24
             end
         end
     end
+    data.wasQueueEmpty = queueEmpty
 end)
 
 -- ---------------------------------------------------------------------------
@@ -1607,31 +1608,59 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
 
     -- 1. Always refill Willpower to 100% and restore ring power cleanly
     data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    data.batteryConstructTimer = 45 -- 1.5s emerald construct manifestation above player
+    data.ringFlareTimer = 20
+
+    -- Play charging & spewer audio
+    pcall(function()
+        SFXManager():Play(SoundEffect.SOUND_BATTERYCHARGE, 1.0, 0, false, 1.0)
+        SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER, 0.85, 0, false, 1.2)
+        local shock = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.HALO, 0, player.Position, Vector.Zero, player)
+        if shock then
+            shock:GetSprite().Color = Color(0.15, 1.0, 0.35, 0.9, 0.1, 0.7, 0.15)
+            shock.Scale = 1.8
+        end
+    end)
 
     -- 2. If used by Hal Jordan at >= 50% Willpower (and not depleted), grant modest OVERCHARGE (+15% DMG for the room).
     --    Otherwise, simply restore Willpower & Ring capabilities without a bonus damage multiplier.
     local statusMsg = "WILLPOWER RESTORED!"
-    if IsHalJordan(player) and (not wasDepleted) and prevWill >= 50.0 then
+    if IsHalJordan(player) then
+        if (not wasDepleted) and prevWill >= 50.0 then
+            data.overcharge = true
+            data.surgeBuff  = false
+            statusMsg       = "OVERCHARGE! (+15% DMG)"
+        else
+            data.overcharge = false
+            data.surgeBuff  = true
+        end
+        RestoreHalRingPower(player, WILLPOWER_MAX, statusMsg)
+    else
+        -- Non-Hal characters get +15% Damage for the room + emerald construct surge
         data.overcharge = true
         data.surgeBuff  = false
-        statusMsg       = "OVERCHARGE! (+15% DMG)"
-    else
-        data.overcharge = false
-        data.surgeBuff  = true
+        player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+        player:EvaluateItems()
     end
-    RestoreHalRingPower(player, WILLPOWER_MAX, statusMsg)
 
     -- 3. Modest close-range pulse: light damage & knockback to nearby enemies and clear close projectiles
     for _, ent in ipairs(Isaac.GetRoomEntities()) do
         local dist = (ent.Position - player.Position):Length()
-        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 105 then
+        if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() and dist <= 110 then
             ent:TakeDamage(player.Damage * 1.0 + 3.0, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
             local push = (ent.Position - player.Position)
             if push:Length() > 0.1 then
-                ent.Velocity = ent.Velocity + push:Normalized() * 9.0
+                ent.Velocity = ent.Velocity + push:Normalized() * 9.5
             end
-        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 115 then
+        elseif ent.Type == EntityType.ENTITY_PROJECTILE and dist <= 125 then
             ent:Die()
+            pcall(function()
+                local sp = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, ent.Position, Vector.Zero, player)
+                if sp then
+                    sp:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.8, 0.1, 0.6, 0.1)
+                    sp.Scale = 0.6
+                end
+            end)
         end
     end
 
@@ -1694,14 +1723,35 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
         fist:GetData().isGiantFist = true
     end
 
+    pcall(function()
+        SFXManager():Play(SoundEffect.SOUND_PUNCH, 1.0, 0, false, 0.85)
+        Game():ShakeScreen(6)
+        local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, player.Position + spawnOffset, Vector.Zero, player)
+        if fx then
+            fx:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.9, 0.1, 0.6, 0.15)
+            fx.Scale = 0.9
+        end
+    end)
+
     return true
 end)
 
--- Giant Fist rock destruction
+-- Giant Fist update, emerald trail, & rock destruction with sound and debris
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     for _, tear in ipairs(Isaac.FindByType(EntityType.ENTITY_TEAR, -1, -1, false)) do
         local td = tear:GetData()
         if td and td.isGiantFist then
+            -- Trailing emerald construct smoke dust
+            if Game():GetFrameCount() % 2 == 0 then
+                pcall(function()
+                    local trail = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SMOKE_CLOUD, 0, tear.Position - tear.Velocity:Normalized() * 8, Vector.Zero, nil)
+                    if trail then
+                        trail:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.65, 0.05, 0.5, 0.1)
+                        trail.Scale = 0.6
+                    end
+                end)
+            end
+
             local room = Game():GetRoom()
             local gridIdx = room:GetGridIndex(tear.Position)
             if gridIdx >= 0 then
@@ -1715,6 +1765,15 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
                     or gtype == GridEntityType.GRID_ROCK_ALT
                     or gtype == GridEntityType.GRID_POOP then
                         gridEntity:Destroy(false)
+                        pcall(function()
+                            SFXManager():Play(SoundEffect.SOUND_ROCK_CRUMBLE, 1.0, 0, false, 1.0)
+                            Game():ShakeScreen(4)
+                            local poof = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, gridEntity.Position, Vector.Zero, nil)
+                            if poof then
+                                poof:GetSprite().Color = Color(0.15, 1.0, 0.35, 0.85, 0.1, 0.6, 0.1)
+                                poof.Scale = 0.8
+                            end
+                        end)
                     end
                 end
             end
@@ -1741,7 +1800,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
 
     local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
 
-    -- Store 5-second vortex state in persistent Lua table (no middle-of-the-room POOF01/CRACK_THE_SKY particles!)
+    -- Store 5-second vortex state in persistent Lua table
     activeCoastCity.active        = true
     activeCoastCity.spawnFrame    = Game():GetFrameCount()
     activeCoastCity.roomIdx       = roomIdx
@@ -1751,6 +1810,8 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
 
     pcall(function()
         SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 0.88)
+        SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2, 0.70, 0, false, 1.30)
+        Game():ShakeScreen(4)
     end)
 
     -- Inflict Fear (3s) and a light 0.50x DMG pulse to vulnerable enemies in the room
@@ -1766,7 +1827,7 @@ GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFla
     return true
 end)
 
--- Coast City logic: gently pull vulnerable enemies toward center & deal light pulsing damage for 5 seconds (no center dust particles!)
+-- Coast City logic: gently pull vulnerable enemies toward center & deal light pulsing damage for 5 seconds
 GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     if not activeCoastCity.active then return end
 
@@ -1790,6 +1851,21 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     local center      = room:GetCenterPos()
     local ownerPlayer = activeCoastCity.owner or Isaac.GetPlayer(0)
     local sparkBonus  = activeCoastCity.sparkBonus or 1.0
+
+    -- Swirling emerald vortex construct particles
+    pcall(function()
+        if age % 2 == 0 then
+            local rotAngle = (currentFrame * 0.14) + (math.random() * 6.28)
+            local distR    = math.random(25, 200)
+            local swirlPos = center + Vector(math.cos(rotAngle) * distR, math.sin(rotAngle) * distR)
+            local swirlVel = Vector(-math.sin(rotAngle), math.cos(rotAngle)) * 4.0 - (swirlPos - center):Normalized() * 3.0
+            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, swirlPos, swirlVel, ownerPlayer)
+            if fx then
+                fx:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.75, 0.1, 0.6, 0.15)
+                fx.Scale = 0.45
+            end
+        end
+    end)
 
     for _, enemy in ipairs(Isaac.GetRoomEntities()) do
         if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
@@ -1817,9 +1893,101 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
 end)
 
 -- ---------------------------------------------------------------------------
--- SECTION 8: SOLID LIGHT SHIELD (Passive damage reflection)
+-- SECTION 8: SOLID LIGHT SHIELD (Orbital construct shield, projectile reflection & aegis barrier)
 -- ---------------------------------------------------------------------------
 
+-- Active orbital construct shield: rotation, enemy projectile deflection, and contact construct damage
+GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
+    if not ITEM_SOLID_LIGHT_SHIELD or ITEM_SOLID_LIGHT_SHIELD < 0 then LoadItemIDs() end
+
+    for i = 0, Game():GetNumPlayers() - 1 do
+        local player = Isaac.GetPlayer(i)
+        if player and ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD) then
+            local data = GetPlayerData(player)
+            if not (IsHalJordan(player) and data.ringDepleted) then
+                -- Smooth isometric elliptical orbit around the player
+                data.shieldOrbitAngle = (data.shieldOrbitAngle or 0) + 0.065
+                local radX = 36
+                local radY = 24
+                local shieldPos = player.Position + Vector(math.cos(data.shieldOrbitAngle) * radX, math.sin(data.shieldOrbitAngle) * radY)
+                data.shieldWorldPos = shieldPos
+
+                if data.shieldDeflectTimer and data.shieldDeflectTimer > 0 then
+                    data.shieldDeflectTimer = data.shieldDeflectTimer - 1
+                end
+
+                -- 1. Projectile blocking & reflection by the orbital shield
+                for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PROJECTILE, -1, -1, false)) do
+                    local proj = ent:ToProjectile()
+                    if proj and proj:IsVulnerableEnemy() == false then
+                        local dist = (proj.Position - shieldPos):Length()
+                        if dist <= 22 then
+                            proj:Die()
+                            data.shieldDeflectTimer = 12
+
+                            pcall(function()
+                                SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.9, 0, false, 1.35)
+                            end)
+
+                            -- Target nearest enemy if possible, else reverse projectile velocity
+                            local targetDir = -proj.Velocity:Normalized()
+                            local nearestDist = 320
+                            for _, enemy in ipairs(Isaac.GetRoomEntities()) do
+                                if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
+                                    local d = (enemy.Position - shieldPos):Length()
+                                    if d < nearestDist then
+                                        nearestDist = d
+                                        targetDir = (enemy.Position - shieldPos):Normalized()
+                                    end
+                                end
+                            end
+
+                            local reflectSpeed = math.max(11.0, proj.Velocity:Length() * 1.25)
+                            local tearVar = (TearVariant and TearVariant.BLUE) or 0
+                            local refTear = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, shieldPos, targetDir * reflectSpeed, player)
+                            local t = refTear and refTear:ToTear()
+                            if t then
+                                t.CollisionDamage = math.max(player.Damage * 1.5, 6.0)
+                                t.TearFlags = t.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+                                t:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
+                                t.Scale = 1.25
+                            end
+
+                            pcall(function()
+                                local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, shieldPos, Vector.Zero, player)
+                                if splash then
+                                    splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
+                                    splash.Scale = 0.8
+                                end
+                            end)
+                        end
+                    end
+                end
+
+                -- 2. Contact construct damage on enemies colliding with orbital shield
+                for _, ent in ipairs(Isaac.GetRoomEntities()) do
+                    if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+                        local dist = (ent.Position - shieldPos):Length()
+                        if dist <= 18 then
+                            if Game():GetFrameCount() % 6 == 0 then
+                                ent:TakeDamage(player.Damage * 0.75 + 2.5, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+                                local push = (ent.Position - shieldPos)
+                                if push:Length() > 0.1 then
+                                    ent.Velocity = ent.Velocity + push:Normalized() * 4.5
+                                end
+                                pcall(function()
+                                    SFXManager():Play(SoundEffect.SOUND_ROCK_CRUMBLE, 0.45, 0, false, 1.5)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Direct player damage reflection (Luck-scaled chance to deflect enemy projectiles hitting the player)
 GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flags, source)
     if entity.Type ~= EntityType.ENTITY_PLAYER then return end
     local player = entity:ToPlayer()
@@ -1828,29 +1996,33 @@ GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flag
     if not ITEM_SOLID_LIGHT_SHIELD or ITEM_SOLID_LIGHT_SHIELD < 0 then LoadItemIDs() end
     if not (ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD)) then return end
 
-    if source and source.Entity and source.Entity.Type == EntityType.ENTITY_TEAR then
-        local srcEnt  = source.Entity
-        local luck    = player.Luck
-        local chance  = math.min(0.25 + luck * 0.05, 0.75)
+    if source and source.Entity and (source.Entity.Type == EntityType.ENTITY_PROJECTILE or source.Entity.Type == EntityType.ENTITY_TEAR) then
+        local srcEnt = source.Entity
+        local luck   = player.Luck
+        local chance = math.min(0.25 + luck * 0.05, 0.75)
 
         if math.random() < chance then
-            local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length())
-            local tearVar    = (TearVariant and TearVariant.BLUE) or 0
-            local ent        = Isaac.Spawn(
-                EntityType.ENTITY_TEAR,
-                tearVar,
-                0,
-                srcEnt.Position,
-                reflectVel,
-                player
-            )
-            local reflected  = ent and ent:ToTear()
+            local data = GetPlayerData(player)
+            data.shieldDeflectTimer = 14
 
-            if reflected then
-                reflected.CollisionDamage = player.Damage
-                reflected.TearFlags       = reflected.TearFlags | TearFlags.TEAR_SPECTRAL
-                reflected:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.5, 0)
-            end
+            pcall(function()
+                SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 1.0, 0, false, 1.35)
+                local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length() * 1.2)
+                local tearVar    = (TearVariant and TearVariant.BLUE) or 0
+                local ent        = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, srcEnt.Position, reflectVel, player)
+                local reflected  = ent and ent:ToTear()
+                if reflected then
+                    reflected.CollisionDamage = player.Damage * 1.5
+                    reflected.TearFlags       = reflected.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+                    reflected:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
+                    reflected.Scale = 1.25
+                end
+                local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, player.Position, Vector.Zero, player)
+                if splash then
+                    splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
+                    splash.Scale = 0.9
+                end
+            end)
 
             return false -- Block damage
         end
@@ -1873,7 +2045,13 @@ GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flag
     if isContact or isExplosion then
         local data = GetPlayerData(player)
         data.fearControlTimer = 60
+        data.fearSkullTimer   = 60
         player:AddEntityFlags(EntityFlag.FLAG_FEAR)
+
+        pcall(function()
+            player:SetColor(Color(1.0, 0.9, 0.1, 1.0, 0.4, 0.35, 0.0), 20, 1, true, false)
+            SFXManager():Play(SoundEffect.SOUND_DEATH_BURST_SMALL, 1.0, 0, false, 1.1)
+        end)
     end
 end)
 
@@ -1882,9 +2060,23 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
         local player = Isaac.GetPlayer(i)
         if player and TRINKET_YELLOW_IMPURITY and player:HasTrinket(TRINKET_YELLOW_IMPURITY) then
             local data = GetPlayerData(player)
+            if data.fearSkullTimer and data.fearSkullTimer > 0 then
+                data.fearSkullTimer = data.fearSkullTimer - 1
+            end
             if data.fearControlTimer and data.fearControlTimer > 0 then
                 data.fearControlTimer = data.fearControlTimer - 1
                 player.Velocity = player.Velocity * -1
+
+                -- Trailing fear poof behind player while running scared
+                if Game():GetFrameCount() % 4 == 0 then
+                    pcall(function()
+                        local dust = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, 0, player.Position, Vector.Zero, nil)
+                        if dust then
+                            dust:GetSprite().Color = Color(1.0, 0.85, 0.1, 0.7, 0.3, 0.25, 0.0)
+                            dust.Scale = 0.5
+                        end
+                    end)
+                end
 
                 if data.fearControlTimer <= 0 then
                     player:ClearEntityFlags(EntityFlag.FLAG_FEAR)
@@ -1892,6 +2084,27 @@ GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
             end
         end
     end
+end)
+
+-- Defeating enemies with Green Lantern Ring releases a burst of emerald construct sparks
+GL:AddCallback(ModCallbacks.MC_POST_ENTITY_KILL, function(_, entity)
+    if not (entity and entity:IsActiveEnemy(false)) then return end
+    pcall(function()
+        for i = 0, Game():GetNumPlayers() - 1 do
+            local player = Isaac.GetPlayer(i)
+            if player and HasGreenLanternRing(player) then
+                local dist = (player.Position - entity.Position):Length()
+                if dist <= 400 then
+                    local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, entity.Position, Vector.Zero, player)
+                    if fx then
+                        fx:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.85, 0.1, 0.7, 0.15)
+                        fx.Scale = 0.75
+                    end
+                    break
+                end
+            end
+        end
+    end)
 end)
 
 -- ---------------------------------------------------------------------------
@@ -2344,10 +2557,13 @@ local function GetModItemInspectionInfo(isTrinket, id)
 end
 
 -- Cached custom Sprite instances for the Green Lantern / Parallax aura, Power Ring hand flare, Continuous Beam, and Green Lantern Emblem drops
-local glAuraSprite     = nil
-local glFlareSprite    = nil
-local glSparkSprite    = nil
-local glContBeamSprite = nil
+local glAuraSprite             = nil
+local glFlareSprite            = nil
+local glSparkSprite            = nil
+local glContBeamSprite         = nil
+local glSolidShieldSprite      = nil
+local glBatteryConstructSprite = nil
+local glYellowFearSprite       = nil
 
 local function GetGLAuraSprites()
     if not glAuraSprite and Sprite then
@@ -2399,6 +2615,48 @@ local function GetGLSparkSprite()
         end
     end
     return glSparkSprite
+end
+
+local function GetGLSolidShieldSprite()
+    if not glSolidShieldSprite and Sprite then
+        local s = Sprite()
+        local ok = pcall(function()
+            s:Load("gfx/effects/gl_solid_shield.anm2", true)
+            s:Play("Orbit", true)
+        end)
+        if ok then
+            glSolidShieldSprite = s
+        end
+    end
+    return glSolidShieldSprite
+end
+
+local function GetGLBatteryConstructSprite()
+    if not glBatteryConstructSprite and Sprite then
+        local s = Sprite()
+        local ok = pcall(function()
+            s:Load("gfx/effects/gl_power_battery_construct.anm2", true)
+            s:Play("Pulse", true)
+        end)
+        if ok then
+            glBatteryConstructSprite = s
+        end
+    end
+    return glBatteryConstructSprite
+end
+
+local function GetGLYellowFearSprite()
+    if not glYellowFearSprite and Sprite then
+        local s = Sprite()
+        local ok = pcall(function()
+            s:Load("gfx/effects/gl_yellow_fear.anm2", true)
+            s:Play("FearSkull", true)
+        end)
+        if ok then
+            glYellowFearSprite = s
+        end
+    end
+    return glYellowFearSprite
 end
 
 local function RenderGLSparkDrops(onlyCollected)
@@ -2585,7 +2843,119 @@ local function RenderGLBeamAndFlareForPlayer(player, data, frame)
     end
 end
 
--- 1. Render uncollected floor Green Lantern Emblem drops, hover aura, AND upward-aimed Ring Beam BEHIND the player
+local function RenderGLSolidShieldBehind(player)
+    if not (player and ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD)) then return end
+    local data = GetPlayerData(player)
+    local shieldSpr = GetGLSolidShieldSprite()
+    if not shieldSpr then return end
+
+    local frame = Game():GetFrameCount()
+
+    -- 1. Hexagonal Construct Barrier Aura centered on player
+    local auraFrame = math.floor(frame / 4) % 2
+    shieldSpr:SetFrame("Aura", auraFrame)
+    local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
+    local auraAlpha = isDeflecting and 0.88 or (0.36 + 0.16 * math.sin(frame * 0.12))
+    shieldSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
+    shieldSpr.Scale = Vector(1.0, 1.0)
+    shieldSpr:Render(Isaac.WorldToScreen(player.Position), Vector.Zero, Vector.Zero)
+
+    -- 2. Orbital shield when BEHIND player in isometric 3D space (sin < 0)
+    local angle = data.shieldOrbitAngle or 0
+    if math.sin(angle) < 0 then
+        local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
+        local sScreen = Isaac.WorldToScreen(shieldPos)
+        if isDeflecting then
+            local defFrame = math.min(3, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3))
+            shieldSpr:SetFrame("Deflect", math.max(0, defFrame))
+        else
+            shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
+        end
+        shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
+        shieldSpr.Scale = Vector(1.0, 1.0)
+        shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
+    end
+end
+
+local function RenderGLSolidShieldFront(player)
+    if not (player and ITEM_SOLID_LIGHT_SHIELD and ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(ITEM_SOLID_LIGHT_SHIELD)) then return end
+    local data = GetPlayerData(player)
+    local shieldSpr = GetGLSolidShieldSprite()
+    if not shieldSpr then return end
+
+    local angle = data.shieldOrbitAngle or 0
+    -- Orbital shield when IN FRONT OF player in isometric 3D space (sin >= 0)
+    if math.sin(angle) >= 0 then
+        local frame = Game():GetFrameCount()
+        local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
+        local sScreen = Isaac.WorldToScreen(shieldPos)
+        local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
+        if isDeflecting then
+            local defFrame = math.min(3, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3))
+            shieldSpr:SetFrame("Deflect", math.max(0, defFrame))
+        else
+            shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
+        end
+        shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
+        shieldSpr.Scale = Vector(1.0, 1.0)
+        shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
+    end
+end
+
+local function RenderGLActiveItemAndTrinketEffects(player)
+    local data = GetPlayerData(player)
+    local frame = Game():GetFrameCount()
+
+    -- Power Battery manifestation construct projection
+    if data.batteryConstructTimer and data.batteryConstructTimer > 0 then
+        local battSpr = GetGLBatteryConstructSprite()
+        if battSpr then
+            battSpr:SetFrame("Pulse", math.floor(frame / 2) % 4)
+            local alpha = math.min(1.0, data.batteryConstructTimer / 10.0)
+            battSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0.10, 0.55, 0.15)
+            local bob = math.sin(frame * 0.18) * 3
+            local battPos = player.Position + Vector(0, -44 + bob)
+            battSpr:Render(Isaac.WorldToScreen(battPos), Vector.Zero, Vector.Zero)
+        end
+    end
+
+    -- Yellow Impurity Fear Skull
+    if data.fearSkullTimer and data.fearSkullTimer > 0 then
+        local fearSpr = GetGLYellowFearSprite()
+        if fearSpr then
+            fearSpr:SetFrame("FearSkull", math.floor(frame / 2) % 2)
+            local alpha = math.min(1.0, data.fearSkullTimer / 10.0)
+            fearSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0.35, 0.28, 0.0)
+            local skullPos = player.Position + Vector(0, -36)
+            fearSpr:Render(Isaac.WorldToScreen(skullPos), Vector.Zero, Vector.Zero)
+        end
+    elseif TRINKET_YELLOW_IMPURITY and player:HasTrinket(TRINKET_YELLOW_IMPURITY) then
+        -- Ambient yellow fear ember crackling around player while held
+        if (frame % 28) < 10 then
+            local fearSpr = GetGLYellowFearSprite()
+            if fearSpr then
+                fearSpr:SetFrame("YellowSpark", math.floor(frame / 2) % 2)
+                fearSpr.Color = Color(1.0, 1.0, 1.0, 0.85, 0.30, 0.22, 0.0)
+                local sparkPos = player.Position + Vector(math.sin(frame * 0.25) * 15, -16 + math.cos(frame * 0.25) * 8)
+                fearSpr:Render(Isaac.WorldToScreen(sparkPos), Vector.Zero, Vector.Zero)
+            end
+        end
+    end
+
+    -- Power Battery passive held spark
+    if ITEM_POWER_BATTERY and player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == ITEM_POWER_BATTERY and (frame % 36) < 8 then
+        local sparkSpr = GetGLSparkSprite()
+        if sparkSpr then
+            sparkSpr:SetFrame("Idle", math.floor(frame / 2) % 4)
+            sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.70, 0.10, 0.50, 0.15)
+            sparkSpr.Scale = Vector(0.65, 0.65)
+            local bPos = player.Position + Vector(math.cos(frame * 0.2) * 14, -18 + math.sin(frame * 0.2) * 6)
+            sparkSpr:Render(Isaac.WorldToScreen(bPos), Vector.Zero, Vector.Zero)
+        end
+    end
+end
+
+-- 1. Render uncollected floor Green Lantern Emblem drops, hover aura, orbital shield behind player, AND upward-aimed Ring Beam BEHIND the player
 if ModCallbacks.MC_PRE_PLAYER_RENDER then
     GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
         if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
@@ -2594,6 +2964,7 @@ if ModCallbacks.MC_PRE_PLAYER_RENDER then
             RenderGLSparkDrops(false)
         end
         RenderGLPlayerAura(player)
+        RenderGLSolidShieldBehind(player)
 
         if IsRingActive(player) then
             local data = GetPlayerData(player)
@@ -2605,7 +2976,7 @@ if ModCallbacks.MC_PRE_PLAYER_RENDER then
     end)
 end
 
--- 2. Render collected Green Lantern Emblem pickup animation, and LEFT/RIGHT/DOWN Ring Beam & flare IN FRONT of the player
+-- 2. Render collected Green Lantern Emblem pickup animation, orbital shield in front, active item construct, and LEFT/RIGHT/DOWN Ring Beam & flare IN FRONT of the player
 GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
     if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
     local p0 = Isaac.GetPlayer(0)
@@ -2616,12 +2987,17 @@ GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOff
             RenderGLSparkDrops(nil)
         end
     end
-    if not IsRingActive(player) then return end
-    local data = GetPlayerData(player)
 
     if not ModCallbacks.MC_PRE_PLAYER_RENDER then
         RenderGLPlayerAura(player)
+        RenderGLSolidShieldBehind(player)
     end
+
+    RenderGLSolidShieldFront(player)
+    RenderGLActiveItemAndTrinketEffects(player)
+
+    if not IsRingActive(player) then return end
+    local data = GetPlayerData(player)
 
     if (not ModCallbacks.MC_PRE_PLAYER_RENDER) or (not IsPlayerAimingUpForRender(player, data)) then
         RenderGLBeamAndFlareForPlayer(player, data, Game():GetFrameCount())
