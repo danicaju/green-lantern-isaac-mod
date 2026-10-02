@@ -141,7 +141,10 @@ return function(Core)
     local beamScale = Core.IsTaintedHal(player) and 1.25 or (data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0))
     local baseRadius = 18.0 * beamScale
     local tickDmg = (player.Damage or 3.5) * Core.HAL_CONTINUOUS_BEAM_DMG_MULT
-    local applyFear = Core.IsTaintedHal(player)
+    -- Tainted: Fear por probabilidad en cada tick (no garantizado)
+    local taintedFearRoll = Core.IsTaintedHal(player)
+      and (math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25))
+    local applyFear = taintedFearRoll
       or (TearFlags and TearFlags.TEAR_FEAR and Core.HasTearFlag(player.TearFlags, TearFlags.TEAR_FEAR))
     local frame = Game():GetFrameCount()
 
