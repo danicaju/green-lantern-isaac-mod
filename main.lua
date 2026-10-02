@@ -24,6 +24,7 @@ include("modules.beam_synergies")(Core)
 
 include("modules.item_battery")(Core)
 include("modules.item_fist")(Core)
+include("modules.item_gatling")(Core)
 include("modules.item_coastcity")(Core)
 
 include("modules.shield")(Core)
