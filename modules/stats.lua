@@ -76,7 +76,8 @@ return function(Core)
     -- POWER BATTERY OVERCHARGE (applies to Hal Jordan when activating Power Battery at >=50% Willpower)
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
       if Core.IsHalJordan(player) and not data.ringDepleted and data.overcharge and data.overchargeRoomIdx == roomIdx then
-        player.Damage = player.Damage * 1.15
+        local mult = (data.overchargeTier or 1) >= 2 and Core.OVERCHARGE_T2_MULT or Core.OVERCHARGE_T1_MULT
+        player.Damage = player.Damage * mult
       end
     elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
       if not (Core.IsHalJordan(player) and data.ringDepleted) and (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx == roomIdx then
