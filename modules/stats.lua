@@ -69,7 +69,8 @@ return function(Core)
       end
 
       if cacheFlag == CacheFlag.CACHE_TEARFLAG then
-        player.TearFlags = player.TearFlags | TearFlags.TEAR_FEAR | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+        -- Tainted ya NO lleva Fear permanente: se aplica por probabilidad al impactar
+        player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
       end
     end
 
