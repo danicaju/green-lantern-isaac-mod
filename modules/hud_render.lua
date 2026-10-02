@@ -126,7 +126,8 @@ return function(Core)
           if data.ringDepleted then
             label = string.format("REBOOT %.0f%%/%.0f%%", data.willpower or 0, Core.WILLPOWER_REBOOT_THRESHOLD)
           elseif data.overcharge then
-            label = string.format("%.0f%% +15%%DMG", data.willpower or 0)
+            local bonus = (data.overchargeTier or 1) >= 2 and "+25%DMG" or "+15%DMG"
+            label = string.format("%.0f%% %s", data.willpower or 0, bonus)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
