@@ -54,14 +54,28 @@ Core.SPARK_DROP_CHANCE_NORMAL = 0.08
 
 Core.COAST_CITY_DURATION  = 150
 
--- Estado compartido: vortice Coast City (un solo vortice activo por run).
-Core.activeCoastCity = {
-    active     = false,
-    spawnFrame = 0,
-    roomIdx    = -1,
-    owner      = nil,
-    sparkBonus = 1.0,
-}
+-- Estado compartido: un vortice Coast City por jugador (co-op seguro).
+Core.activeCoastCityByPlayer = {}
+
+function Core.GetCoastCity(player)
+    local key = (player and player.Index) or 0
+    local cc = Core.activeCoastCityByPlayer[key]
+    if not cc then
+        cc = {
+            active     = false,
+            spawnFrame = 0,
+            roomIdx    = -1,
+            owner      = nil,
+            sparkBonus = 1.0,
+        }
+        Core.activeCoastCityByPlayer[key] = cc
+    end
+    return cc
+end
+
+function Core.ClearAllCoastCities()
+    Core.activeCoastCityByPlayer = {}
+end
 
 -- Drops de emblemas en el suelo (renderizados via anm2, nunca como coins).
 Core.activeEmeraldSparks = {}

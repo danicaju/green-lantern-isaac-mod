@@ -5,7 +5,7 @@ return function(Core)
 
     GL:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, function(_, isContinued)
         Core.LoadItemIDs()
-        Core.activeCoastCity.active = false
+        Core.ClearAllCoastCities()
         Core.ClearAllLanternEmblemDrops()
     end)
 

@@ -1,5 +1,5 @@
 -- modules/item_coastcity.lua -- RSI: solo The Tragedy of Coast City + vortex. Sin Willpower, sin beam, sin sparks.
--- Responsabilidad unica: active Coast City (vortex 5s, Fear + pull + pulso). Estado via Core.activeCoastCity, sin locales sueltos.
+-- Responsabilidad unica: active Coast City (vortex 5s, Fear + pull + pulso). Estado via Core.GetCoastCity(player), sin locales sueltos.
 return function(Core)
   local GL = Core.GL
 
@@ -22,13 +22,14 @@ return function(Core)
 
     local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
 
-    -- Store 5-second vortex state in persistent Lua table
-    Core.activeCoastCity.active        = true
-    Core.activeCoastCity.spawnFrame    = Game():GetFrameCount()
-    Core.activeCoastCity.roomIdx       = roomIdx
-    Core.activeCoastCity.owner         = player
-    Core.activeCoastCity.sparkBonus    = sparkBonus
-    Core.activeCoastCity.totalDuration = Core.COAST_CITY_DURATION + durationBonus
+    -- Store 5-second vortex state in this player's slot (co-op safe)
+    local cc = Core.GetCoastCity(player)
+    cc.active        = true
+    cc.spawnFrame    = Game():GetFrameCount()
+    cc.roomIdx       = roomIdx
+    cc.owner         = player
+    cc.sparkBonus    = sparkBonus
+    cc.totalDuration = Core.COAST_CITY_DURATION + durationBonus
 
     pcall(function()
       SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 0.88)
@@ -50,16 +51,12 @@ return function(Core)
   end)
 
   -- Coast City logic: gently pull vulnerable enemies toward center & deal light pulsing damage for 5 seconds
-  GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
-    if not Core.activeCoastCity.active then return end
+  local function RenderCoastCityVortex(cc, currentFrame, roomIdx)
+    local age          = currentFrame - (cc.spawnFrame or currentFrame)
+    local maxDuration  = cc.totalDuration or Core.COAST_CITY_DURATION
 
-    local currentFrame = Game():GetFrameCount()
-    local roomIdx      = Game():GetLevel():GetCurrentRoomIndex()
-    local age          = currentFrame - (Core.activeCoastCity.spawnFrame or currentFrame)
-    local maxDuration  = Core.activeCoastCity.totalDuration or Core.COAST_CITY_DURATION
-
-    if roomIdx ~= Core.activeCoastCity.roomIdx or age > maxDuration then
-      Core.activeCoastCity.active = false
+    if roomIdx ~= cc.roomIdx or age > maxDuration then
+      cc.active = false
       for i = 0, Game():GetNumPlayers() - 1 do
         local p = Isaac.GetPlayer(i)
         if Core.IsTaintedHal(p) then
@@ -71,8 +68,8 @@ return function(Core)
 
     local room        = Game():GetRoom()
     local center      = room:GetCenterPos()
-    local ownerPlayer = Core.activeCoastCity.owner or Isaac.GetPlayer(0)
-    local sparkBonus  = Core.activeCoastCity.sparkBonus or 1.0
+    local ownerPlayer = cc.owner or Isaac.GetPlayer(0)
+    local sparkBonus  = cc.sparkBonus or 1.0
 
     -- Swirling emerald vortex construct particles
     pcall(function()
@@ -110,6 +107,16 @@ return function(Core)
           local dmg = ownerPlayer.Damage * distMult * sparkBonus
           enemy:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(ownerPlayer), 0)
         end
+      end
+    end
+  end
+
+  GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
+    local currentFrame = Game():GetFrameCount()
+    local roomIdx      = Game():GetLevel():GetCurrentRoomIndex()
+    for _, cc in pairs(Core.activeCoastCityByPlayer) do
+      if cc.active then
+        RenderCoastCityVortex(cc, currentFrame, roomIdx)
       end
     end
   end)

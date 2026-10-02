@@ -3,7 +3,7 @@
 return function(Core)
     local GL = Core.GL
     GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
-        Core.activeCoastCity.active = false
+        Core.ClearAllCoastCities()
         -- Remove any uncollected Green Lantern emblems when leaving a room so they never persist or turn into coins!
         Core.ClearAllLanternEmblemDrops()
 
