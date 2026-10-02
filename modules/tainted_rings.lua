@@ -35,7 +35,15 @@ return function(Core)
           for _, ent in ipairs(Isaac.FindInRadius(player.Position, 50, EntityPartition.PICKUP)) do
             local ed = ent:GetData()
             if ed and ed.canBeConsumedByHal then
-              data.stolenRings = data.stolenRings + 1
+              if (data.stolenRings or 0) >= Core.MAX_STOLEN_RINGS then
+                pcall(function()
+                  SFXManager():Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.8, 0, false, 1.0)
+                end)
+              else
+                data.stolenRings = data.stolenRings + 1
+                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+                player:EvaluateItems()
+              end
               data.ringConsumeCooldown = 15
 
               local flyVar = (FamiliarVariant and FamiliarVariant.BLUE_FLY) or 43
