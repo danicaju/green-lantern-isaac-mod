@@ -24,7 +24,7 @@ return function(Core)
         laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
         laser.CollisionDamage = laser.CollisionDamage * 1.25
         laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-        if Core.IsTaintedHal(player) then
+        if Core.IsTaintedHal(player) and math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25) then
             laser.TearFlags = laser.TearFlags | TearFlags.TEAR_FEAR
         end
 

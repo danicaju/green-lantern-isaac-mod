@@ -38,6 +38,8 @@ return function(Core)
       {"Willpower drenado por tick (30Hz) al canalizar."})
     AddNumber("TAINTED_DMG_MULTIPLIER", "Tainted DMG mult", 1, 2, 0.05,
       {"Multiplicador de dano base de Tainted Hal."})
+    AddNumber("TAINTED_FEAR_CHANCE", "Tainted Fear chance", 0, 1, 0.05,
+      {"Probabilidad de Fear por beam/laser de Tainted. 0 = sin Fear."})
     AddNumber("SPARK_PER_KILL", "Sparks por emblema", 1, 25, 1,
       {"Medidor ganado por emblema recogido."})
     AddNumber("SPARK_DECAY_PER_SEC", "Decaimiento sparks/s", 0, 10, 0.5,
