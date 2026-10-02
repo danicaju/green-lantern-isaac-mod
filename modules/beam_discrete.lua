@@ -84,6 +84,13 @@ return function(Core)
       -- Grant Piercing (pass through enemies) + Spectral (pass through rocks/objects)
       -- (Fear de Tainted ya no va en el flag: se tira probabilidad al impactar)
       tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
+      -- Balance click-vs-hold: el beam discreto pega una fraccion del dano de ficha
+      -- (el Puño Gigante queda excluido: lleva su propio 10x)
+      local btd = tear:GetData()
+      if not (btd and btd.isGiantFist)
+        and (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then
+          tear.CollisionDamage = tear.CollisionDamage * Core.DISCRETE_BEAM_DMG_MULT
+      end
 
       -- Synergy scale adjustments (Chocolate Milk, Monstro's Lung, Ipecac, Haemolacria, Soy/Almond Milk)
       local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
