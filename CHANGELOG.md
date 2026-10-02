@@ -4,6 +4,13 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Rebalance click-vs-hold
+- `DISCRETE_BEAM_DMG_MULT = 0.70`: los beams por click pegan el 70% del daño
+  de ficha (Puño Gigante excluido, conserva su 10x).
+- `HAL_CONTINUOUS_BEAM_DMG_MULT`: `0.20 → 0.25` (1.5x → ~1.9x DPS sostenido).
+- Ambos ajustables en MCM. Objetivo: click = burst con coste, hold = DPS
+  sostenido + multitudes.
+
 ### Rebalance: Fear de Tainted por probabilidad
 - `TAINTED_FEAR_CHANCE = 0.25` (`core.lua`): los beams, el rayo continuo y los
   lasers de Tainted ya NO aplican Fear siempre; tiran 25% por impacto/tick/láser.
