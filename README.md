@@ -53,8 +53,8 @@ green_lantern_mod/
 │   └── gfx/                          # Gráficos y animaciones del menú de selección de personaje
 │       ├── hal_charactermenu.png     # Sprite y textos de Hal Jordan en el menú (160x160)
 │       ├── tainted_charactermenu.png # Sprite y textos de Tainted Hal en el menú (160x160)
-│       ├── charactermenu.png         # Hoja base del menú normal (512x512)
-│       ├── charactermenualt.png      # Hoja base del menú Tainted (512x512)
+│       ├── charactermenu.png         # Hoja base del menú normal (512x555)
+│       ├── charactermenualt.png      # Hoja base del menú Tainted (512x556)
 │       ├── characterportraits.anm2   # Animación del retrato en el menú normal
 │       ├── characterportraitsalt.anm2# Animación del retrato en el menú Tainted
 │       ├── charactermenu.anm2        # Animación del nombre/stats en el menú normal
@@ -76,11 +76,11 @@ green_lantern_mod/
         │       └── trinket_yellow_impurity.png
         └── ui/
             ├── boss/                 # Pantalla VS contra jefes y racha de victoria
-            │   ├── portrait_hal_jordan.png   # Retrato de Hal Jordan en pantalla VS (112x78)
-            │   ├── portrait_tainted_hal.png  # Retrato de Tainted Hal en pantalla VS (112x78)
+            │   ├── portrait_hal_jordan.png   # Retrato de Hal Jordan en pantalla VS (144x144)
+            │   ├── portrait_tainted_hal.png  # Retrato de Tainted Hal en pantalla VS (144x144)
             │   ├── name_hal_jordan.png       # Letrero con el nombre de Hal Jordan (192x64)
             │   └── name_tainted_hal.png      # Letrero con el nombre de Tainted Hal (192x64)
-            └── stage/                # Transición de pesadilla entre pisos (112x112)
+            └── stage/                # Transición de pesadilla entre pisos (144x144)
                 ├── stage_hal_jordan.png
                 └── stage_tainted_hal.png
 ```
