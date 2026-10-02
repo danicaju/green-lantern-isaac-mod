@@ -9,6 +9,7 @@ Core.GL = RegisterMod("GreenLanternMod", 1)
 -- IDs resueltos en runtime por modules/ids.lua (se declaran aqui, se rellenan alli).
 Core.ITEM_POWER_BATTERY       = nil
 Core.ITEM_GIANT_FIST          = nil
+Core.ITEM_GATLING             = nil
 Core.ITEM_COAST_CITY          = nil
 Core.ITEM_SOLID_LIGHT_SHIELD  = nil
 Core.ITEM_POWER_RING          = nil
@@ -63,6 +64,7 @@ Core.SPARK_DROP_CHANCE_FEARED = 0.14
 Core.SPARK_DROP_CHANCE_NORMAL = 0.08
 
 Core.COAST_CITY_DURATION  = 150
+Core.GATLING_DURATION     = 300
 
 -- Estado compartido: un vortice Coast City por jugador (co-op seguro).
 Core.activeCoastCityByPlayer = {}
