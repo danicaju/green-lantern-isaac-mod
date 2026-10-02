@@ -54,6 +54,10 @@ return function(Core)
     if Core.IsTaintedHal(player) then
       if cacheFlag == CacheFlag.CACHE_DAMAGE then
         player.Damage = player.Damage * Core.TAINTED_DMG_MULTIPLIER
+        local rings = Core.GetPlayerData(player).stolenRings or 0
+        if rings > 0 then
+          player.Damage = player.Damage + math.min(rings, Core.MAX_STOLEN_RINGS) * Core.STOLEN_RING_DMG
+        end
       end
 
       if cacheFlag == CacheFlag.CACHE_FIREDELAY then
