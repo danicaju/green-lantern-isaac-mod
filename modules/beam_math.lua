@@ -2,8 +2,7 @@
 -- Responsabilidad unica: CanUse/Stop, conteo de lagrimas por tap, ComputeContinuousBeamEndWorld y TickContinuousBeamDamage.
 
 return function(Core)
-  local HAL_CONTINUOUS_BEAM_DMG_MULT = Core.HAL_CONTINUOUS_BEAM_DMG_MULT
-  local HAL_CONTINUOUS_TICK_FRAMES = Core.HAL_CONTINUOUS_TICK_FRAMES
+  -- NOTA: sin alias locales de constantes: MCM puede cambiarlas en runtime.
 
   function Core.CanUseContinuousBeam(player)
     if not (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then return false end
@@ -141,7 +140,7 @@ return function(Core)
 
     local beamScale = Core.IsTaintedHal(player) and 1.25 or (data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0))
     local baseRadius = 18.0 * beamScale
-    local tickDmg = (player.Damage or 3.5) * HAL_CONTINUOUS_BEAM_DMG_MULT
+    local tickDmg = (player.Damage or 3.5) * Core.HAL_CONTINUOUS_BEAM_DMG_MULT
     local applyFear = Core.IsTaintedHal(player)
       or (TearFlags and TearFlags.TEAR_FEAR and Core.HasTearFlag(player.TearFlags, TearFlags.TEAR_FEAR))
     local frame = Game():GetFrameCount()
