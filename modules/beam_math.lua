@@ -163,7 +163,10 @@ return function(Core)
               local ed = ent.GetData and ent:GetData()
               if not (ed and ed.lastGLContBeamTickFrame == frame) then
                 if ed then ed.lastGLContBeamTickFrame = frame end
-                local fearMult = ent:HasEntityFlags(EntityFlag.FLAG_FEAR) and 1.25 or 1.0
+                local fearMult = 1.0
+                if Core.FEAR_VULN_ENABLED ~= false and ent:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+                  fearMult = 1.25
+                end
                 local tookDmg = ent:TakeDamage(tickDmg * fearMult, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
                 if tookDmg ~= false then
                   if applyFear then
