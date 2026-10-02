@@ -21,6 +21,7 @@ Mod de **Green Lantern (Hal Jordan)** y su versión Tainted (**The Butcher of Oa
 - **Salud inicial:** 1 Corazón Rojo, 2 Corazones Negros.
 - **Mecánica exclusiva — Stolen Rings (Pocket Active):**
   - Forja anillos a partir de enemigos derrotados y acumula hasta 10 anillos de poder (+0.3 DMG c/u) que incrementan la velocidad de ataque y el daño, con riesgo de sobrecarga al recibir daño.
+  - Los beams aplican Fear con 25% de probabilidad (ajustable en MCM, 0 = off); Coast City lo garantiza.
   - **Hambre de Parallax:** sin kills, el medidor decae 2%/s tras 5s.
   - **Depredador del miedo:** +25% de rayo continuo contra enemigos con Fear.
 
