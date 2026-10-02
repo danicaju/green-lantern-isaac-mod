@@ -96,7 +96,8 @@ return function(Core)
           Core.ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
 
           -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
-          local drain = Core.WILLPOWER_PER_TEAR
+          -- Gatling: cero coste mientras dura el buff
+          local drain = (data.gatlingTimer or 0) > 0 and 0 or Core.WILLPOWER_PER_TEAR
           if data.multiShotIndex > 0 then
               drain = drain * 0.25 -- Multi-shot / Monstro's Lung extra beams cost 75% less willpower
           end
