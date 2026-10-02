@@ -39,6 +39,7 @@ include("modules.fx_sprites")(Core)
 include("modules.fx_beam")(Core)
 include("modules.fx_shield_items")(Core)
 include("modules.hud_render")(Core)
+include("modules.fx_mcm")(Core)
 
 include("modules.debug")(Core)
 
