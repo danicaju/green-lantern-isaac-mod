@@ -36,6 +36,10 @@ return function(Core)
       {"Willpower devuelto por beam que golpea."})
     AddNumber("HAL_CONTINUOUS_WILL_DRAIN", "Drenaje rayo continuo", 0, 0.3, 0.01,
       {"Willpower drenado por tick (30Hz) al canalizar."})
+    AddNumber("HAL_CONTINUOUS_BEAM_DMG_MULT", "Dano rayo continuo", 0.05, 0.6, 0.05,
+      {"Fraccion de dano por tick (7.5 ticks/s)."})
+    AddNumber("DISCRETE_BEAM_DMG_MULT", "Dano beam discreto", 0.3, 1.5, 0.05,
+      {"Fraccion de dano de ficha por click. Baja para favorecer hold."})
     AddNumber("TAINTED_DMG_MULTIPLIER", "Tainted DMG mult", 1, 2, 0.05,
       {"Multiplicador de dano base de Tainted Hal."})
     AddNumber("TAINTED_FEAR_CHANCE", "Tainted Fear chance", 0, 1, 0.05,
