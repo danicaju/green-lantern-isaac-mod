@@ -26,13 +26,17 @@ return function(Core)
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
       if Core.IsTaintedHal(player) then
+        local data = Core.GetPlayerData(player)
+        if data.ringConsumeCooldown and data.ringConsumeCooldown > 0 then
+          data.ringConsumeCooldown = data.ringConsumeCooldown - 1
+        end
         local isUsing = Input.IsActionPressed(ButtonAction.ACTION_DROP, player.ControllerIndex)
-        if isUsing then
+        if isUsing and not (data.ringConsumeCooldown and data.ringConsumeCooldown > 0) then
           for _, ent in ipairs(Isaac.FindInRadius(player.Position, 50, EntityPartition.PICKUP)) do
             local ed = ent:GetData()
             if ed and ed.canBeConsumedByHal then
-              local data = Core.GetPlayerData(player)
               data.stolenRings = data.stolenRings + 1
+              data.ringConsumeCooldown = 15
 
               local flyVar = (FamiliarVariant and FamiliarVariant.BLUE_FLY) or 43
               local ring = Isaac.Spawn(
