@@ -200,5 +200,20 @@ return function(Core)
           local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, collider.Position, Vector.Zero, tear)
           Core.SetEntityScaleAndColor(fx, 0.70, Color(0.1, 1.0, 0.35, 0.9, 0.15, 0.85, 0.25))
       end
+
+      -- Willpower refund: cada beam que impacta devuelve una pizca (premia punteria)
+      if not td.glRefundGiven then
+          td.glRefundGiven = true
+          local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+          if sp and Core.IsHalJordan(sp) then
+              local sd = Core.GetPlayerData(sp)
+              local max = Core.WILLPOWER_MAX
+              if (sd.willpower or max) < max and not sd.ringDepleted then
+                  sd.willpower = math.min(max, (sd.willpower or max) + Core.WILLPOWER_HIT_REFUND)
+                  sp:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+                  sp:EvaluateItems()
+              end
+          end
+      end
   end)
 end
