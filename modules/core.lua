@@ -28,6 +28,7 @@ Core.HAL_SHOT_SPEED_BONUS     = 0.30
 -- Willpower y rayo continuo.
 Core.WILLPOWER_MAX                 = 100.0
 Core.WILLPOWER_PER_TEAR            = 0.5
+Core.WILLPOWER_HIT_REFUND          = 0.15
 Core.WILLPOWER_REBOOT_THRESHOLD    = 20.0
 Core.WILLPOWER_PASSIVE_REBOOT_RATE = 0.085
 Core.WILLPOWER_KILL_REBOOT_BONUS   = 5.0
@@ -41,10 +42,14 @@ Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
 -- Tainted Hal.
 Core.TAINTED_DMG_MULTIPLIER   = 1.5
 Core.TAINTED_TEARS_PENALTY    = -1.5
+Core.MAX_STOLEN_RINGS         = 10
+Core.STOLEN_RING_DMG          = 0.3
 
 -- Emblemas esmeralda.
 Core.SPARK_MAX                = 100.0
 Core.SPARK_PER_KILL           = 10.0
+Core.SPARK_DECAY_PER_SEC      = 2.0
+Core.SPARK_DECAY_GRACE_FRAMES = 150
 Core.SPARK_LIFETIME_FRAMES    = 180
 Core.SPARK_BLINK_FRAMES       = 60
 Core.SPARK_COLLECT_FRAMES     = 12
