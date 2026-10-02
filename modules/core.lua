@@ -29,6 +29,7 @@ Core.HAL_SHOT_SPEED_BONUS     = 0.30
 Core.WILLPOWER_MAX                 = 100.0
 Core.WILLPOWER_PER_TEAR            = 0.5
 Core.WILLPOWER_HIT_REFUND          = 0.15
+Core.FEAR_VULN_ENABLED             = true
 Core.OVERCHARGE_T1_THRESHOLD       = 50.0
 Core.OVERCHARGE_T2_THRESHOLD       = 90.0
 Core.OVERCHARGE_T1_MULT            = 1.15
