@@ -221,15 +221,17 @@ return function(Core)
       data.lastCollectibleCount = count
       data.lastActiveItem = activeId
       Core.RefreshCharacterCostume(player)
-      if Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD) then
-        if not data.grantedSolidShieldHearts then
-          data.grantedSolidShieldHearts = true
-          player:AddSoulHearts(2)
-          pcall(function()
-            SFXManager():Play(SoundEffect.SOUND_HOLY, 1.0, 0, false, 1.0)
-          end)
-          data.shieldDeflectTimer = 16
-        end
+      local hasShield = Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0
+        and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)
+      if not hasShield then
+        data.grantedSolidShieldHearts = false
+      elseif not data.grantedSolidShieldHearts then
+        data.grantedSolidShieldHearts = true
+        player:AddSoulHearts(2)
+        pcall(function()
+          SFXManager():Play(SoundEffect.SOUND_HOLY, 1.0, 0, false, 1.0)
+        end)
+        data.shieldDeflectTimer = 16
       end
       if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and player:HasCollectible(Core.ITEM_POWER_RING) then
         if not data.grantedRingVisual then
