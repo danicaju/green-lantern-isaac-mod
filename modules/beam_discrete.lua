@@ -82,10 +82,8 @@ return function(Core)
       data.ringFlareTimer     = 6
 
       -- Grant Piercing (pass through enemies) + Spectral (pass through rocks/objects)
+      -- (Fear de Tainted ya no va en el flag: se tira probabilidad al impactar)
       tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
-      if Core.IsTaintedHal(player) then
-          tear.TearFlags = tear.TearFlags | TearFlags.TEAR_FEAR
-      end
 
       -- Synergy scale adjustments (Chocolate Milk, Monstro's Lung, Ipecac, Haemolacria, Soy/Almond Milk)
       local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
@@ -214,6 +212,20 @@ return function(Core)
                   sp:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
                   sp:EvaluateItems()
               end
+          end
+      end
+
+      -- Parallax dread: los beams de Tainted aplican Fear por probabilidad, no siempre
+      if not td.glFearRolled then
+          td.glFearRolled = true
+          local sp2 = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+          if sp2 and Core.IsTaintedHal(sp2)
+            and math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25)
+            and not collider:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+              pcall(function()
+                  collider:AddFear(EntityRef(sp2), 90)
+                  collider:AddEntityFlags(EntityFlag.FLAG_FEAR)
+              end)
           end
       end
   end)
