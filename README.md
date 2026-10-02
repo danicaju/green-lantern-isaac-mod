@@ -11,13 +11,18 @@ Mod de **Green Lantern (Hal Jordan)** y su versión Tainted (**The Butcher of Oa
 - **Habilidad innata:** Vuelo y disparos de energía esmeralda desde su anillo.
 - **Mecánica exclusiva — Willpower & Power Battery (Pocket Active):**
   - Dispone de una barra de **Willpower** bajo los corazones que se consume al disparar y se recarga en combate o usando la **Power Battery** (ítem activo de bolsillo).
-  - **Sobrecarga (>100%):** Otorga daño adicional y lágrimas espectrales/perforantes temporalmente.
+  - **Impactos devuelven +0.15%** Willpower por beam que golpea.
+  - **Sobrecarga por tramos:** ≥50% → +15% DMG, ≥90% → +25% DMG temporalmente.
   - **Batería agotada (0%):** Reduce la cadencia de disparo hasta recargar el anillo.
+- **Progresión Oathkeeper:** pisar Womb I como Hal/Tainted desbloquea bonus inicial permanente.
+- **Menú MCM:** todo el balance (costes, drenajes, multiplicadores) es ajustable en Mod Config Menu.
 
 ### 2. Tainted Hal (The Butcher of Oa / Parallax)
 - **Salud inicial:** 1 Corazón Rojo, 2 Corazones Negros.
 - **Mecánica exclusiva — Stolen Rings (Pocket Active):**
-  - Forja anillos a partir de enemigos derrotados y acumula hasta 10 anillos de poder que incrementan la velocidad de ataque y el daño, con riesgo de sobrecarga al recibir daño.
+  - Forja anillos a partir de enemigos derrotados y acumula hasta 10 anillos de poder (+0.3 DMG c/u) que incrementan la velocidad de ataque y el daño, con riesgo de sobrecarga al recibir daño.
+  - **Hambre de Parallax:** sin kills, el medidor decae 2%/s tras 5s.
+  - **Depredador del miedo:** +25% de rayo continuo contra enemigos con Fear.
 
 ---
 
@@ -25,8 +30,9 @@ Mod de **Green Lantern (Hal Jordan)** y su versión Tainted (**The Butcher of Oa
 
 | Nombre | Tipo | Descripción |
 | :--- | :--- | :--- |
-| **Power Battery** | Activo (Inicial) | Recarga la barra de Willpower de Hal Jordan o activa *Overcharge*. |
+| **Power Battery** | Activo (Inicial) | Recarga la barra de Willpower de Hal Jordan o activa *Overcharge* (tramos +15%/+25%). |
 | **Construct: Giant Fist** | Activo | Invoca un puño gigante de luz sólida que golpea y empuja enemigos. |
+| **Construct: Gatling** | Activo | 10s de beams discretos rápidos sin coste de Willpower. |
 | **Solid Light Shield** | Pasivo | Orbital de luz sólida que bloquea proyectiles y daña al contacto. |
 | **The Tragedy of Coast City** | Activo (Tainted) | Invoca el constructo de Coast City al llenar las chispas esmeralda. |
 | **Yellow Impurity** | Trinket | Incrementa el daño x1.5, pero los impactos recibidos pueden causar *Fear*. |
