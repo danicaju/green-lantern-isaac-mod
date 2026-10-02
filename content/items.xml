@@ -31,6 +31,16 @@
         quality="3"
         />
 
+    <active
+        id="6"
+        name="Construct: Gatling"
+        description="10s rapid-fire emerald beams with no Willpower cost"
+        gfx="collectible_gatling.png"
+        maxcharges="4"
+        chargetype="normal"
+        quality="3"
+        />
+
     <!-- ===== PASSIVE ITEMS ===== -->
     <passive
         id="4"
