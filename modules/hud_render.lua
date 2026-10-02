@@ -47,6 +47,8 @@ return function(Core)
   local lastRenderGameFrame = -1
   local frozenRenderFrames = 0
   local imVisibleBeforeFreeze = false
+  local inspectCacheFrame = -100
+  local inspectCacheTitle, inspectCacheLines = nil, nil
 
   GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     Core.EnsureEIDRegistered()
@@ -128,7 +130,10 @@ return function(Core)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
-            data.oathTextTimer = data.oathTextTimer - 1
+            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz
+            if currentGameFrame % 2 == 0 then
+              data.oathTextTimer = data.oathTextTimer - 1
+            end
             if data.oathText then
               local headPos = Isaac.WorldToScreen(player.Position + Vector(0, -48))
               local textAlpha = math.min(0.95, data.oathTextTimer / 20.0)
@@ -153,7 +158,10 @@ return function(Core)
         end
         if i == 0 then
           local inspectTitle, inspectLines = nil, nil
-          if not EID then
+          -- Throttle: el pedestal mas cercano no cambia a 60Hz; escanea cada 15 render frames
+          if not EID and currentGameFrame - inspectCacheFrame >= 15 then
+            inspectCacheFrame = currentGameFrame
+            inspectCacheTitle, inspectCacheLines = nil, nil
             local nearestDist = 95
             for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
               if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
@@ -162,8 +170,8 @@ return function(Core)
                   local t, l = Core.GetModItemInspectionInfo(false, ent.SubType)
                   if t then
                     nearestDist = dist
-                    inspectTitle = t
-                    inspectLines = l
+                    inspectCacheTitle = t
+                    inspectCacheLines = l
                   end
                 end
               elseif ent.Variant == PickupVariant.PICKUP_TRINKET and ent.SubType > 0 then
@@ -172,12 +180,15 @@ return function(Core)
                   local t, l = Core.GetModItemInspectionInfo(true, ent.SubType)
                   if t then
                     nearestDist = dist
-                    inspectTitle = t
-                    inspectLines = l
+                    inspectCacheTitle = t
+                    inspectCacheLines = l
                   end
                 end
               end
             end
+          end
+          if not EID then
+            inspectTitle, inspectLines = inspectCacheTitle, inspectCacheLines
           end
           local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
             and (Game():GetFrameCount() > 60)
