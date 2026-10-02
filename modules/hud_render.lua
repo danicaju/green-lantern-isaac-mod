@@ -123,7 +123,9 @@ return function(Core)
             Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
           end
           local label = string.format("%.0f%%", data.willpower or 0)
-          if data.ringDepleted then
+          if (data.gatlingTimer or 0) > 0 then
+            label = string.format("%.0f%% GATLING", data.willpower or 0)
+          elseif data.ringDepleted then
             label = string.format("REBOOT %.0f%%/%.0f%%", data.willpower or 0, Core.WILLPOWER_REBOOT_THRESHOLD)
           elseif data.overcharge then
             local bonus = (data.overchargeTier or 1) >= 2 and "+25%DMG" or "+15%DMG"
