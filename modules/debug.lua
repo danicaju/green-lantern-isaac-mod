@@ -20,7 +20,7 @@ return function(Core)
     if cmd == "gl_sparks" then
       local p = Isaac.GetPlayer(0)
       if Core.IsTaintedHal(p) then
-        local pct = tonumber(params) or 100
+        local pct = math.max(0, math.min(Core.SPARK_MAX, tonumber(params) or 100))
         Core.GetPlayerData(p).emeraldSparks = pct
         p:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
         p:EvaluateItems()
