@@ -28,17 +28,25 @@ return function(Core)
 
     local statusMsg = "WILLPOWER RESTORED!"
     if Core.IsHalJordan(player) then
-      if (not wasDepleted) and prevWill >= 50.0 then
+      if (not wasDepleted) and prevWill >= Core.OVERCHARGE_T2_THRESHOLD then
         data.overcharge = true
+        data.overchargeTier = 2
+        data.surgeBuff = false
+        statusMsg = "OVERCHARGE MAX! (+25% DMG)"
+      elseif (not wasDepleted) and prevWill >= Core.OVERCHARGE_T1_THRESHOLD then
+        data.overcharge = true
+        data.overchargeTier = 1
         data.surgeBuff = false
         statusMsg = "OVERCHARGE! (+15% DMG)"
       else
         data.overcharge = false
+        data.overchargeTier = 0
         data.surgeBuff = true
       end
       Core.RestoreHalRingPower(player, Core.WILLPOWER_MAX, statusMsg)
     else
       data.overcharge = true
+      data.overchargeTier = 1
       data.surgeBuff = false
       player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
       player:EvaluateItems()
