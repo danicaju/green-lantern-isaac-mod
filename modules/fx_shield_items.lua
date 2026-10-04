@@ -13,27 +13,12 @@ return function(Core)
         local auraFrame = math.floor(frame / 4) % 2
         shieldSpr:SetFrame("Aura", auraFrame)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
-        local auraAlpha = isDeflecting and 0.88 or (0.36 + 0.16 * math.sin(frame * 0.12))
+        -- Pulsing alpha: alternating 0.36 / 0.52 every 4 frames. Was a sinusoidal pulse (eliminated per SPEC).
+        local auraAlpha = isDeflecting and 0.88 or ((math.floor(frame / 4) % 2 == 0) and 0.52 or 0.36)
         shieldSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
         shieldSpr.Scale = Vector(1.0, 1.0)
         local auraPos = player.Position + Vector(0, -14)
         shieldSpr:Render(Isaac.WorldToScreen(auraPos) + rOffset, Vector.Zero, Vector.Zero)
-
-        -- 2. Orbital shield when BEHIND player in isometric 3D space (sin < 0)
-        local angle = data.shieldOrbitAngle or 0
-        if math.sin(angle) < 0 then
-            local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
-            local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
-            if isDeflecting then
-                local defFrame = math.min(3, math.max(0, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3)))
-                shieldSpr:SetFrame("Deflect", defFrame)
-            else
-                shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
-            end
-            shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
-            shieldSpr.Scale = Vector(1.0, 1.0)
-            shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
-        end
     end
 
     function Core.RenderGLSolidShieldFront(player, renderOffset)
@@ -42,24 +27,22 @@ return function(Core)
         local shieldSpr = Core.GetGLSolidShieldSprite()
         if not shieldSpr then return end
 
-        local angle = data.shieldOrbitAngle or 0
-        -- Orbital shield when IN FRONT OF player in isometric 3D space (sin >= 0)
-        if math.sin(angle) >= 0 then
-            local frame = Game():GetFrameCount()
-            local rOffset = renderOffset or Vector.Zero
-            local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
-            local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
-            local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
-            if isDeflecting then
-                local defFrame = math.min(3, math.max(0, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3)))
-                shieldSpr:SetFrame("Deflect", defFrame)
-            else
-                shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
-            end
-            shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
-            shieldSpr.Scale = Vector(1.0, 1.0)
-            shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
+        -- Orbital shield always rendered in MC_POST_PLAYER_RENDER (delante del jugador).
+        -- Reparto isometrico (sign-of-angle split) eliminado: el orbital vive siempre en Front.
+        local frame = Game():GetFrameCount()
+        local rOffset = renderOffset or Vector.Zero
+        local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
+        local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
+        local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
+        if isDeflecting then
+            local defFrame = math.min(3, math.max(0, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3)))
+            shieldSpr:SetFrame("Deflect", defFrame)
+        else
+            shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
         end
+        shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
+        shieldSpr.Scale = Vector(1.0, 1.0)
+        shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
     end
 
     function Core.RenderGLActiveItemAndTrinketEffects(player, renderOffset)
@@ -74,7 +57,8 @@ return function(Core)
                 battSpr:SetFrame("Pulse", math.floor(frame / 2) % 4)
                 local alpha = math.min(1.0, data.batteryConstructTimer / 10.0)
                 battSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0.10, 0.55, 0.15)
-                local bob = math.sin(frame * 0.18) * 3
+                -- Bob +/-3 alternando cada 18 frames aprox. Era un bob sinusoidal (eliminado per SPEC).
+                local bob = ((math.floor(frame * 0.18) % 2 == 0) and 1 or -1) * 3
                 local battPos = player.Position + Vector(0, -44 + bob)
                 battSpr:Render(Isaac.WorldToScreen(battPos) + rOffset, Vector.Zero, Vector.Zero)
             end
@@ -97,7 +81,10 @@ return function(Core)
                 if fearSpr then
                     fearSpr:SetFrame("YellowSpark", math.floor(frame / 2) % 2)
                     fearSpr.Color = Color(1.0, 1.0, 1.0, 0.85, 0.30, 0.22, 0.0)
-                    local sparkPos = player.Position + Vector(math.sin(frame * 0.25) * 15, -16 + math.cos(frame * 0.25) * 8)
+                    -- Orbita rectangular alrededor del jugador. Antes: Vector(sin(0.25t)*15, -16 + cos(0.25t)*8)
+                    local sx = ((frame % 32) - 16) * (15 / 16)
+                    local sy = ((frame % 16) - 8)
+                    local sparkPos = player.Position + Vector(sx, -16 + sy)
                     fearSpr:Render(Isaac.WorldToScreen(sparkPos) + rOffset, Vector.Zero, Vector.Zero)
                 end
             end
@@ -110,7 +97,10 @@ return function(Core)
                 sparkSpr:SetFrame("Idle", math.floor(frame / 2) % 4)
                 sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.70, 0.10, 0.50, 0.15)
                 sparkSpr.Scale = Vector(0.65, 0.65)
-                local bPos = player.Position + Vector(math.cos(frame * 0.2) * 14, -18 + math.sin(frame * 0.2) * 6)
+                -- Orbita rectangular alrededor del jugador. Antes: Vector(cos(0.2t)*14, -18 + sin(0.2t)*6)
+                local bx = ((frame % 28) - 14) * (14 / 14)
+                local by = ((frame % 14) - 7) * (6 / 7)
+                local bPos = player.Position + Vector(bx, -18 + by)
                 sparkSpr:Render(Isaac.WorldToScreen(bPos) + rOffset, Vector.Zero, Vector.Zero)
             end
         end
