@@ -171,7 +171,7 @@ return function(Core)
         if frame > (data.bufferedClickExpireFrame or 0) or not Core.CanUseContinuousBeam(player) then
           data.bufferedClickDir = nil
         else
-          local minClickInterval = math.max(3, math.min(7, math.floor((player.MaxFireDelay or 10) * 0.55)))
+          local minClickInterval = math.max(6, math.min(10, math.floor((player.MaxFireDelay or 10) * 0.70)))
           if (data.gatlingTimer or 0) > 0 then minClickInterval = 2 end
           if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
             local dir = Vector(data.bufferedClickDir.X, data.bufferedClickDir.Y)
