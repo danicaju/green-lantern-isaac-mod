@@ -74,6 +74,21 @@ return function(Core)
         auraSpr:Render(bodyScreenPos, Vector.Zero, Vector.Zero)
     end
 
+    -- Screen-space offset (px) to skip at the start of the continuous beam when aiming UP.
+    -- The ring hand is centered behind the head (Vector(0,-32)) in that pose; the initial
+    -- segment would otherwise be painted directly over the head/neck. Purely a render-time
+    -- trim — raycast / damage start are untouched.
+    local GL_BEAM_UP_HEAD_SKIP = 28.0
+
+    -- Returns the initial screen-space distance (px) to skip when drawing the continuous beam.
+    -- Only applies while aiming UP and when the beam is long enough that something would still
+    -- remain visible after the skip. 0 in every other case.
+    function Core.ComputeBeamRenderStartSkip(isAimingUp, totalScreenLen)
+        if not isAimingUp then return 0.0 end
+        if totalScreenLen <= GL_BEAM_UP_HEAD_SKIP then return 0.0 end
+        return GL_BEAM_UP_HEAD_SKIP
+    end
+
     function Core.RenderGLContinuousBeam(player, data, flareSpr, frame)
         if not (data and data.isFiringContinuousBeam) then
             return
@@ -108,7 +123,8 @@ return function(Core)
         local thickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
         local segWidth = 48.0
         local segStep  = 48.0
-        local dist     = 0.0
+        local aimingUp = Core.IsAimingUp(player, dir)
+        local dist     = Core.ComputeBeamRenderStartSkip(aimingUp, totalScreenLen)
         local animFrame = math.floor(frame / 2) % 4
 
         while dist < totalScreenLen do
