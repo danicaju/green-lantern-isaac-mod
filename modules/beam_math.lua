@@ -74,6 +74,9 @@ return function(Core)
       return startWorld + d * 400.0
     end
 
+    -- Minimum beam world-distance (used for degenerate cases: started in wall, never entered room, bisect floor).
+    local MIN_BEAM_DIST = 12.0
+
     local function IsWallAt(p)
       if room.IsPositionInRoom and not room:IsPositionInRoom(p, 0) then
         return true
@@ -102,7 +105,7 @@ return function(Core)
           break
         elseif dist >= 80.0 then
           -- Started inside a wall margin while flying and aiming outward away from the room
-          hitDist = 12.0
+          hitDist = MIN_BEAM_DIST
           break
         end
       else
@@ -113,7 +116,7 @@ return function(Core)
     end
 
     if not hasEnteredRoom then
-      return startWorld + d * 12.0
+      return startWorld + d * MIN_BEAM_DIST
     end
 
     local lo = lastValid
@@ -127,7 +130,7 @@ return function(Core)
       end
     end
 
-    local finalDist = math.max(12.0, (lo + hi) * 0.5)
+    local finalDist = math.max(MIN_BEAM_DIST, (lo + hi) * 0.5)
     return startWorld + d * finalDist
   end
 
