@@ -16,6 +16,25 @@ return function(Core)
     end)
   end
 
+  local function AddInt(key, label, min, max, step, info)
+    pcall(function()
+      ModConfigMenu.AddSetting("GreenLantern", "Balance", {
+        Type = ModConfigMenuOptionType.NUMBER,
+        CurrentSetting = function() return math.floor(Core[key] + 0.5) end,
+        Display = function() return label .. ": " .. tostring(math.floor(Core[key] + 0.5)) end,
+        OnChange = function(v)
+          Core[key] = math.floor(tonumber(v) or min)
+          if Core[key] < min then Core[key] = min end
+          if Core[key] > max then Core[key] = max end
+        end,
+        Info = info or {},
+        Minimum = min,
+        Maximum = max,
+        ModifyBy = step,
+      })
+    end)
+  end
+
   local function AddBool(key, label, info)
     pcall(function()
       ModConfigMenu.AddSetting("GreenLantern", "Balance", {
@@ -39,7 +58,10 @@ return function(Core)
     AddNumber("HAL_CONTINUOUS_BEAM_DMG_MULT", "Dano rayo continuo", 0.05, 0.6, 0.05,
       {"Fraccion de dano por tick (7.5 ticks/s)."})
     AddNumber("DISCRETE_BEAM_DMG_MULT", "Dano beam discreto", 0.3, 1.5, 0.05,
-      {"Fraccion de dano de ficha por click. Baja para favorecer hold."})
+      {"Fraccion de dano de ficha por click. Baja para favorecer hold.",
+       "Subirlo por encima de ~0.45 puede devolver el dominio al click."})
+    AddInt("HAL_CONTINUOUS_HOLD_FRAMES", "Frames para entrar en continuo", 4, 30, 1,
+      {"Frames sostenidos antes de pasar de beam discreto a rayo continuo. Default 10."})
     AddNumber("TAINTED_DMG_MULTIPLIER", "Tainted DMG mult", 1, 2, 0.05,
       {"Multiplicador de dano base de Tainted Hal."})
     AddNumber("TAINTED_FEAR_CHANCE", "Tainted Fear chance", 0, 1, 0.05,
