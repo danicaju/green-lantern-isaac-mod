@@ -96,7 +96,7 @@ return function(Core)
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
     local hudOffset = (Options and Options.HUDOffset) or 0
     local baseX = 48 + math.floor(hudOffset * 20)
-    local baseY = 33 + math.floor(hudOffset * 12)
+    local baseY = 40 + math.floor(hudOffset * 12)
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
       if player then
