@@ -4,6 +4,14 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### S9 — HUD propia +7px (sin solape con slot activo)
+- `modules/hud_render.lua`: `baseY` 33→40. El slot activo del engine no es
+  movible por API pública (clase HUD sin setters de posición).
+
+### S8 — Inspector propio eliminado
+- `modules/hud_render.lua` (-58/+1): fuera la caja verde de Tab/Map.
+- EID sigue registrándose; `GetModItemInspectionInfo` queda como API.
+
 ### S7 — Recorte visual del haz continuo al apuntar arriba
 - `modules/fx_beam.lua`: nueva constante local `GL_BEAM_UP_HEAD_SKIP = 28.0` (px)
   y `Core.ComputeBeamRenderStartSkip(isAimingUp, totalScreenLen)`. En
