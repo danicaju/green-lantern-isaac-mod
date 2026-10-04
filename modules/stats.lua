@@ -38,7 +38,16 @@ return function(Core)
 
       if cacheFlag == CacheFlag.CACHE_FLYING then
         if not data.ringDepleted then
+          -- Track grants so depletion only revokes flight the Ring itself gave,
+          -- preserving flight from items (e.g. Spirit Wings / Holy Mantle flight items).
+          if not player.CanFly then
+            data.ringGrantedFly = true
+          end
           player.CanFly = true
+        elseif data.ringGrantedFly then
+          -- Ring depleted: revoke only the flight it previously granted.
+          player.CanFly = false
+          data.ringGrantedFly = false
         end
       end
 
