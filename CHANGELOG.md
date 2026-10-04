@@ -4,6 +4,20 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### S7 — Recorte visual del haz continuo al apuntar arriba
+- `modules/fx_beam.lua`: nueva constante local `GL_BEAM_UP_HEAD_SKIP = 28.0` (px)
+  y `Core.ComputeBeamRenderStartSkip(isAimingUp, totalScreenLen)`. En
+  `RenderGLContinuousBeam`, cuando se apunta arriba y hay haz suficiente,
+  `dist` inicial salta esos 28 px para no pintar el segmento sobre la cabeza
+  (la mano se coloca en `Vector(0,-32)` por `GetRingHandOffset`). Si el haz
+  es ≤28 px no se recorta (no quedaría nada visible).
+- Solo dibujo: `ring_aim.lua` (offset up), `firing_mode.lua` (`dmgStart`) y
+  `beam_math.lua` (raycast/`ComputeContinuousBeamEndWorld`) intactos.
+- Sin efecto en daño, hitbox ni longitud lógica del rayo (el recorte es solo
+  de dibujado).
+- `tools/test_fx_beam_render_skip.lua`: 21 asserts (skip unitarios + integración
+  de render con stubs de Vector/Isaac/Sprite). `lua5.1 tools/test_fx_beam_render_skip.lua` → `passes=21 failures=0`.
+
 ### S5 — Vuelo del anillo respeta alas de items
 - `data.ringGrantedFly` (`core.lua` init, `stats.lua` CACHE_FLYING): al agotarse
   el anillo solo se revoca el vuelo si lo había concedido el anillo; las alas
