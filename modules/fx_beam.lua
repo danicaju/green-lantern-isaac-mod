@@ -128,11 +128,21 @@ return function(Core)
             dist = dist + segStep
         end
 
-        -- Render bright emerald construct impact flare at the beam endpoint
-        if flareSpr then
+        -- Render bright emerald construct impact flare at the beam endpoint.
+        -- Guard: skip on very short beams to avoid a bright flare stacked on the player.
+        -- Alpha scales with length: 0 at <=24px, 1 at >=120px, linear in between.
+        local GL_BEAM_FLARE_MIN_DIST = 24.0
+        local GL_BEAM_FLARE_FULL_DIST = 120.0
+        if flareSpr and totalScreenLen >= GL_BEAM_FLARE_MIN_DIST then
+            local flareAlpha = (totalScreenLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
+            if flareAlpha < 0.0 then
+                flareAlpha = 0.0
+            elseif flareAlpha > 1.0 then
+                flareAlpha = 1.0
+            end
             flareSpr:SetFrame("RingFlare", math.floor(frame / 2) % 4)
             flareSpr.Scale = Vector(0.95 * thickness, 0.95 * thickness)
-            flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0.15, 0.50, 0.18)
+            flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha, 0.15, 0.50, 0.18)
             flareSpr:Render(endScreen, Vector.Zero, Vector.Zero)
         end
     end
