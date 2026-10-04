@@ -1,4 +1,4 @@
--- modules/hud_render.lua -- RSI: solo render player + HUD + inspector + ItemMenu guard + 60Hz poll.
+-- modules/hud_render.lua -- RSI: render player + HUD + ItemMenu guard + 60Hz poll.
 return function(Core)
   local GL = Core.GL
 
@@ -47,8 +47,6 @@ return function(Core)
   local lastRenderGameFrame = -1
   local frozenRenderFrames = 0
   local imVisibleBeforeFreeze = false
-  local inspectCacheFrame = -100
-  local inspectCacheTitle, inspectCacheLines = nil, nil
 
   GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
     Core.EnsureEIDRegistered()
@@ -158,61 +156,6 @@ return function(Core)
             label = string.format("%s [%d]", label, data.stolenRings)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
-        end
-        if i == 0 then
-          local inspectTitle, inspectLines = nil, nil
-          -- Throttle: el pedestal mas cercano no cambia a 60Hz; escanea cada 15 render frames
-          if not EID and currentGameFrame - inspectCacheFrame >= 15 then
-            inspectCacheFrame = currentGameFrame
-            inspectCacheTitle, inspectCacheLines = nil, nil
-            local nearestDist = 95
-            for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, -1, -1, false)) do
-              if ent.Variant == PickupVariant.PICKUP_COLLECTIBLE and ent.SubType > 0 then
-                local dist = (ent.Position - player.Position):Length()
-                if dist < nearestDist then
-                  local t, l = Core.GetModItemInspectionInfo(false, ent.SubType)
-                  if t then
-                    nearestDist = dist
-                    inspectCacheTitle = t
-                    inspectCacheLines = l
-                  end
-                end
-              elseif ent.Variant == PickupVariant.PICKUP_TRINKET and ent.SubType > 0 then
-                local dist = (ent.Position - player.Position):Length()
-                if dist < nearestDist then
-                  local t, l = Core.GetModItemInspectionInfo(true, ent.SubType)
-                  if t then
-                    nearestDist = dist
-                    inspectCacheTitle = t
-                    inspectCacheLines = l
-                  end
-                end
-              end
-            end
-          end
-          if not EID then
-            inspectTitle, inspectLines = inspectCacheTitle, inspectCacheLines
-          end
-          local holdingMap = Input.IsActionPressed(ButtonAction.ACTION_MAP, player.ControllerIndex)
-            and (Game():GetFrameCount() > 60)
-          if not inspectTitle and holdingMap then
-            local actId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
-            inspectTitle, inspectLines = Core.GetModItemInspectionInfo(false, actId)
-            if not inspectTitle and Core.ITEM_SOLID_LIGHT_SHIELD and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD) then
-              inspectTitle, inspectLines = Core.GetModItemInspectionInfo(false, Core.ITEM_SOLID_LIGHT_SHIELD)
-            end
-            if not inspectTitle and Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
-              inspectTitle, inspectLines = Core.GetModItemInspectionInfo(true, Core.TRINKET_YELLOW_IMPURITY)
-            end
-          end
-          if inspectTitle and inspectLines then
-            local boxX = math.max(12, baseX - 28)
-            local boxY = 215
-            Core.DrawHudText(inspectTitle, boxX, boxY, 0.25, 1.0, 0.45, 0.95)
-            for idx, line in ipairs(inspectLines) do
-              Core.DrawHudText(line, boxX, boxY + idx * 9, 0.92, 0.96, 0.93, 0.90)
-            end
-          end
         end
       end
     end
