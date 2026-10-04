@@ -4,6 +4,20 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### S5 — Vuelo del anillo respeta alas de items
+- `data.ringGrantedFly` (`core.lua` init, `stats.lua` CACHE_FLYING): al agotarse
+  el anillo solo se revoca el vuelo si lo había concedido el anillo; las alas
+  de items se conservan. Tainted intacto.
+
+### S3 — Rebalance click-vs-hold agresivo
+- `HOLD_FRAMES 15→10`, `CONT_BEAM 0.25→0.35`, `DISCRETE 0.70→0.45`;
+  intervalo `max(6,min(10,MFD*0.70))`; ratio hold/click ≥1.15 en MFD 6–20.
+- Slider MCM `HOLD_FRAMES` 4–30 + aviso de inversión de dominio.
+
+### S1 — Escudo orbital siempre delante
+- Orbital en `POST_PLAYER_RENDER`, aura hexagonal detrás; sin `math.sin` en
+  el fichero; partículas no-escudo a pulsación binaria/rectangular.
+
 ### Rebalance click-vs-hold
 - `DISCRETE_BEAM_DMG_MULT = 0.70`: los beams por click pegan el 70% del daño
   de ficha (Puño Gigante excluido, conserva su 10x).
