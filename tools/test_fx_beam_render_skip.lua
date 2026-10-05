@@ -171,13 +171,13 @@ check(Core.ComputeBeamRenderStartSkip(false, 0) == 0, "no aim-up 0: skip=0")
 check(Core.ComputeBeamRenderStartSkip(true, 200) > 0, "aim-up 200: skip>0")
 check(Core.ComputeBeamRenderStartSkip(true, 80) > 0, "aim-up 80: skip>0")
 
-check(Core.ComputeBeamRenderStartSkip(true, 28) == 0, "aim-up == skip: 0")
-check(Core.ComputeBeamRenderStartSkip(true, 27.5) == 0, "aim-up < skip: 0")
+check(Core.ComputeBeamRenderStartSkip(true, 14) == 0, "aim-up == skip: 0")
+check(Core.ComputeBeamRenderStartSkip(true, 13.5) == 0, "aim-up < skip: 0")
 check(Core.ComputeBeamRenderStartSkip(true, 4) == 0, "aim-up 4: 0")
 check(Core.ComputeBeamRenderStartSkip(true, 0) == 0, "aim-up 0: 0")
 
 local v = Core.ComputeBeamRenderStartSkip(true, 200)
-check(v > 20 and v < 36, "skip ~28px (20<v<36)")
+check(v > 12 and v < 16, "skip ~14px (12<v<16)")
 
 -- Constancia del skip (no escala con la longitud del haz).
 local v2 = Core.ComputeBeamRenderStartSkip(true, 1000)
@@ -208,12 +208,12 @@ for _, r in ipairs(renderLog) do
     if r.sprite == "Beam" then table.insert(beamRendersUp, r) end
 end
 
--- El primer render debe estar en X >= skip (~28).
+-- El primer render debe estar en X >= skip (~14).
 check(#beamRendersUp > 0, "aim-up largo: se dibuja al menos un segmento del haz")
 if #beamRendersUp > 0 then
     local firstX = beamRendersUp[1].pos.X
-    check(firstX >= 27.5,
-          string.format("aim-up largo: primer render debe estar a X>=~28, fue %.3f", firstX))
+    check(firstX >= 13.5,
+          string.format("aim-up largo: primer render debe estar a X>=~14, fue %.3f", firstX))
 end
 
 -- Aim-up con haz corto (10px screen) → el haz es más corto que el skip, así que NO se
@@ -248,7 +248,7 @@ if #beamRendersFlat > 0 then
           string.format("no aim-up: primer render debe estar en X=0, fue %.3f", firstX))
 end
 
--- Aim-up con haz 60 → primer render debe estar en X >= ~28 (no en 0).
+-- Aim-up con haz 60 → primer render debe estar en X >= ~14 (no en 0).
 runRender(60, true)
 local beamRenders60 = {}
 for _, r in ipairs(renderLog) do
@@ -257,8 +257,8 @@ end
 check(#beamRenders60 > 0, "aim-up 60px: se dibuja el resto tras el skip")
 if #beamRenders60 > 0 then
     local firstX = beamRenders60[1].pos.X
-    check(firstX >= 27.5,
-          string.format("aim-up 60: primer render debe estar a X>=~28, fue %.3f", firstX))
+    check(firstX >= 13.5,
+          string.format("aim-up 60: primer render debe estar a X>=~14, fue %.3f", firstX))
     local lastX = beamRenders60[#beamRenders60].pos.X
     check(lastX < 60.001,
           string.format("aim-up 60: último render debe estar antes del final X=60, fue %.3f", lastX))
