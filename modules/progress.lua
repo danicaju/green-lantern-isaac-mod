@@ -49,9 +49,15 @@ return function(Core)
 
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
     if Core.IsHalJordan(player) and Core.Progress.oathkeeperHal then
+      local data = Core.GetPlayerData(player)
+      if data.oathGrantedThisRun then return end
       pcall(function() player:AddSoulHearts(2) end)
+      data.oathGrantedThisRun = true
     elseif Core.IsTaintedHal(player) and Core.Progress.oathkeeperTainted then
-      Core.GetPlayerData(player).emeraldSparks = 20.0
+      local data = Core.GetPlayerData(player)
+      if data.oathGrantedThisRun then return end
+      data.emeraldSparks = math.max(20.0, data.emeraldSparks or 0.0)
+      data.oathGrantedThisRun = true
     end
   end)
 end
