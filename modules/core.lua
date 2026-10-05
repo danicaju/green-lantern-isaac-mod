@@ -46,10 +46,10 @@ Core.DISCRETE_BEAM_DMG_MULT        = 0.60
 Core.HAL_CONTINUOUS_TICK_FRAMES    = 4
 Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
 
--- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con el
--- calculo de modules/shield.lua MC_ENTITY_TAKE_DMG (base 0.25, +0.05/Luck,
--- cap 0.75). Declarado en T1; shield.lua aun no las lee (sigue hardcoded),
--- solo expone balance + slider MCM por ahora.
+-- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con
+-- el calculo de modules/shield.lua (base 0.25, +0.05/Luck, cap 0.75). Las dos
+-- ramas (orbital y MC_ENTITY_TAKE_DMG) las consumen desde shield.lua;
+-- bypass glShieldBypass evita re-rolls frame-a-frame para proyectiles lentos.
 Core.SHIELD_REFLECT_BASE       = 0.25
 Core.SHIELD_REFLECT_PER_LUCK   = 0.05
 Core.SHIELD_REFLECT_MAX        = 0.75

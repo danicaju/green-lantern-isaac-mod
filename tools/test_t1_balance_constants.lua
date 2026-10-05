@@ -9,8 +9,9 @@
 --   4. SHIELD_REFLECT_PER_LUCK == 0.05
 --   5. SHIELD_REFLECT_MAX == 0.75
 --
--- No comprueba shield.lua (esa superficie sino que usa los literales hardcoded
--- sigue fuera de scope T1; lo dejamos apuntado en el handoff).
+-- No comprueba shield.lua directamente: las constantes son consumidas por las
+-- dos ramas (orbital y MC_ENTITY_TAKE_DMG); la verificacion runtime del
+-- comportamiento Luck-scaled + bypass vive en tools/test_t4_shield_luck_pass.lua.
 
 -- Stub minimo: core.lua usa RegisterMod(...) y unos cuantos nil IDs arriba.
 -- Solo necesitamos que la llamada exista.
