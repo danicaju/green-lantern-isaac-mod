@@ -78,7 +78,7 @@ return function(Core)
     -- The ring hand is centered behind the head (Vector(0,-32)) in that pose; the initial
     -- segment would otherwise be painted directly over the head/neck. Purely a render-time
     -- trim — raycast / damage start are untouched.
-    local GL_BEAM_UP_HEAD_SKIP = 28.0
+    local GL_BEAM_UP_HEAD_SKIP = 14.0
 
     -- Returns the initial screen-space distance (px) to skip when drawing the continuous beam.
     -- Only applies while aiming UP and when the beam is long enough that something would still
