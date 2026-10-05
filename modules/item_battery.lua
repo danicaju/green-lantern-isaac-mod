@@ -44,6 +44,12 @@ return function(Core)
         data.surgeBuff = true
       end
       Core.RestoreHalRingPower(player, Core.WILLPOWER_MAX, statusMsg)
+      -- T5: juramento poetico "IN BRIGHTEST DAY..." tras el refill (Hal).
+      -- Convive con el statusMsg mecanico (que RestoreHalRingPower usa solo
+      -- en reboot real via ring_state.lua); aqui siempre se sobreescribe el
+      -- texto poetico del HUD.
+      data.oathText      = "IN BRIGHTEST DAY..."
+      data.oathTextTimer = 90
     else
       data.overcharge = true
       data.overchargeTier = 1
