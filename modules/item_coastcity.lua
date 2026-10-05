@@ -31,6 +31,12 @@ return function(Core)
     cc.sparkBonus    = sparkBonus
     cc.totalDuration = Core.COAST_CITY_DURATION + durationBonus
 
+    -- T5: juramento poetico "I AM PARALLAX!" al activar Coast City (Tainted).
+    if Core.IsTaintedHal(player) then
+      data.oathText      = "I AM PARALLAX!"
+      data.oathTextTimer = 90
+    end
+
     pcall(function()
       SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 0.88)
       SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2, 0.70, 0, false, 1.30)
