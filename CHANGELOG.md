@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F4 — Reset por cambio de personaje
+- `lastPlayerType`: al cambiar, reset de estado + rekit mismo frame; familiares huérfanos inertes. Harness 28/28.
+
 ### F5 — Escudo suprime fear mismo-frame
 - `shieldBlockedFrame` al bloquear; el trinket lo respeta. Harness 9/9.
 
