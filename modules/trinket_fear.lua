@@ -10,11 +10,13 @@ return function(Core)
     if not player then return end
     if not (Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)) then return end
 
+    local data = Core.GetPlayerData(player)
+    if data.shieldBlockedFrame == Game():GetFrameCount() then return end
+
     local isContact   = (flags & DamageFlag.DAMAGE_CRUSH) ~= 0 or (flags & DamageFlag.DAMAGE_NOKILL) == 0
     local isExplosion = (flags & DamageFlag.DAMAGE_EXPLOSION) ~= 0
 
     if isContact or isExplosion then
-      local data = Core.GetPlayerData(player)
       data.fearControlTimer = 60
       data.fearSkullTimer   = 60
       player:AddEntityFlags(EntityFlag.FLAG_FEAR)
