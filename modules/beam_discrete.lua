@@ -152,45 +152,71 @@ return function(Core)
       end
   end
 
+  -- T6: contraataque al sprite del Construct Giant Fist. Mismo riesgo que el
+  -- beam: el engine puede revertir el tear a su variante vanilla o cambiar
+  -- la animacion tras un reset C++. Reaplicamos Idle (cargando el anm2
+  -- esmeralda si hace falta) y la Rotation por velocidad, sin tocar
+  -- Scale / TearFlags / CollisionDamage. Ramas separadas en POST_TEAR_UPDATE
+  -- y POST_TEAR_RENDER, sin interferir con isGLRingBeam.
+  local function EnforceGiantFistSprite(tear, td)
+      local ts = tear:GetSprite()
+      if ts then
+          if ts:GetAnimation() ~= "Idle" then
+              ts:Load("gfx/effects/gl_giant_fist.anm2", true)
+              ts:Play("Idle", true)
+          end
+          if tear.Velocity and tear.Velocity:Length() > 0.1 then
+              ts.Rotation = tear.Velocity:GetAngleDegrees()
+          end
+      end
+  end
+
   -- Keep all Green Lantern Ring energy beams oriented along their straight flight vector and prevent C++ sprite/variant resets
   GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
       local td = tear:GetData()
-      if not (td and td.isGLRingBeam) then return end
+      if td and td.isGLRingBeam then
+          tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
 
-      tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
-
-      -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
-      local flags = tear.TearFlags
-      local hasCurvingSynergy = false
-      if TearFlags and flags then
-          if Core.HasTearFlag(flags, TearFlags.TEAR_HOMING)
-              or Core.HasTearFlag(flags, TearFlags.TEAR_ORBIT)
-              or Core.HasTearFlag(flags, TearFlags.TEAR_BOOMERANG)
-              or Core.HasTearFlag(flags, TearFlags.TEAR_SPIRAL)
-              or Core.HasTearFlag(flags, TearFlags.TEAR_WIGGLE)
-          then
-              hasCurvingSynergy = true
+          -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
+          local flags = tear.TearFlags
+          local hasCurvingSynergy = false
+          if TearFlags and flags then
+              if Core.HasTearFlag(flags, TearFlags.TEAR_HOMING)
+                  or Core.HasTearFlag(flags, TearFlags.TEAR_ORBIT)
+                  or Core.HasTearFlag(flags, TearFlags.TEAR_BOOMERANG)
+                  or Core.HasTearFlag(flags, TearFlags.TEAR_SPIRAL)
+                  or Core.HasTearFlag(flags, TearFlags.TEAR_WIGGLE)
+              then
+                  hasCurvingSynergy = true
+              end
           end
+          if not hasCurvingSynergy then
+              if td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
+                  local currentSpeed = tear.Velocity:Length()
+                  tear.Velocity = td.glBeamVel:Normalized() * currentSpeed
+              end
+              tear.FallingAcceleration = -0.04
+              if tear.FallingSpeed and tear.FallingSpeed > 0 then
+                  tear.FallingSpeed = 0.0
+              end
+          end
+
+          EnforceRingBeamTearSprite(tear, td)
+      elseif td and td.isGLFist then
+          -- T6: refuerzo del sprite del Construct Giant Fist (rama independiente,
+          -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
+          EnforceGiantFistSprite(tear, td)
       end
-      if not hasCurvingSynergy then
-          if td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
-              local currentSpeed = tear.Velocity:Length()
-              tear.Velocity = td.glBeamVel:Normalized() * currentSpeed
-          end
-          tear.FallingAcceleration = -0.04
-          if tear.FallingSpeed and tear.FallingSpeed > 0 then
-              tear.FallingSpeed = 0.0
-          end
-      end
-
-      EnforceRingBeamTearSprite(tear, td)
   end)
 
   if ModCallbacks.MC_POST_TEAR_RENDER then
       GL:AddCallback(ModCallbacks.MC_POST_TEAR_RENDER, function(_, tear, renderOffset)
           local td = tear:GetData()
-          if not (td and td.isGLRingBeam) then return end
-          EnforceRingBeamTearSprite(tear, td)
+          if td and td.isGLRingBeam then
+              EnforceRingBeamTearSprite(tear, td)
+          elseif td and td.isGLFist then
+              EnforceGiantFistSprite(tear, td)
+          end
       end)
   end
 
