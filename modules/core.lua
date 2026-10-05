@@ -42,9 +42,17 @@ Core.WILLPOWER_ROOM_REBOOT_BONUS   = 15.0
 Core.HAL_CONTINUOUS_HOLD_FRAMES    = 10
 Core.HAL_SPAM_EXTRA_HOLD_FRAMES    = 5
 Core.HAL_CONTINUOUS_BEAM_DMG_MULT  = 0.35
-Core.DISCRETE_BEAM_DMG_MULT        = 0.45
+Core.DISCRETE_BEAM_DMG_MULT        = 0.60
 Core.HAL_CONTINUOUS_TICK_FRAMES    = 4
 Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
+
+-- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con el
+-- calculo de modules/shield.lua MC_ENTITY_TAKE_DMG (base 0.25, +0.05/Luck,
+-- cap 0.75). Declarado en T1; shield.lua aun no las lee (sigue hardcoded),
+-- solo expone balance + slider MCM por ahora.
+Core.SHIELD_REFLECT_BASE       = 0.25
+Core.SHIELD_REFLECT_PER_LUCK   = 0.05
+Core.SHIELD_REFLECT_MAX        = 0.75
 
 -- Tainted Hal.
 Core.TAINTED_DMG_MULTIPLIER   = 1.5
