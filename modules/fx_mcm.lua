@@ -59,7 +59,11 @@ return function(Core)
       {"Fraccion de dano por tick (7.5 ticks/s)."})
     AddNumber("DISCRETE_BEAM_DMG_MULT", "Dano beam discreto", 0.3, 1.5, 0.05,
       {"Fraccion de dano de ficha por click. Baja para favorecer hold.",
-       "Subirlo por encima de ~0.45 puede devolver el dominio al click."})
+       "Subirlo por encima de ~0.60 puede devolver el dominio al click."})
+    AddNumber("SHIELD_REFLECT_BASE", "Escudo: reflect base", 0, 1, 0.05,
+      {"Probabilidad base de reflejar un disparo enemigo con el escudo.",
+       "Cap con SHIELD_REFLECT_MAX; Luck suma +0.05/reflect por arriba.",
+       "Alineada con el calculo de shield.lua (Luck-scaled)."})
     AddInt("HAL_CONTINUOUS_HOLD_FRAMES", "Frames para entrar en continuo", 4, 30, 1,
       {"Frames sostenidos antes de pasar de beam discreto a rayo continuo. Default 10."})
     AddNumber("TAINTED_DMG_MULTIPLIER", "Tainted DMG mult", 1, 2, 0.05,
