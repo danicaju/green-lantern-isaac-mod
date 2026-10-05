@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### OPT — Const muerta, vetos y freeze
+- Fuera `HAL_DAMAGE_MULTIPLIER`; veto blended/eternal; oath freeze-aware. Suite 17/17.
+
 ### F8b — Persistencia save/continue
 - Slot compartido `{oath, run}` read-modify-write; `save_run.lua` persiste willpower/sparks/rings/tier por Index. Suite 310/310.
 
