@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F8a — Oathkeeper anti-farmeo
+- Flag por-run + sparks `max(20, actual)`. Harness 8/8 x3.
+
 ### F4 — Reset por cambio de personaje
 - `lastPlayerType`: al cambiar, reset de estado + rekit mismo frame; familiares huérfanos inertes. Harness 28/28.
 
