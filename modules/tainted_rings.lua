@@ -39,11 +39,12 @@ return function(Core)
                 pcall(function()
                   SFXManager():Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.8, 0, false, 1.0)
                 end)
-              else
-                data.stolenRings = data.stolenRings + 1
-                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
-                player:EvaluateItems()
+                data.ringConsumeCooldown = 15
+                return
               end
+              data.stolenRings = (data.stolenRings or 0) + 1
+              player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+              player:EvaluateItems()
               data.ringConsumeCooldown = 15
 
               local flyVar = (FamiliarVariant and FamiliarVariant.BLUE_FLY) or 43
