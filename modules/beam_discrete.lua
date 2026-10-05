@@ -152,7 +152,7 @@ return function(Core)
       end
   end
 
-  -- T6: contraataque al sprite del Construct Giant Fist. Mismo riesgo que el
+  -- T6: contraataque al sprite del Giant Fist. Mismo riesgo que el
   -- beam: el engine puede revertir el tear a su variante vanilla o cambiar
   -- la animacion tras un reset C++. Reaplicamos Idle (cargando el anm2
   -- esmeralda si hace falta) y la Rotation por velocidad, sin tocar
@@ -203,7 +203,7 @@ return function(Core)
 
           EnforceRingBeamTearSprite(tear, td)
       elseif td and td.isGLFist then
-          -- T6: refuerzo del sprite del Construct Giant Fist (rama independiente,
+          -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
           EnforceGiantFistSprite(tear, td)
       end

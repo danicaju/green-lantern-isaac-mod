@@ -3,7 +3,7 @@
 return function(Core)
   local GL = Core.GL
 
-  -- Construct: Giant Fist
+  -- Giant Fist
   GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
     if not Core.ITEM_GIANT_FIST or Core.ITEM_GIANT_FIST < 0 then Core.LoadItemIDs() end
     if itemID ~= Core.ITEM_GIANT_FIST then return end

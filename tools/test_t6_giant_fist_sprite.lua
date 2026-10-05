@@ -1,5 +1,5 @@
 -- tools/test_t6_giant_fist_sprite.lua
--- T6 — guard de regresion sobre el sprite custom del Construct: Giant Fist.
+-- T6 — guard de regresion sobre el sprite custom del Giant Fist.
 -- Compatible con Lua 5.1.
 --
 -- Verifica que:

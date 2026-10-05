@@ -1,4 +1,4 @@
--- modules/item_gatling.lua -- RSI: solo Construct: Gatling. Sin Willpower pasivo, sin beam.
+-- modules/item_gatling.lua -- RSI: solo Gatling. Sin Willpower pasivo, sin beam.
 -- Activo 4 cargas: 10s de beams discretos rapidos sin coste de Willpower.
 return function(Core)
   local GL = Core.GL
