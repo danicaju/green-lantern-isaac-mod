@@ -4,6 +4,11 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T4 — Escudo: posición live + roll único Luck (fix teleport/OP)
+- `Core.GetShieldOrbitPos` usada en colisiones y render (fuera `shieldWorldPos` stale).
+- Orbital: un roll por proyectil con `SHIELD_REFLECT_*`; miss → `glShieldBypass`, sin segundo roll (ni en dano ni en re-entrada orbital).
+- Harnesses 27+11+11+21 en verde con kill-checks.
+
 ### T3 — Posición live del escudo + fix userdata
 - Nueva `Core.GetShieldOrbitPos(player, data)` (`ring_aim.lua`): `pos + orbit*0.6 + facing*24`.
 - `shield.lua` la consume; compat `shieldWorldPos` hasta T4.
