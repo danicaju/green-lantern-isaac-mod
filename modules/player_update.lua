@@ -4,6 +4,27 @@ return function(Core)
     local GL = Core.GL
     GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         local data = Core.GetPlayerData(player)
+        -- F4: anti-cruce de PlayerType (Glitched Crown / D4 / co-op swap).
+        -- Si el tipo cambia desde el ultimo frame, resetear estado de run a
+        -- defaults y forzar re-kit (initializedStartingItems=false).
+        local curType = player:GetPlayerType()
+        if data.lastPlayerType ~= nil and data.lastPlayerType ~= curType then
+            data.willpower                = Core.WILLPOWER_MAX
+            data.ringDepleted             = false
+            data.overcharge               = false
+            data.surgeBuff                = false
+            data.overchargeTier           = 0
+            data.overchargeRoomIdx        = -1
+            data.emeraldSparks            = 0.0
+            data.stolenRings              = 0
+            data.coastCityActive          = false
+            data.gatlingTimer             = 0
+            data.fearControlTimer         = 0
+            data.fearSkullTimer           = 0
+            data.hadItemFlight            = false
+            data.initializedStartingItems = false
+        end
+        data.lastPlayerType = curType
         if data.batteryConstructTimer and data.batteryConstructTimer > 0 then
             data.batteryConstructTimer = data.batteryConstructTimer - 1
         end
