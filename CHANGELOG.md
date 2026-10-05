@@ -4,6 +4,12 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T3 — Posición live del escudo + fix userdata
+- Nueva `Core.GetShieldOrbitPos(player, data)` (`ring_aim.lua`): `pos + orbit*0.6 + facing*24`.
+- `shield.lua` la consume; compat `shieldWorldPos` hasta T4.
+- Fix B1: guard por campos X/Y (Vector Isaac es `userdata`, el `type()=="table"` lo descartaba siempre); stub del harness emula userdata + kill-check.
+- Harnesses 9+11+21 en verde.
+
 ### T2 — Recorte haz up 28→14px
 - `GL_BEAM_UP_HEAD_SKIP` 28.0→14.0 (el hueco de S7 era excesivo); harness
   migrado, 21/21. Solo render, dano/raycast intactos.
