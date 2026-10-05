@@ -35,6 +35,8 @@ return function(Core)
       or (HeartSubType.HEART_SCARED and sub == HeartSubType.HEART_SCARED)
       or (HeartSubType.HEART_ROTTEN and sub == HeartSubType.HEART_ROTTEN)
       or (HeartSubType.HEART_BONE and sub == HeartSubType.HEART_BONE)
+      or (HeartSubType.HEART_BLENDED and sub == HeartSubType.HEART_BLENDED)
+      or (HeartSubType.HEART_ETERNAL and sub == HeartSubType.HEART_ETERNAL)
 
     if isRedOnlyHeart then
       return true
