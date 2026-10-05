@@ -36,6 +36,7 @@ include("modules.tainted_rings")(Core)
 
 include("modules.room_reset")(Core)
 include("modules.progress")(Core)
+include("modules.save_run")(Core)
 
 include("modules.fx_sprites")(Core)
 include("modules.fx_beam")(Core)
