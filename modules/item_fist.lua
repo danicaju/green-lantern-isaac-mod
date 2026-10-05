@@ -54,7 +54,7 @@ return function(Core)
       fist.CollisionDamage = player.Damage * 10
       fist.Scale           = 3.5
       fist.TearFlags       = fist.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_MEGA
-      fist:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+      Core.ApplyGiantFistSprite(fist)
       fist:GetData().isGiantFist = true
     end
 
