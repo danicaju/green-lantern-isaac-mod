@@ -123,7 +123,7 @@ function Core.GetPlayerData(player)
         d.GreenLantern = {
             willpower                    = Core.WILLPOWER_MAX,
             ringDepleted                 = false,
-            ringGrantedFly               = false,
+            hadItemFlight                = false,
             overcharge                   = false,
             surgeBuff                    = false,
             overchargeRoomIdx            = -1,
