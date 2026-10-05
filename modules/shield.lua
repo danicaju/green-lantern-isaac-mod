@@ -16,62 +16,80 @@ return function(Core)
         -- Single source of truth for the shield world position (see Core.GetShieldOrbitPos).
         local shieldPos = Core.GetShieldOrbitPos(player, data)
         if not shieldPos then return end
-        -- Compat: fx_shield_items.lua aún lee data.shieldWorldPos hasta que T4 lo migre.
-        data.shieldWorldPos = shieldPos
 
         if data.shieldDeflectTimer and data.shieldDeflectTimer > 0 then
           data.shieldDeflectTimer = data.shieldDeflectTimer - 1
         end
 
         -- 1. Projectile blocking & reflection by the orbital shield
+        -- Luck-scaled chance to deflect; on miss, mark the projectile so
+        -- MC_ENTITY_TAKE_DMG knows it has already been "passed through"
+        -- and skips its own redundant reflect roll.
+        local reflectChance = math.min(
+          Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK,
+          Core.SHIELD_REFLECT_MAX
+        )
         for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PROJECTILE, -1, -1, false)) do
           local proj = ent:ToProjectile()
           if proj and proj:IsVulnerableEnemy() == false and not proj:IsDead() then
             local dist = (proj.Position - shieldPos):Length()
             if dist <= 22 then
-              proj:Die()
-              data.shieldDeflectTimer = 12
+              -- Skip proyectiles ya marcados: roll único por proyectil, evita que
+              -- lentos dentro del radio 22px se re-evaluen frame tras frame e
+              -- inflen el bloqueo real por encima del 25-75% declarado.
+              local ok, pData = pcall(function() return proj:GetData() end)
+              local bypassed = ok and pData and pData.glShieldBypass == true
+              if not bypassed then
+                if math.random() >= reflectChance then
+                  -- Roll failed: let the projectile pass through the orbital,
+                  -- but remember it so the damage callback does not double-roll.
+                  pcall(function() proj:GetData().glShieldBypass = true end)
+                else
+                  proj:Die()
+                  data.shieldDeflectTimer = 12
 
-              pcall(function()
-                SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.9, 0, false, 1.35)
-              end)
+                  pcall(function()
+                    SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.9, 0, false, 1.35)
+                  end)
 
-              -- Target nearest enemy if possible, else reverse projectile velocity or reflect outward
-              local targetDir = -proj.Velocity:Normalized()
-              local nearestDist = 320
-              for _, enemy in ipairs(Isaac.GetRoomEntities()) do
-                if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
-                  local d = (enemy.Position - shieldPos):Length()
-                  if d < nearestDist then
-                    nearestDist = d
-                    targetDir = (enemy.Position - shieldPos):Normalized()
+                  -- Target nearest enemy if possible, else reverse projectile velocity or reflect outward
+                  local targetDir = -proj.Velocity:Normalized()
+                  local nearestDist = 320
+                  for _, enemy in ipairs(Isaac.GetRoomEntities()) do
+                    if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
+                      local d = (enemy.Position - shieldPos):Length()
+                      if d < nearestDist then
+                        nearestDist = d
+                        targetDir = (enemy.Position - shieldPos):Normalized()
+                      end
+                    end
                   end
+
+                  if targetDir:Length() < 0.1 then
+                    local fromPlayer = (shieldPos - player.Position)
+                    targetDir = fromPlayer:Length() > 0.1 and fromPlayer:Normalized() or Vector(1, 0)
+                  end
+
+                  local reflectSpeed = math.max(11.0, proj.Velocity:Length() * 1.25)
+                  local tearVar = (TearVariant and TearVariant.BLUE) or 0
+                  local refTear = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, shieldPos, targetDir * reflectSpeed, player)
+                  local t = refTear and refTear:ToTear()
+                  if t then
+                    t.CollisionDamage = math.max(player.Damage * 1.5, 6.0)
+                    t.TearFlags = t.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+                    t:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
+                    t.Scale = 1.25
+                  end
+
+                  pcall(function()
+                    local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, shieldPos, Vector.Zero, player)
+                    if splash then
+                      splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
+                      splash.Scale = 0.8
+                    end
+                  end)
                 end
               end
-
-              if targetDir:Length() < 0.1 then
-                local fromPlayer = (shieldPos - player.Position)
-                targetDir = fromPlayer:Length() > 0.1 and fromPlayer:Normalized() or Vector(1, 0)
-              end
-
-              local reflectSpeed = math.max(11.0, proj.Velocity:Length() * 1.25)
-              local tearVar = (TearVariant and TearVariant.BLUE) or 0
-              local refTear = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, shieldPos, targetDir * reflectSpeed, player)
-              local t = refTear and refTear:ToTear()
-              if t then
-                t.CollisionDamage = math.max(player.Damage * 1.5, 6.0)
-                t.TearFlags = t.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-                t:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
-                t.Scale = 1.25
-              end
-
-              pcall(function()
-                local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, shieldPos, Vector.Zero, player)
-                if splash then
-                  splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
-                  splash.Scale = 0.8
-                end
-              end)
             end
           end
         end
@@ -109,8 +127,14 @@ return function(Core)
 
     if source and source.Entity and (source.Entity.Type == EntityType.ENTITY_PROJECTILE or source.Entity.Type == EntityType.ENTITY_TEAR) then
       local srcEnt = source.Entity
-      local luck   = player.Luck
-      local chance = math.min(0.25 + luck * 0.05, 0.75)
+      -- If the orbital already let this projectile through (T4 bypass), skip the
+      -- second roll entirely so it does not double-deflect or self-cancel.
+      local srcData = srcEnt:GetData()
+      if srcData and srcData.glShieldBypass == true then
+        return
+      end
+
+      local chance = math.min(Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK, Core.SHIELD_REFLECT_MAX)
 
       if math.random() < chance then
         local data = Core.GetPlayerData(player)
