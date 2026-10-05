@@ -4,6 +4,10 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T7 — Sin prefijo "Construct:" en nombres de items
+- "Giant Fist" y "Gatling" en items.xml, pools, ids, EID, README y comentarios.
+- IDs, gfx, weights y comportamiento intactos. 141/141 harnesses.
+
 ### T6 — Giant Fist con sprite dedicado + enforcement
 - Nuevo `gl_giant_fist.anm2` (Idle 32x32) + PNG; `Core.ApplyGiantFistSprite`.
 - `EnforceGiantFistSprite` en UPDATE/RENDER contra resets C++ (ramas separadas de beam).

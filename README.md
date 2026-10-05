@@ -32,8 +32,8 @@ Mod de **Green Lantern (Hal Jordan)** y su versión Tainted (**The Butcher of Oa
 | Nombre | Tipo | Descripción |
 | :--- | :--- | :--- |
 | **Power Battery** | Activo (Inicial) | Recarga la barra de Willpower de Hal Jordan o activa *Overcharge* (tramos +15%/+25%). |
-| **Construct: Giant Fist** | Activo | Invoca un puño gigante de luz sólida que golpea y empuja enemigos. |
-| **Construct: Gatling** | Activo | 10s de beams discretos rápidos sin coste de Willpower. |
+| **Giant Fist** | Activo | Invoca un puño gigante de luz sólida que golpea y empuja enemigos. |
+| **Gatling** | Activo | 10s de beams discretos rápidos sin coste de Willpower. |
 | **Solid Light Shield** | Pasivo | Orbital de luz sólida que bloquea proyectiles y daña al contacto. |
 | **The Tragedy of Coast City** | Activo (Tainted) | Invoca el constructo de Coast City al llenar las chispas esmeralda. |
 | **Yellow Impurity** | Trinket | Incrementa el daño x1.5, pero los impactos recibidos pueden causar *Fear*. |
