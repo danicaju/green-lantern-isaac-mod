@@ -6,21 +6,53 @@ return function(Core)
 
   Core.Progress = { oathkeeperHal = false, oathkeeperTainted = false }
 
+  -- Slot COMPARTIDO SaveModData (un solo string por mod en Isaac) con secciones
+  -- namespaced {oath = {...}, run = {...}}. progress.lua posee `oath`;
+  -- save_run.lua posee `run`. Read-modify-write: cargar todo, actualizar SOLO
+  -- la seccion propia, guardar todo. Nunca lanza; corrupto/vacio -> {} y cada
+  -- seccion cae a defaults al leerla, sin tumbar la otra.
+  -- Normaliza legados planos: {oathkeeperHal,...} -> seccion oath,
+  -- {["0"]={...}} (snapshot de run) -> seccion run.
+  local function LoadSlot()
+    local slot = nil
+    pcall(function()
+      if GL:HasModData() then
+        local raw = GL:LoadModData()
+        if type(raw) == "string" and raw ~= "" then
+          local ok, decoded = pcall(json.decode, raw)
+          if ok and type(decoded) == "table" then slot = decoded end
+        end
+      end
+    end)
+    if type(slot) ~= "table" then slot = {} end
+    if type(slot.oath) ~= "table" and type(slot.run) ~= "table" then
+      if slot.oathkeeperHal ~= nil or slot.oathkeeperTainted ~= nil then
+        slot = { oath = { oathkeeperHal = slot.oathkeeperHal, oathkeeperTainted = slot.oathkeeperTainted } }
+      elseif next(slot) ~= nil then
+        slot = { run = slot }
+      end
+    end
+    return slot
+  end
+
   local function Save()
     pcall(function()
-      GL:SaveModData(json.encode(Core.Progress))
+      local slot = LoadSlot()
+      slot.oath = {
+        oathkeeperHal = (Core.Progress.oathkeeperHal == true),
+        oathkeeperTainted = (Core.Progress.oathkeeperTainted == true),
+      }
+      GL:SaveModData(json.encode(slot))
     end)
   end
 
   local function Load()
     pcall(function()
-      if GL:HasModData() then
-        local t = json.decode(GL:LoadModData())
-        if type(t) == "table" then
-          Core.Progress.oathkeeperHal = (t.oathkeeperHal == true)
-          Core.Progress.oathkeeperTainted = (t.oathkeeperTainted == true)
-        end
-      end
+      local slot = LoadSlot()
+      local oath = slot.oath
+      if type(oath) ~= "table" then oath = {} end
+      Core.Progress.oathkeeperHal = (oath.oathkeeperHal == true)
+      Core.Progress.oathkeeperTainted = (oath.oathkeeperTainted == true)
     end)
   end
 
