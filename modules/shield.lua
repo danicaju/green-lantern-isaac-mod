@@ -13,9 +13,10 @@ return function(Core)
         local data = Core.GetPlayerData(player)
         -- Smooth isometric elliptical orbit around the player
         data.shieldOrbitAngle = (data.shieldOrbitAngle or 0) + 0.065
-        local radX = 36
-        local radY = 24
-        local shieldPos = player.Position + Vector(math.cos(data.shieldOrbitAngle) * radX, math.sin(data.shieldOrbitAngle) * radY)
+        -- Single source of truth for the shield world position (see Core.GetShieldOrbitPos).
+        local shieldPos = Core.GetShieldOrbitPos(player, data)
+        if not shieldPos then return end
+        -- Compat: fx_shield_items.lua aún lee data.shieldWorldPos hasta que T4 lo migre.
         data.shieldWorldPos = shieldPos
 
         if data.shieldDeflectTimer and data.shieldDeflectTimer > 0 then
