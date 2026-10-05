@@ -38,12 +38,27 @@ return function(Core)
               -- lentos dentro del radio 22px se re-evaluen frame tras frame e
               -- inflen el bloqueo real por encima del 25-75% declarado.
               local ok, pData = pcall(function() return proj:GetData() end)
-              local bypassed = ok and pData and pData.glShieldBypass == true
-              if not bypassed then
+              local bypassBy = ok and pData and pData.glShieldBypassBy
+              local bypassedForMe
+              if bypassBy ~= nil then
+                bypassedForMe = (bypassBy == player.Index)
+              else
+                bypassedForMe = ok and pData and pData.glShieldBypass == true
+              end
+              if not bypassedForMe then
                 if math.random() >= reflectChance then
                   -- Roll failed: let the projectile pass through the orbital,
                   -- but remember it so the damage callback does not double-roll.
-                  pcall(function() proj:GetData().glShieldBypass = true end)
+                  -- Bypass por-jugador (F7): glShieldBypassBy = player.Index.
+                  -- Se mantiene glShieldBypass legacy como fallback single-player.
+                  local byIndex = player.Index
+                  pcall(function()
+                    local d = proj:GetData()
+                    if d then
+                      d.glShieldBypass = true
+                      d.glShieldBypassBy = byIndex
+                    end
+                  end)
                 else
                   proj:Die()
                   data.shieldDeflectTimer = 12
@@ -127,10 +142,18 @@ return function(Core)
 
     if source and source.Entity and (source.Entity.Type == EntityType.ENTITY_PROJECTILE or source.Entity.Type == EntityType.ENTITY_TEAR) then
       local srcEnt = source.Entity
-      -- If the orbital already let this projectile through (T4 bypass), skip the
+      -- If the orbital already let this projectile through, skip the
       -- second roll entirely so it does not double-deflect or self-cancel.
-      local srcData = srcEnt:GetData()
-      if srcData and srcData.glShieldBypass == true then
+      -- Bypass por-jugador (F7): solo exime si glShieldBypassBy coincide con
+      -- el indice del jugador golpeado. Fallback legacy: flag global sin dueno.
+      local okSrc, srcData = pcall(function() return srcEnt:GetData() end)
+      if not okSrc then srcData = nil end
+      local bypassBy = srcData and srcData.glShieldBypassBy
+      if bypassBy ~= nil then
+        if bypassBy == player.Index then
+          return
+        end
+      elseif srcData and srcData.glShieldBypass == true then
         return
       end
 
