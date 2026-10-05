@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F6 — Coast expira solo en su dueño
+- Apaga `coastCityActive` solo de `cc.owner` (fallback legacy si nil). Harness 7/7 x3.
+
 ### F3 — Vuelo de items sobrevive al depletar
 - `hadItemFlight` muestrea la base con anillo activo; al depletar restaura la base.
 - Harness 8/8 x3. Tainted intacto.
