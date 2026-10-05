@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T8 — Harness de coherencia de nombres
+- `tools/test_item_names_consistency.lua` 18/18: sin `Construct:`, names↔lookups, pools↔items.
+
 ### T7 — Sin prefijo "Construct:" en nombres de items
 - "Giant Fist" y "Gatling" en items.xml, pools, ids, EID, README y comentarios.
 - IDs, gfx, weights y comportamiento intactos. 141/141 harnesses.
