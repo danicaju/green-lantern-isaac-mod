@@ -4,6 +4,10 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T2 — Recorte haz up 28→14px
+- `GL_BEAM_UP_HEAD_SKIP` 28.0→14.0 (el hueco de S7 era excesivo); harness
+  migrado, 21/21. Solo render, dano/raycast intactos.
+
 ### T1 — Paridad click/hold + consts reflect escudo
 - `DISCRETE_BEAM_DMG_MULT` 0.45→0.60; MFD {6,10,14,20}: click 3.00/2.57/2.00/1.80
   vs hold 2.625 (paridad en MFD10, nichos por arma).
