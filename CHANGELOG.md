@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F2 — Timers de fear sin trinket
+- Decremento y limpieza corren sin trinket; inversión/poof solo con él. Harness 19/19.
+
 ### F7 — Bypass de escudo por jugador
 - `glShieldBypassBy = player.Index` (fallback legacy); P2 re-rollea lo de P1.
 - Harness 18/18; suite 203/203.
