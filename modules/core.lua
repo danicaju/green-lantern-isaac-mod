@@ -162,6 +162,7 @@ function Core.GetPlayerData(player)
             lastCollectibleCount = -1,
             multiShotFrame       = -1,
             multiShotIndex       = 0,
+            lastPlayerType       = nil,
         }
     end
     return d.GreenLantern
