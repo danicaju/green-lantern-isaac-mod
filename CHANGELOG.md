@@ -4,6 +4,10 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F3 — Vuelo de items sobrevive al depletar
+- `hadItemFlight` muestrea la base con anillo activo; al depletar restaura la base.
+- Harness 8/8 x3. Tainted intacto.
+
 ### F1 — Cap de anillos sin consumir pickup
 - A cap: buzz + cooldown, sin familiar fantasma ni `Remove()`. Harness 11/11.
 
