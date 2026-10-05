@@ -4,6 +4,12 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T5 — Juramentos poéticos al activar ítems (Battery/C-Coast) + render Tainted
+- `modules/item_battery.lua`: tras el refill (rama Hal), `oathText = "IN BRIGHTEST DAY..."` y `oathTextTimer = 90`. Convive con `statusMsg` mecánico (que `RestoreHalRingPower` sigue recibiendo).
+- `modules/item_coastcity.lua`: tras activar, `oathText = "I AM PARALLAX!"` y `oathTextTimer = 90` (Tainted).
+- `modules/hud_render.lua`: render del juramento extendido a la rama `IsTaintedHal`. Mismo patrón que Hal (decremento `currentGameFrame % 2`, color de la barra verde Tainted). Cada jugador decrementa una vez por frame; no se duplica entre ramas.
+- Solo 3 ficheros tocados (+21 LOC). Test `tools/test_t5_oath_text.lua` 29/29 verde.
+
 ### T4 — Escudo: posición live + roll único Luck (fix teleport/OP)
 - `Core.GetShieldOrbitPos` usada en colisiones y render (fuera `shieldWorldPos` stale).
 - Orbital: un roll por proyectil con `SHIELD_REFLECT_*`; miss → `glShieldBypass`, sin segundo roll (ni en dano ni en re-entrada orbital).
