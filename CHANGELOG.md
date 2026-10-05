@@ -4,6 +4,11 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T6 — Giant Fist con sprite dedicado + enforcement
+- Nuevo `gl_giant_fist.anm2` (Idle 32x32) + PNG; `Core.ApplyGiantFistSprite`.
+- `EnforceGiantFistSprite` en UPDATE/RENDER contra resets C++ (ramas separadas de beam).
+- Harnesses 38/38. Dano/flags/escala intactos.
+
 ### T5 — Juramentos poéticos al activar ítems (Battery/C-Coast) + render Tainted
 - `modules/item_battery.lua`: tras el refill (rama Hal), `oathText = "IN BRIGHTEST DAY..."` y `oathTextTimer = 90`. Convive con `statusMsg` mecánico (que `RestoreHalRingPower` sigue recibiendo).
 - `modules/item_coastcity.lua`: tras activar, `oathText = "I AM PARALLAX!"` y `oathTextTimer = 90` (Tainted).
