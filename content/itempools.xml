@@ -2,13 +2,13 @@
 <!-- Merges into vanilla pools by pool name. Weights keep mod items rare. -->
 <ItemPools>
     <Pool Name="Treasure Room">
-        <Item Name="Construct: Giant Fist" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Giant Fist" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Solid Light Shield" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Green Lantern Ring" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
-        <Item Name="Construct: Gatling" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Gatling" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
     </Pool>
     <Pool Name="Shop">
-        <Item Name="Construct: Gatling" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Gatling" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Power Battery" Weight="0.4" DecreaseBy="1" RemoveOn="0.1"/>
     </Pool>
 </ItemPools>

@@ -13,7 +13,7 @@
 
     <active
         id="2"
-        name="Construct: Giant Fist"
+        name="Giant Fist"
         description="Fires a massive piercing 10x DMG fist that crushes rocks"
         gfx="collectible_giant_fist.png"
         maxcharges="4"
@@ -33,7 +33,7 @@
 
     <active
         id="6"
-        name="Construct: Gatling"
+        name="Gatling"
         description="10s rapid-fire emerald beams with no Willpower cost"
         gfx="collectible_gatling.png"
         maxcharges="4"
