@@ -23,7 +23,6 @@ Core.PLAYER_TAINTED_HAL       = nil
 
 -- Balance Hal Jordan (solo via MC_EVALUATE_CACHE en modules/stats.lua).
 Core.HAL_SPEED_BONUS          = 0.15
-Core.HAL_DAMAGE_MULTIPLIER    = 0.80
 Core.HAL_SHOT_SPEED_BONUS     = 0.30
 
 -- Willpower y rayo continuo.
