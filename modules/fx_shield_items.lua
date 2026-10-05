@@ -31,7 +31,7 @@ return function(Core)
         -- Reparto isometrico (sign-of-angle split) eliminado: el orbital vive siempre en Front.
         local frame = Game():GetFrameCount()
         local rOffset = renderOffset or Vector.Zero
-        local shieldPos = data.shieldWorldPos or (player.Position + Vector(36, 0))
+        local shieldPos = Core.GetShieldOrbitPos(player, data) or (player.Position + Vector(36, 0))
         local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
         if isDeflecting then
