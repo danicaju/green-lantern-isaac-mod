@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F1 — Cap de anillos sin consumir pickup
+- A cap: buzz + cooldown, sin familiar fantasma ni `Remove()`. Harness 11/11.
+
 ### T8 — Harness de coherencia de nombres
 - `tools/test_item_names_consistency.lua` 18/18: sin `Construct:`, names↔lookups, pools↔items.
 
