@@ -447,19 +447,21 @@ check(drewOathColor ~= nil and math.abs(drewOathColor[1] - 0.0)  < 0.01 and math
                     drewOathColor and drewOathColor[2] or -1,
                     drewOathColor and drewOathColor[3] or -1))
 
--- (3.B) Decremento: solo en currentGameFrame % 2 == 0. Frame 0 (par): timer
--- 90 -> 89. Frame 1 (impar): timer 89 -> 89 (NO decrementa).
+-- (3.B) Decremento: solo en currentGameFrame % 2 == 0 Y con Game frame que
+-- avanza (OPT2b: juego congelado no consume timer). Frames 4 (par) -> 89,
+-- 5 (impar) -> 89 (NO decrementa), 6 (par) -> 88. Se usan frames frescos
+-- porque el modulo recuerda lastRenderGameFrame entre llamadas.
 -- Resetear el timer a 90 porque la seccion (3.A) ya lo decremento.
 dataByPlayer[th2.Index].oathTextTimer = 90
-_frameCount = 0
+_frameCount = 4
 postCb()
 check(dataByPlayer[th2.Index].oathTextTimer == 89,
       string.format("T5(3.B): frame par (%%2==0) decrementa timer 90->89, fue %d", dataByPlayer[th2.Index].oathTextTimer or -1))
-_frameCount = 1
+_frameCount = 5
 postCb()
 check(dataByPlayer[th2.Index].oathTextTimer == 89,
       string.format("T5(3.B): frame impar (%%2==1) NO decrementa, fue %d", dataByPlayer[th2.Index].oathTextTimer or -1))
-_frameCount = 2
+_frameCount = 6
 postCb()
 check(dataByPlayer[th2.Index].oathTextTimer == 88,
       string.format("T5(3.B): frame par siguiente decrementa 89->88, fue %d", dataByPlayer[th2.Index].oathTextTimer or -1))
