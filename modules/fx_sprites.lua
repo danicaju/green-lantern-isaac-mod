@@ -33,14 +33,14 @@ return function(Core)
                     "Power Battery", lang)
                 EID:addCollectible(Core.ITEM_GIANT_FIST,
                     "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
-                    "Construct: Giant Fist", lang)
+                    "Giant Fist", lang)
                 EID:addCollectible(Core.ITEM_COAST_CITY,
                     "Inflicts Fear (3s) and spawns a 5s Emerald Vortex that pulls nearby enemies toward the center#Collecting Green Lantern Emblems recharges the item and extends vortex duration",
                     "The Tragedy of Coast City", lang)
                 if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
                     EID:addCollectible(Core.ITEM_GATLING,
                         "10s of rapid-fire emerald beams with no Willpower cost",
-                        "Construct: Gatling", lang)
+                        "Gatling", lang)
                 end
                 EID:addCollectible(Core.ITEM_SOLID_LIGHT_SHIELD,
                     "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
@@ -69,12 +69,12 @@ return function(Core)
                     ">=50% Will: +15% Overcharge DMG for room"
                 }
             elseif id == Core.ITEM_GIANT_FIST then
-                return "Construct: Giant Fist [4R Active]", {
+                return "Giant Fist [4R Active]", {
                     "Fires a giant piercing 10x DMG emerald fist",
                     "Smashes rocks, poop, and obstacles in its path"
                 }
             elseif id == Core.ITEM_GATLING then
-                return "Construct: Gatling [4R Active]", {
+                return "Gatling [4R Active]", {
                     "10s rapid-fire emerald beams, no Willpower cost",
                     "Click fast while it lasts"
                 }
