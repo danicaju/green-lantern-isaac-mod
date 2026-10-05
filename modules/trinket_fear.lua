@@ -29,28 +29,31 @@ return function(Core)
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
-      if player and Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
+      if player then
+        local hasTrinket = Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)
         local data = Core.GetPlayerData(player)
         if data.fearSkullTimer and data.fearSkullTimer > 0 then
           data.fearSkullTimer = data.fearSkullTimer - 1
         end
         if data.fearControlTimer and data.fearControlTimer > 0 then
           data.fearControlTimer = data.fearControlTimer - 1
-          local moveInput = player:GetMovementInput()
-          if moveInput:Length() > 0.05 then
-            local fearSpeed = math.max(2.8, (player.MoveSpeed or 1.0) * 3.2)
-            player.Velocity = -moveInput:Normalized() * fearSpeed
-          end
+          if hasTrinket then
+            local moveInput = player:GetMovementInput()
+            if moveInput:Length() > 0.05 then
+              local fearSpeed = math.max(2.8, (player.MoveSpeed or 1.0) * 3.2)
+              player.Velocity = -moveInput:Normalized() * fearSpeed
+            end
 
-          -- Trailing fear poof behind player while running scared
-          if Game():GetFrameCount() % 4 == 0 then
-            pcall(function()
-              local dust = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, 0, player.Position, Vector.Zero, nil)
-              if dust then
-                dust:GetSprite().Color = Color(1.0, 0.85, 0.1, 0.7, 0.3, 0.25, 0.0)
-                dust.Scale = 0.5
-              end
-            end)
+            -- Trailing fear poof behind player while running scared
+            if Game():GetFrameCount() % 4 == 0 then
+              pcall(function()
+                local dust = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, 0, player.Position, Vector.Zero, nil)
+                if dust then
+                  dust:GetSprite().Color = Color(1.0, 0.85, 0.1, 0.7, 0.3, 0.25, 0.0)
+                  dust.Scale = 0.5
+                end
+              end)
+            end
           end
 
           if data.fearControlTimer <= 0 then
