@@ -4,6 +4,10 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F7 — Bypass de escudo por jugador
+- `glShieldBypassBy = player.Index` (fallback legacy); P2 re-rollea lo de P1.
+- Harness 18/18; suite 203/203.
+
 ### F6 — Coast expira solo en su dueño
 - Apaga `coastCityActive` solo de `cc.owner` (fallback legacy si nil). Harness 7/7 x3.
 
