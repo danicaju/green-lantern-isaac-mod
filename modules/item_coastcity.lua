@@ -63,10 +63,15 @@ return function(Core)
 
     if roomIdx ~= cc.roomIdx or age > maxDuration then
       cc.active = false
-      for i = 0, Game():GetNumPlayers() - 1 do
-        local p = Isaac.GetPlayer(i)
-        if Core.IsTaintedHal(p) then
-          Core.GetPlayerData(p).coastCityActive = false
+      -- Solo el dueno apaga su flag; el fallback cubre vortices legacy sin owner.
+      if cc.owner then
+        Core.GetPlayerData(cc.owner).coastCityActive = false
+      else
+        for i = 0, Game():GetNumPlayers() - 1 do
+          local p = Isaac.GetPlayer(i)
+          if Core.IsTaintedHal(p) then
+            Core.GetPlayerData(p).coastCityActive = false
+          end
         end
       end
       return
