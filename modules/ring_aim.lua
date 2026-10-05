@@ -104,4 +104,28 @@ return function(Core)
       end
     end)
   end
+
+  -- Compute the orbital shield world position from the player's current aim
+  -- and the shield orbit angle. Centralizes the orbital formula so collisions
+  -- (modules/shield.lua) and future consumers share a single source of truth.
+  --   facing = data.lastShootDir if set, else head-dir via GetHeadDirection()
+  --   orbit  = Vector(cos(data.shieldOrbitAngle)*36, sin(data.shieldOrbitAngle)*24)
+  --   result = player.Position + orbit*0.6 + facing*24
+  function Core.GetShieldOrbitPos(player, data)
+    if not (player and data) then return nil end
+    local radX, radY = 36, 24
+    local a = data.shieldOrbitAngle or 0
+    local orbit = Vector(math.cos(a) * radX, math.sin(a) * radY)
+
+    local facing = data.lastShootDir
+    if not (facing and facing.X and facing.Y) then
+      local headDir = player:GetHeadDirection()
+      if headDir == Direction.RIGHT then facing = Vector(1, 0)
+      elseif headDir == Direction.LEFT then facing = Vector(-1, 0)
+      elseif headDir == Direction.UP then facing = Vector(0, -1)
+      else facing = Vector(0, 1) end
+    end
+
+    return player.Position + orbit * 0.6 + facing * 24
+  end
 end
