@@ -3,29 +3,29 @@ return function(Core)
     function Core.RenderGLSolidShieldBehind(player, renderOffset)
         if not (player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
         local data = Core.GetPlayerData(player)
-        local shieldSpr = Core.GetGLSolidShieldSprite()
-        if not shieldSpr then return end
+        local auraSpr = Core.GetGLSolidShieldAuraSprite()
+        if not auraSpr then return end
 
         local frame = Game():GetFrameCount()
         local rOffset = renderOffset or Vector.Zero
 
         -- 1. Hexagonal Construct Barrier Aura centered on player's torso
         local auraFrame = math.floor(frame / 4) % 2
-        shieldSpr:SetFrame("Aura", auraFrame)
+        auraSpr:SetFrame("Aura", auraFrame)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
         -- Pulsing alpha: alternating 0.36 / 0.52 every 4 frames. Was a sinusoidal pulse (eliminated per SPEC).
         local auraAlpha = isDeflecting and 0.88 or ((math.floor(frame / 4) % 2 == 0) and 0.52 or 0.36)
-        shieldSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
-        shieldSpr.Scale = Vector(1.0, 1.0)
+        auraSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
+        auraSpr.Scale = Vector(1.0, 1.0)
         local auraPos = player.Position + Vector(0, -14)
-        shieldSpr:Render(Isaac.WorldToScreen(auraPos) + rOffset, Vector.Zero, Vector.Zero)
+        auraSpr:Render(Isaac.WorldToScreen(auraPos) + rOffset, Vector.Zero, Vector.Zero)
     end
 
     function Core.RenderGLSolidShieldFront(player, renderOffset)
         if not (player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
         local data = Core.GetPlayerData(player)
-        local shieldSpr = Core.GetGLSolidShieldSprite()
-        if not shieldSpr then return end
+        local orbitalSpr = Core.GetGLSolidShieldOrbitalSprite()
+        if not orbitalSpr then return end
 
         -- Orbital shield always rendered in MC_POST_PLAYER_RENDER (delante del jugador).
         -- Reparto isometrico (sign-of-angle split) eliminado: el orbital vive siempre en Front.
@@ -36,13 +36,13 @@ return function(Core)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
         if isDeflecting then
             local defFrame = math.min(3, math.max(0, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3)))
-            shieldSpr:SetFrame("Deflect", defFrame)
+            orbitalSpr:SetFrame("Deflect", defFrame)
         else
-            shieldSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
+            orbitalSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
         end
-        shieldSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
-        shieldSpr.Scale = Vector(1.0, 1.0)
-        shieldSpr:Render(sScreen, Vector.Zero, Vector.Zero)
+        orbitalSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
+        orbitalSpr.Scale = Vector(1.0, 1.0)
+        orbitalSpr:Render(sScreen, Vector.Zero, Vector.Zero)
     end
 
     function Core.RenderGLActiveItemAndTrinketEffects(player, renderOffset)

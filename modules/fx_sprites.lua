@@ -109,7 +109,8 @@ return function(Core)
     local glFlareSprite            = nil
     local glSparkSprite            = nil
     local glContBeamSprite         = nil
-    local glSolidShieldSprite      = nil
+    local glSolidShieldOrbitalSprite = nil  -- dedicated to "Orbit"/"Deflect" animations
+    local glSolidShieldAuraSprite    = nil  -- dedicated to "Aura" animation
     local glBatteryConstructSprite = nil
     local glYellowFearSprite       = nil
 
@@ -165,18 +166,40 @@ return function(Core)
         return glSparkSprite
     end
 
-    function Core.GetGLSolidShieldSprite()
-        if not glSolidShieldSprite and Sprite then
+    -- Two separate sprite instances for the shield so the aura and the orbital
+    -- never fight over animation state within the same render frame.
+    function Core.GetGLSolidShieldOrbitalSprite()
+        if not glSolidShieldOrbitalSprite and Sprite then
             local s = Sprite()
             local ok = pcall(function()
                 s:Load("gfx/effects/gl_solid_shield.anm2", true)
                 s:Play("Orbit", true)
             end)
             if ok then
-                glSolidShieldSprite = s
+                glSolidShieldOrbitalSprite = s
             end
         end
-        return glSolidShieldSprite
+        return glSolidShieldOrbitalSprite
+    end
+
+    function Core.GetGLSolidShieldAuraSprite()
+        if not glSolidShieldAuraSprite and Sprite then
+            local s = Sprite()
+            local ok = pcall(function()
+                s:Load("gfx/effects/gl_solid_shield.anm2", true)
+                s:Play("Aura", true)
+            end)
+            if ok then
+                glSolidShieldAuraSprite = s
+            end
+        end
+        return glSolidShieldAuraSprite
+    end
+
+    -- Legacy alias: some old code paths may call GetGLSolidShieldSprite().
+    -- Route them to the orbital sprite to avoid nil errors.
+    function Core.GetGLSolidShieldSprite()
+        return Core.GetGLSolidShieldOrbitalSprite()
     end
 
     function Core.GetGLBatteryConstructSprite()
