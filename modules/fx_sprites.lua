@@ -206,4 +206,21 @@ return function(Core)
         end
         return glYellowFearSprite
     end
+
+    -- T6: swap the tear's sprite for the custom Giant Fist anm2 so the construct
+    -- looks like a giant emerald fist instead of a tinted tooth. Caller is
+    -- modules/item_fist.lua (right after spawn). Hardcodes the only allowed path.
+    function Core.ApplyGiantFistSprite(tear)
+        if not tear then return end
+        pcall(function()
+            local ts = tear:GetSprite()
+            ts:Load("gfx/effects/gl_giant_fist.anm2", true)
+            ts:Play("Idle", true)
+            local vel = tear.Velocity
+            local speed = (vel and vel:Length()) or 0.0
+            ts.Rotation = (speed > 0.01) and vel:GetAngleDegrees() or 0.0
+            local td = tear:GetData()
+            td.isGLFist = true
+        end)
+    end
 end
