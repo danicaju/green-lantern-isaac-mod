@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F8b — Persistencia save/continue
+- Slot compartido `{oath, run}` read-modify-write; `save_run.lua` persiste willpower/sparks/rings/tier por Index. Suite 310/310.
+
 ### F8a — Oathkeeper anti-farmeo
 - Flag por-run + sparks `max(20, actual)`. Harness 8/8 x3.
 
