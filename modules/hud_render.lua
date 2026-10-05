@@ -156,6 +156,17 @@ return function(Core)
             label = string.format("%s [%d]", label, data.stolenRings)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
+          if data.oathTextTimer and data.oathTextTimer > 0 then
+            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz
+            if currentGameFrame % 2 == 0 then
+              data.oathTextTimer = data.oathTextTimer - 1
+            end
+            if data.oathText then
+              local headPos = Isaac.WorldToScreen(player.Position + Vector(0, -48))
+              local textAlpha = math.min(0.95, data.oathTextTimer / 20.0)
+              Core.DrawHudText(data.oathText, math.floor(headPos.X - 38), math.floor(headPos.Y), r, g, b, textAlpha)
+            end
+          end
         end
       end
     end
