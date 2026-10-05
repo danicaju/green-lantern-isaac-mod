@@ -63,22 +63,33 @@ local luck10 = math.min(
 )
 check(luck10 == 0.75, string.format("Luck=10 (cap) debe dar 0.75, dio %.4f", luck10))
 
--- Balance paridad: ratio hold/click >= 1.15 para MFD en {6,10,14,20}
--- (esto es lo que dice el CHANGELOG S3; con DISCRETE 0.45->0.60 seguimos manteniendo
--- paridad porque el intervalo de click escala con MFD). Sanity check aritmetico:
---   click_dps = DISCRETE / MFD
---   hold_dps  = CONT_BEAM * (30/tickFrames) * hold_factor
---   tickFrames = 4 -> 7.5 ticks/s
---   hold_factor = HOLD_FRAMES / 60 (sostenido puro)
+-- Balance paridad: ratio hold/click por MFD, con la formula real del modulo
+-- (modules/firing_mode.lua:174):
+--   mci    = max(6, min(10, floor(MFD*0.70)))   -- minClickInterval (frames)
+--   click  = DISCRETE * (30 / mci)               -- dmg/s clickeando
+--   hold   = 0.35 * 7.5 = 2.625                 -- CONT_BEAM * ticks/s
+--   ratio  = hold / click
+-- En MFD=6 el click GANA por diseño (nicho cadencia, 0.60*5.0=3.0 vs 2.625);
+-- a partir de MFD>=10 el hold domina y la paridad vuelve. Antes este harness
+-- comparaba DISCRETE/MFD (por frame) contra hold/s, inflando el ratio ~30x y
+-- pasando trivialmente; ahora son valores esperados por MFD (±0.001 tolerancia).
 local function ratioFor(MFD_)
-        local click_dps = 1.0 * Core.DISCRETE_BEAM_DMG_MULT / MFD_
-        local hold_dps  = 1.0 * Core.HAL_CONTINUOUS_BEAM_DMG_MULT * (30 / Core.HAL_CONTINUOUS_TICK_FRAMES)
-        return hold_dps / click_dps
+    local mci   = math.max(6, math.min(10, math.floor(MFD_ * 0.70)))
+    local click = Core.DISCRETE_BEAM_DMG_MULT * (30 / mci)
+    local hold  = Core.HAL_CONTINUOUS_BEAM_DMG_MULT * (30 / Core.HAL_CONTINUOUS_TICK_FRAMES)
+    return hold / click, click, hold, mci
 end
+local expected = {
+    [6]  = 2.625 / (0.60 * (30 / 6)),     -- 0.8750
+    [10] = 2.625 / (0.60 * (30 / 7)),     -- 1.0204
+    [14] = 2.625 / (0.60 * (30 / 9)),     -- 1.3125
+    [20] = 2.625 / (0.60 * (30 / 10)),    -- 1.4583
+}
 for _, mfd in ipairs({6, 10, 14, 20}) do
-    local ratio = ratioFor(mfd)
-    check(ratio >= 1.15,
-          string.format("MFD=%d: ratio hold/click debe ser >=1.15, fue %.3f", mfd, ratio))
+    local ratio, click, hold, mci = ratioFor(mfd)
+    check(math.abs(ratio - expected[mfd]) < 0.001,
+          string.format("MFD=%d (mci=%d): ratio hold/click debe ser %.4f ±0.001, fue %.4f (click=%.4f hold=%.4f)",
+                        mfd, mci, expected[mfd], ratio, click, hold))
 end
 
 io.stderr:write(string.format("\n[test_t1_balance_constants] passes=%d failures=%d\n",
