@@ -82,7 +82,8 @@ return function(Core)
       if fd and fd.isStolenRing then
         local owner = familiar.SpawnerEntity
         local player = owner and owner:ToPlayer()
-        if player then
+        -- F4: solo el Tainted real mueve y dispara sus anillos; huerfanos quedan inertes.
+        if player and Core.IsTaintedHal(player) then
           local ringIdx   = fd.ringIndex or 1
           local orbitRad  = 40 + (ringIdx - 1) * 20
           local speed     = 0.12
