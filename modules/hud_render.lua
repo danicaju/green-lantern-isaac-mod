@@ -52,6 +52,7 @@ return function(Core)
     Core.EnsureEIDRegistered()
     Core.RegisterStageAPIGraphics()
     local currentGameFrame = Game():GetFrameCount()
+    local gameAdvancedThisRender = (currentGameFrame ~= lastRenderGameFrame)
     if currentGameFrame == lastRenderGameFrame then
       frozenRenderFrames = frozenRenderFrames + 1
     else
@@ -131,8 +132,9 @@ return function(Core)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
-            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz
-            if currentGameFrame % 2 == 0 then
+            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz.
+            -- Con juego congelado (pausa/menu) el Game frame no avanza: no consume timer.
+            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then
               data.oathTextTimer = data.oathTextTimer - 1
             end
             if data.oathText then
@@ -157,8 +159,9 @@ return function(Core)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
-            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz
-            if currentGameFrame % 2 == 0 then
+            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz.
+            -- Con juego congelado (pausa/menu) el Game frame no avanza: no consume timer.
+            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then
               data.oathTextTimer = data.oathTextTimer - 1
             end
             if data.oathText then
