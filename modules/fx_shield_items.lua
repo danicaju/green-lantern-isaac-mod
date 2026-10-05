@@ -90,12 +90,12 @@ return function(Core)
             end
         end
 
-        -- Power Battery passive held spark
-        if Core.ITEM_POWER_BATTERY and player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == Core.ITEM_POWER_BATTERY and (frame % 36) < 8 then
+        -- Power Battery passive held spark (siempre visible mientras Battery en primaria; alpha pulsante suave, sin gate on/off)
+        if Core.ITEM_POWER_BATTERY and player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == Core.ITEM_POWER_BATTERY then
             local sparkSpr = Core.GetGLSparkSprite()
             if sparkSpr then
                 sparkSpr:SetFrame("Idle", math.floor(frame / 2) % 4)
-                sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.70, 0.10, 0.50, 0.15)
+                sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.45 + 0.25 * (1 - math.abs((frame % 48) / 24 - 1)), 0.10, 0.50, 0.15)
                 sparkSpr.Scale = Vector(0.65, 0.65)
                 -- Orbita rectangular alrededor del jugador. Antes: Vector(cos(0.2t)*14, -18 + sin(0.2t)*6)
                 local bx = ((frame % 28) - 14) * (14 / 14)
