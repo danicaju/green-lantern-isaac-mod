@@ -162,6 +162,7 @@ return function(Core)
       if math.random() < chance then
         local data = Core.GetPlayerData(player)
         data.shieldDeflectTimer = 14
+        data.shieldBlockedFrame = Game():GetFrameCount()
 
         pcall(function()
           SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 1.0, 0, false, 1.35)
