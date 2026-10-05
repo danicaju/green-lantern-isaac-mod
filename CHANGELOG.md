@@ -4,6 +4,9 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### F5 — Escudo suprime fear mismo-frame
+- `shieldBlockedFrame` al bloquear; el trinket lo respeta. Harness 9/9.
+
 ### F2 — Timers de fear sin trinket
 - Decremento y limpieza corren sin trinket; inversión/poof solo con él. Harness 19/19.
 
