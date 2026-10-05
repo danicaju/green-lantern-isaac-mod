@@ -4,6 +4,12 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### T1 — Paridad click/hold + consts reflect escudo
+- `DISCRETE_BEAM_DMG_MULT` 0.45→0.60; MFD {6,10,14,20}: click 3.00/2.57/2.00/1.80
+  vs hold 2.625 (paridad en MFD10, nichos por arma).
+- `SHIELD_REFLECT_BASE/PER_LUCK/MAX` (0.25/0.05/0.75) + slider MCM.
+- Harness `tools/test_t1_balance_constants.lua` 11/11.
+
 ### S9 — HUD propia +7px (sin solape con slot activo)
 - `modules/hud_render.lua`: `baseY` 33→40. El slot activo del engine no es
   movible por API pública (clase HUD sin setters de posición).
