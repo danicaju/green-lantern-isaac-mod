@@ -37,6 +37,11 @@ end
 function VectorMT.__tostring(v) return string.format("Vector(%.3f, %.3f)", v.X, v.Y) end
 Vector.Zero = Vector.new(0, 0)
 
+-- Compat: algunos runtimes Lua (5.4) no traen math.atan2; el juego si.
+if math.atan2 == nil then
+    function math.atan2(y, x) return math.atan(y, x) end
+end
+
 function Color(r,g,b,a,bo,go,by)
     return setmetatable({R=r,G=g,B=b,A=a,BOff=bo,GOff=go,BYOff=by}, {})
 end
@@ -53,6 +58,9 @@ Core.SPARK_BLINK_FRAMES = 1
 Core.WILLPOWER_MAX = 100
 Core.HAL_CONTINUOUS_TICK_FRAMES = 4
 Core.HAL_CONTINUOUS_WILL_DRAIN = 0.06
+-- SPEC-D: el haz crece 0->full en N renders; el harness calienta la rampa
+-- antes de asertar posiciones (ver runRender).
+Core.CONTINUOUS_BEAM_GROWTH_FRAMES = 10
 
 -- Captura de renders.
 local renderLog = {}
@@ -156,6 +164,10 @@ local function makeData(opts)
         overcharge = false,
         surgeBuff = false,
         willpower = 100,
+        -- SPEC-D: estado de crecimiento como en GetPlayerData (sin nil-tolerancia implicita).
+        beamGrowthFrame = 0,
+        beamGrowthDir = nil,
+        beamGrowthBaseLen = 0.0,
     }
     return data
 end
@@ -198,6 +210,13 @@ local function runRender(worldDeltaPx, up)
     Isaac.WorldToScreen = function(p)
         return Vector.new(p.X, p.Y)
     end
+    -- SPEC-D: calienta la rampa de crecimiento (N renders) y descarta el log;
+    -- las aserciones de abajo validan el haz a longitud completa, como antes.
+    local warmupN = Core.CONTINUOUS_BEAM_GROWTH_FRAMES or 10
+    for _ = 1, warmupN do
+        Core.RenderGLContinuousBeam(player, _dataOverride, flareSpr, 0)
+    end
+    clearLog()
     Core.RenderGLContinuousBeam(player, _dataOverride, flareSpr, 0)
 end
 
