@@ -4,6 +4,8 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### SPEC-C — Balance cadencia/daño: Hal +2 firedelay y base willMult 1.10 (pico 1.35x); Tainted 1.35/-2.0; hold domina a click ×1.17 en MFD12. Harness tools/test_balance_dps.lua 26/26.
+
 ### SPEC-A — Orbital sin trompicones: avance a 60Hz en POST_RENDER (1.95 rad/s), fuente única `GetShieldOrbitPos`, transiciones vía `Play` + `DEFLECT_DURATION=12`; smooth 14/14 + flicker 28/28.
 
 ### OPT — Const muerta, vetos y freeze
