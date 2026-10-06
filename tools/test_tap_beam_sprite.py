@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""tools/test_tap_beam_sprite.py — SPEC-B: tap-beam estilo comic GL.
+"""tools/test_tap_beam_sprite.py — SPEC-W3: tap-beam mini-rayo sin flecha.
 
 Verifica sobre `resources/gfx/effects/gl_ring_beam.png` + `.anm2`:
-  ATLAS (guardias, ya pasan): tamano 64x256, crops tap 64x32 con pivot
+  ATLAS (guardias): tamano 64x256, crops tap 64x32 con pivot
     (5,16) dentro de bounds, mitad inferior (ContinuousBeam, y128-255)
     byte-identica a HEAD (beam continuo intacto).
-  COMIC (criterios nuevos, fallan con el sprite fino actual):
+  MINI-RAYO (criterios W3, sin arrowhead):
     nucleo blanco grueso + halo verde 2 capas + estela comica,
     base clara (min canal >= 120 en opacos fuertes) para que Color() tina,
-    arrowhead rotundo y haz mas opaco.
+    punta roma continua: sin ensanchamiento flecha en x54-63,
+    haz mas opaco y punta truncada como el continuo.
 
 Solo stdlib (struct/zlib/re/xml). Sin PIL, sin engine.
 Salida estilo repo: passes/failures por stderr, exit 1 si falla.
@@ -27,13 +28,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PNG_PATH = str(REPO_ROOT / "resources/gfx/effects/gl_ring_beam.png")
 ANM2_PATH = str(REPO_ROOT / "resources/gfx/effects/gl_ring_beam.anm2")
 
-# --- Umbrales SPEC-B (tap-beam comic) ---
+# --- Umbrales SPEC-W3 (tap-beam mini-rayo sin flecha) ---
 CORE_HALF_MIN = 7          # grosor blanco vertical en x=32 por frame
 INNER_MIN = 200            # halo interno verde claro opaco por frame
 OUTER_MIN = 160            # halo externo suave (alpha<=190) verdoso por frame
 MIN_CHANNEL = 120          # base clara: min(r,g,b) en px con a>128
 OPAQUE_MIN = 1000          # haz rotundo: px con a>8 por frame
-TIP_MIN = 80               # arrowhead: px opacos en x54-63 por frame
+TIP_MAX = 20               # sin flecha: px opacos en x54-63 por frame (<=)
+TIP_WIDTH_MAX = 4          # sin flecha: alto vertical opaco en x=56 (<=)
 PIVOT_MIN = 30             # base del anillo: px opacos en x0-6 por frame
 FRAME_DIFF_MIN = 60        # frames animados: diff par-a-par minima
 CENTER_RUN_MIN = 40        # nucleo blanco horizontal en fila central
@@ -150,7 +152,7 @@ if git.returncode == 0:
 else:
     check(False, "no se pudo leer HEAD del png para comparar continuo")
 
-# ---------- COMIC (frames tap y0 = f*32) ----------
+# ---------- MINI-RAYO sin flecha (frames tap y0 = f*32) ----------
 for f in range(4):
     y0 = f * 32
     core = sum(1 for y in range(y0, y0 + 32) if is_white(px(ROWS, 32, y)))
@@ -170,8 +172,13 @@ for f in range(4):
           "frame%d opacos: %d < %d" % (f, op, OPAQUE_MIN))
     tip = sum(1 for y in range(y0, y0 + 32) for x in range(54, 64)
               if px(ROWS, x, y)[3] > 8)
-    check(tip >= TIP_MIN,
-          "frame%d arrowhead x54-63: %d < %d" % (f, tip, TIP_MIN))
+    check(tip <= TIP_MAX,
+          "frame%d con flecha x54-63: %d > %d" % (f, tip, TIP_MAX))
+    tip_w = sum(1 for y in range(y0, y0 + 32)
+                if px(ROWS, 56, y)[3] > 8)
+    check(tip_w <= TIP_WIDTH_MAX,
+          "frame%d punta no truncada x=56 h=%d > %d" % (f, tip_w,
+                                                        TIP_WIDTH_MAX))
     piv = sum(1 for y in range(y0, y0 + 32) for x in range(7)
               if px(ROWS, x, y)[3] > 8)
     check(piv >= PIVOT_MIN,
@@ -183,9 +190,8 @@ for f in range(4):
             best = max(best, cur)
         else:
             cur = 0
-    run = best
-    check(run >= CENTER_RUN_MIN,
-          "frame%d run blanco central: %d < %d" % (f, run, CENTER_RUN_MIN))
+    check(best >= CENTER_RUN_MIN,
+          "frame%d run blanco central: %d < %d" % (f, best, CENTER_RUN_MIN))
 
 worst = 255
 for y in range(128):

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""tools/gen_tap_beam_sprite.py — SPEC-B: regenera el tap-beam comic GL.
+"""tools/gen_tap_beam_sprite.py — SPEC-W3: regenera el tap-beam mini-rayo.
 
 Reescribe SOLO las filas y0-127 (4 frames tap de 64x32) de
 `resources/gfx/effects/gl_ring_beam.png` con nucleo blanco + halo verde
-2 capas + estela comica (dientes + lineas de velocidad + arrowhead).
+2 capas + estela comica (dientes + lineas de velocidad), punta roma
+continua SIN arrowhead (mini-rayo, truncado como el continuo).
 Las filas y128-255 (ContinuousBeam) se copian byte a byte: beam
 continuo intacto, .anm2 y pivot (5,16) sin cambios.
 
-Base toda clara (min canal 168 en opacos con a>128; umbral del
-test 120) para que Color() tina.
+Base toda clara (gen garantiza min canal 168 en opacos con a>128;
+el test exige >=120 con margen) para que Color() tina.
 Solo stdlib. Uso: python tools/gen_tap_beam_sprite.py (cwd cualquiera
 dentro del repo).
 """
@@ -25,6 +26,11 @@ INNER = (168, 255, 168, 255)   # halo interno opaco verde claro
 OUTER = (150, 245, 150, 110)   # halo externo suave
 AA = (200, 255, 200, 150)      # feather (claro para no romper tinte)
 SPEED = (150, 245, 150, 100)   # lineas de velocidad
+
+
+def core_half(x, f):
+    """Semigrosor del nucleo blanco en x (ondula 4/5, fase por frame)."""
+    return 4 + (1 if ((x + f) % 8) < 2 else 0)
 
 
 def read_png(path):
@@ -72,12 +78,12 @@ def make_frame(f):
             o = x * 4
             grid[y][o:o + 4] = bytes(c)
 
-    tip_base = 48 + (f % 2)
-    tip_x = 61 - (f % 2)
+    # +1 en frames impares: fase de animacion (sin esto 4 frames identicos).
+    end_x = 51 + (f % 2)
 
     # --- Cuerpo: nucleo blanco ondulante + halo interno + estela dentada ---
-    for x in range(4, tip_base + 1):
-        hc = 4 + (1 if ((x + f) % 8) < 2 else 0)
+    for x in range(4, end_x + 1):
+        hc = core_half(x, f)
         jagged = ((x + f * 2) // 3) % 2 == 0
         ext = hc + (6 if jagged else 4)
         for dy in range(-ext - 1, ext + 2):
@@ -92,21 +98,20 @@ def make_frame(f):
             elif ad == ext + 1:
                 setp(x, y, AA)
 
-    # --- Arrowhead comica ---
-    base_x = tip_base - 2
-    span = tip_x - base_x
-    for x in range(base_x, tip_x + 1):
-        t = (x - base_x) / span
-        half = int(round(10 * (1 - t) + 1.5))
-        for dy in range(-half - 2, half + 3):
-            y = 16 + dy
-            ad = abs(dy)
-            if ad <= max(2, half - 4):
-                setp(x, y, WHITE)
-            elif ad <= max(3, half - 1):
-                setp(x, y, INNER)
-            elif ad <= half + 2:
-                setp(x, y, OUTER)
+    # --- Punta roma continua (SPEC-W3: sin arrowhead) ---
+    # Corte truncado como el continuo (termina en end_x); 1px de halo
+    # suave en end_x+1 para no dejar corte blanco duro. x54-63 queda
+    # vacio: mini-rayo, sin ensanchamiento flecha.
+    hc_end = core_half(end_x, f)
+    for dy in range(-hc_end - 2, hc_end + 3):
+        y = 16 + dy
+        ad = abs(dy)
+        if ad <= hc_end - 1:
+            setp(end_x + 1, y, INNER)
+        elif ad <= hc_end + 1:
+            setp(end_x + 1, y, OUTER)
+        elif ad == hc_end + 2:
+            setp(end_x + 1, y, AA)
 
     # --- Base del anillo (pivot 5,16): disco esmeralda con corazon blanco ---
     for y in range(32):
@@ -139,7 +144,7 @@ def main():
         for y in range(32):
             rows[f * 32 + y] = frame[y]
     write_png(PNG_PATH, w, h, rows)
-    print("tap-beam comic escrito: 4 frames 64x32, continuo intacto")
+    print("tap-beam mini-rayo escrito: 4 frames 64x32 sin flecha, continuo intacto")
 
 
 if __name__ == "__main__":
