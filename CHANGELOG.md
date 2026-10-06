@@ -4,6 +4,19 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### SPEC-D — Rayo continuo con crecimiento fluido estilo Brimstone (solo render)
+- `modules/core.lua`: `CONTINUOUS_BEAM_GROWTH_FRAMES = 10` + estado por jugador
+  `beamGrowthFrame/beamGrowthDir(lastBeamDir)/beamGrowthBaseLen` en `GetPlayerData`
+  (nunca global; co-op seguro).
+- `modules/fx_beam.lua`: `ComputeBeamGrowthVisibleLength` (rampa monotona
+  smoothstep 0->full en N frames), `UpdateBeamGrowth` (giro >~30° reinicia desde
+  la longitud visible actual) y `ResetBeamGrowth` al soltar; el haz dibujado y el
+  flare final (posicion + alpha) siguen la punta visible.
+- Intactos: `beam_math.lua` (raycast/dano/ticks con endWorld completo),
+  `firing_mode.lua` (estado/coste), tap discreto y flare de la mano.
+- Harness `tools/test_beam_growth.lua` 61/61; `test_fx_beam_render_skip.lua`
+  migrado (calienta la rampa antes de asertar) 21/21.
+
 ### SPEC-C — Balance cadencia/daño: Hal +2 firedelay y base willMult 1.10 (pico 1.35x); Tainted 1.35/-2.0; hold domina a click ×1.17 en MFD12. Harness tools/test_balance_dps.lua 26/26.
 
 ### SPEC-A — Orbital sin trompicones: avance a 60Hz en POST_RENDER (1.95 rad/s), fuente única `GetShieldOrbitPos`, transiciones vía `Play` + `DEFLECT_DURATION=12`; smooth 14/14 + flicker 28/28.
