@@ -4,6 +4,8 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### W1 — Alas al activar: son del item del jugador (sin código; verificado por grep).
+
 ### SPEC-B — Tap-beam estilo cómic GL (solo sprite, sin Lua)
 - `resources/gfx/effects/gl_ring_beam.png`: filas tap y0-127 redibujadas
   (núcleo blanco grueso + halo verde 2 capas + estela cómica con dientes,
