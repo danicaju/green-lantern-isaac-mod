@@ -3,19 +3,46 @@
 return function(Core)
   local GL = Core.GL
 
+  -- SPEC-A: paso orbital a ritmo de render (60Hz). POST_UPDATE corre a ritmo
+  -- logico (30Hz); avanzar 0.065 ahi mostraba cada posicion 2 frames seguidos
+  -- (patron d,0,d,0 = trompicones). 0.0325 * 60 = 0.065 * 30 = 1.95 rad/s:
+  -- misma velocidad angular/segundo, sin duplicar.
+  local SHIELD_ORBIT_STEP_RENDER = 0.065 / 2
+  local TWO_PI = math.pi * 2
+  -- Flash Deflect: 12 frames en los 2 puntos de armado de shield.lua
+  -- (literal 12, verificado por test_shield_orbit_flicker) + DEFLECT_DURATION
+  -- en fx_shield_items.lua. Mantener los tres sincronizados.
+
+  -- Helpers locales: evitan triplicar guards/lookups sin tocar comportamiento.
+  local function EnsureShieldId()
+    if not Core.ITEM_SOLID_LIGHT_SHIELD or Core.ITEM_SOLID_LIGHT_SHIELD < 0 then Core.LoadItemIDs() end
+  end
+
+  local function HasShield(player)
+    return player
+      and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0
+      and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)
+  end
+
+  local function ReflectChance(player)
+    return math.min(
+      Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK,
+      Core.SHIELD_REFLECT_MAX
+    )
+  end
+
   -- Active orbital construct shield: rotation, enemy projectile deflection, and contact construct damage
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
-    if not Core.ITEM_SOLID_LIGHT_SHIELD or Core.ITEM_SOLID_LIGHT_SHIELD < 0 then Core.LoadItemIDs() end
+    EnsureShieldId()
 
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
-      if player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD) then
+      if HasShield(player) then
         local data = Core.GetPlayerData(player)
-        -- Smooth isometric elliptical orbit around the player
-        data.shieldOrbitAngle = (data.shieldOrbitAngle or 0) + 0.065
-        -- Single source of truth for the shield world position (see Core.GetShieldOrbitPos).
+        -- SPEC-A: el angulo avanza en MC_POST_RENDER (60Hz); aqui solo se lee
+        -- via Core.GetShieldOrbitPos (fuente unica con el render).
         local shieldPos = Core.GetShieldOrbitPos(player, data)
-        if not shieldPos then return end
+        if shieldPos then
 
         if data.shieldDeflectTimer and data.shieldDeflectTimer > 0 then
           data.shieldDeflectTimer = data.shieldDeflectTimer - 1
@@ -25,10 +52,7 @@ return function(Core)
         -- Luck-scaled chance to deflect; on miss, mark the projectile so
         -- MC_ENTITY_TAKE_DMG knows it has already been "passed through"
         -- and skips its own redundant reflect roll.
-        local reflectChance = math.min(
-          Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK,
-          Core.SHIELD_REFLECT_MAX
-        )
+        local reflectChance = ReflectChance(player)
         for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PROJECTILE, -1, -1, false)) do
           local proj = ent:ToProjectile()
           if proj and proj:IsVulnerableEnemy() == false and not proj:IsDead() then
@@ -128,6 +152,7 @@ return function(Core)
             end
           end
         end
+        end -- shieldPos válida; sin ella se salta solo este jugador (co-op)
       end
     end
   end)
@@ -136,9 +161,8 @@ return function(Core)
   GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, flags, source)
     if entity.Type ~= EntityType.ENTITY_PLAYER then return end
     local player = entity:ToPlayer()
-    if not player then return end
-    if not Core.ITEM_SOLID_LIGHT_SHIELD or Core.ITEM_SOLID_LIGHT_SHIELD < 0 then Core.LoadItemIDs() end
-    if not (Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
+    EnsureShieldId()
+    if not HasShield(player) then return end
 
     if source and source.Entity and (source.Entity.Type == EntityType.ENTITY_PROJECTILE or source.Entity.Type == EntityType.ENTITY_TEAR) then
       local srcEnt = source.Entity
@@ -157,11 +181,11 @@ return function(Core)
         return
       end
 
-      local chance = math.min(Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK, Core.SHIELD_REFLECT_MAX)
+      local chance = ReflectChance(player)
 
       if math.random() < chance then
         local data = Core.GetPlayerData(player)
-        data.shieldDeflectTimer = 14
+        data.shieldDeflectTimer = 12
         data.shieldBlockedFrame = Game():GetFrameCount()
 
         pcall(function()
@@ -187,4 +211,30 @@ return function(Core)
       end
     end
   end)
+
+  -- SPEC-A: avance suave del orbital a 60Hz (unica sede del avance).
+  -- Misma fuente de posicion para render y colision (Core.GetShieldOrbitPos);
+  -- sin caches divergentes. Se pausa con el juego (MC_POST_RENDER sigue
+  -- disparando en pausa). Registrado en ultimo lugar para no alterar el
+  -- orden de los callbacks existentes.
+  if ModCallbacks.MC_POST_RENDER then
+    GL:AddCallback(ModCallbacks.MC_POST_RENDER, function(_)
+      local paused = false
+      pcall(function() paused = Game():IsPaused() end)
+      if paused then return end
+      EnsureShieldId()
+
+      for i = 0, Game():GetNumPlayers() - 1 do
+        local player = Isaac.GetPlayer(i)
+        if HasShield(player) then
+          local data = Core.GetPlayerData(player)
+          if data then
+            -- Wrap 2pi: evita deriva de precision en sesiones largas; cos/sin
+            -- son continuos en el wrap, la posicion no salta.
+            data.shieldOrbitAngle = ((data.shieldOrbitAngle or 0) + SHIELD_ORBIT_STEP_RENDER) % TWO_PI
+          end
+        end
+      end
+    end)
+  end
 end
