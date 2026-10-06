@@ -4,6 +4,8 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### SPEC-A — Orbital sin trompicones: avance a 60Hz en POST_RENDER (1.95 rad/s), fuente única `GetShieldOrbitPos`, transiciones vía `Play` + `DEFLECT_DURATION=12`; smooth 14/14 + flicker 28/28.
+
 ### OPT — Const muerta, vetos y freeze
 - Fuera `HAL_DAMAGE_MULTIPLIER`; veto blended/eternal; oath freeze-aware. Suite 17/17.
 
