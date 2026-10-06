@@ -89,8 +89,84 @@ return function(Core)
         return GL_BEAM_UP_HEAD_SKIP
     end
 
+    -- SPEC-D: crecimiento fluido del rayo continuo (solo render, estilo Brimstone).
+    -- Coseno del umbral de giro (~30 grados): por debajo se reinicia la rampa
+    -- desde la longitud visible actual, sin colapsar a 0. Solo render: el raycast,
+    -- el dano por tick y el flare de la mano no cambian (beam_math/firing_mode intactos).
+    local GL_BEAM_GROWTH_TURN_DOT = 0.8660254
+    local GL_BEAM_GROWTH_MIN_LEN = 0.001
+
+    local function growthFrames()
+        local n = Core.CONTINUOUS_BEAM_GROWTH_FRAMES or 10
+        if n < 1 then n = 1 end
+        return n
+    end
+
+    local function normDirOrNil(v)
+        if v and v.Length and v:Length() > GL_BEAM_GROWTH_MIN_LEN then
+            return v:Normalized()
+        end
+        return nil
+    end
+
+    -- Longitud visible del haz para un frame de crecimiento dado. Pura y monotona:
+    -- arranca en baseLen y llega a totalLen en N frames (suavizado smoothstep).
+    function Core.ComputeBeamGrowthVisibleLength(totalLen, growthFrame, baseLen)
+        local total = totalLen or 0.0
+        if total <= 0.0 then return 0.0 end
+        local n = growthFrames()
+        local t = (growthFrame or 0) / n
+        if t < 0.0 then t = 0.0 elseif t > 1.0 then t = 1.0 end
+        local ease = t * t * (3.0 - 2.0 * t)
+        local base = baseLen or 0.0
+        if base < 0.0 then base = 0.0 elseif base > total then base = total end
+        return base + (total - base) * ease
+    end
+
+    function Core.ResetBeamGrowth(data)
+        if not data then return end
+        data.beamGrowthFrame = 0
+        data.beamGrowthDir = nil
+        data.beamGrowthBaseLen = 0.0
+    end
+
+    -- Avanza la rampa de crecimiento un frame de render y devuelve la longitud
+    -- visible. Todo el estado vive en data (por jugador, co-op seguro).
+    function Core.UpdateBeamGrowth(data, dir, totalLen)
+        local total = math.max(0.0, totalLen or 0.0)
+        if not data then return 0.0 end
+        if data.beamGrowthFrame == nil then data.beamGrowthFrame = 0 end
+        if data.beamGrowthBaseLen == nil then data.beamGrowthBaseLen = 0.0 end
+        local ndir = normDirOrNil(dir)
+        local oldDir = data.beamGrowthDir
+        local hasOld = oldDir and oldDir.Length and oldDir:Length() > GL_BEAM_GROWTH_MIN_LEN
+        if ndir and hasOld then
+            local dot = ndir.X * oldDir.X + ndir.Y * oldDir.Y
+            if dot < GL_BEAM_GROWTH_TURN_DOT then
+                local cur = Core.ComputeBeamGrowthVisibleLength(total, data.beamGrowthFrame, data.beamGrowthBaseLen)
+                if cur < 0.0 then cur = 0.0 elseif cur > total then cur = total end
+                data.beamGrowthBaseLen = cur
+                data.beamGrowthFrame = 0
+                data.beamGrowthDir = ndir
+                return cur
+            end
+        elseif not ndir then
+            return Core.ComputeBeamGrowthVisibleLength(total, data.beamGrowthFrame, data.beamGrowthBaseLen)
+        end
+        if oldDir == nil and ndir then
+            data.beamGrowthDir = ndir
+            return Core.ComputeBeamGrowthVisibleLength(total, data.beamGrowthFrame, data.beamGrowthBaseLen)
+        end
+        local n = growthFrames()
+        data.beamGrowthFrame = math.min(n, (data.beamGrowthFrame or 0) + 1)
+        if ndir then data.beamGrowthDir = ndir end
+        return Core.ComputeBeamGrowthVisibleLength(total, data.beamGrowthFrame, data.beamGrowthBaseLen)
+    end
+
     function Core.RenderGLContinuousBeam(player, data, flareSpr, frame)
         if not (data and data.isFiringContinuousBeam) then
+            -- SPEC-D: al soltar el disparo el proximo haz vuelve a crecer desde 0.
+            if data then Core.ResetBeamGrowth(data) end
             return
         end
         local beamSpr = Core.GetGLContBeamSprite()
@@ -118,6 +194,11 @@ return function(Core)
         local totalScreenLen = screenDelta:Length()
         if totalScreenLen < 4.0 then return end
 
+        -- SPEC-D: solo render — el dano usa el endWorld completo (beam_math intacto);
+        -- aqui el haz crece 0->full en N frames y el flare sigue la punta visible.
+        local visibleLen = Core.UpdateBeamGrowth(data, dir, totalScreenLen)
+        if visibleLen < 4.0 then return end
+
         local screenDir = screenDelta / totalScreenLen
         local screenAngle = screenDir:GetAngleDegrees()
         local thickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
@@ -127,8 +208,8 @@ return function(Core)
         local dist     = Core.ComputeBeamRenderStartSkip(aimingUp, totalScreenLen)
         local animFrame = math.floor(frame / 2) % 4
 
-        while dist < totalScreenLen do
-            local rem = totalScreenLen - dist
+        while dist < visibleLen do
+            local rem = visibleLen - dist
             local xScale = 1.0
             if rem < segWidth then
                 xScale = math.max(0.05, rem / segWidth)
@@ -144,22 +225,23 @@ return function(Core)
             dist = dist + segStep
         end
 
-        -- Render bright emerald construct impact flare at the beam endpoint.
+        -- Render bright emerald construct impact flare at the VISIBLE beam tip.
         -- Guard: skip on very short beams to avoid a bright flare stacked on the player.
-        -- Alpha scales with length: 0 at <=24px, 1 at >=120px, linear in between.
+        -- Alpha scales with VISIBLE length: 0 at <=24px, 1 at >=120px, linear in between.
         local GL_BEAM_FLARE_MIN_DIST = 24.0
         local GL_BEAM_FLARE_FULL_DIST = 120.0
-        if flareSpr and totalScreenLen >= GL_BEAM_FLARE_MIN_DIST then
-            local flareAlpha = (totalScreenLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
+        if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST then
+            local flareAlpha = (visibleLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
             if flareAlpha < 0.0 then
                 flareAlpha = 0.0
             elseif flareAlpha > 1.0 then
                 flareAlpha = 1.0
             end
+            local flarePos = startScreen + screenDir * visibleLen
             flareSpr:SetFrame("RingFlare", math.floor(frame / 2) % 4)
             flareSpr.Scale = Vector(0.95 * thickness, 0.95 * thickness)
             flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha, 0.15, 0.50, 0.18)
-            flareSpr:Render(endScreen, Vector.Zero, Vector.Zero)
+            flareSpr:Render(flarePos, Vector.Zero, Vector.Zero)
         end
     end
 
