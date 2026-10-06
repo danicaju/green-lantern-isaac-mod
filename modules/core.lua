@@ -46,6 +46,10 @@ Core.HAL_CONTINUOUS_BEAM_DMG_MULT  = 0.35
 Core.DISCRETE_BEAM_DMG_MULT        = 0.60
 Core.HAL_CONTINUOUS_TICK_FRAMES    = 4
 Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
+-- SPEC-D: crecimiento fluido del rayo continuo (solo render, estilo Brimstone).
+-- El haz visible crece 0->full en N frames al iniciar/cambiar de direccion.
+-- Raycast/dano/tick-rate intactos (viven en beam_math.lua con el endWorld completo).
+Core.CONTINUOUS_BEAM_GROWTH_FRAMES = 10
 
 -- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con
 -- el calculo de modules/shield.lua (base 0.25, +0.05/Luck, cap 0.75). Las dos
@@ -148,6 +152,12 @@ function Core.GetPlayerData(player)
             spawningContinuousBeam       = false,
             continuousLaser              = nil,
             continuousBeamGraceTimer     = 0,
+            -- SPEC-D: crecimiento fluido del rayo (solo render, por jugador, nunca global).
+            -- beamGrowthDir es el lastBeamDir del crecimiento; beamGrowthBaseLen la
+            -- longitud visible desde la que se reinicia tras un giro >~30 grados.
+            beamGrowthFrame              = 0,
+            beamGrowthDir                = nil,
+            beamGrowthBaseLen            = 0.0,
             allowingTapTear              = false,
             emeraldSparks       = 0.0,
             stolenRings         = 0,
