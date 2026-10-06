@@ -4,6 +4,18 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### W2 — Haz corto contra muro: no se dibuja (solo render)
+- `modules/core.lua`: `CONTINUOUS_BEAM_MIN_RENDER_LEN = 44.0` (SECTION 1).
+- `modules/fx_beam.lua`: en `RenderGLContinuousBeam`, si `totalScreenLen`
+  < mínimo no se dibuja ningún segmento ni flare de impacto (evita el pegote
+  sobre el jugador al disparar pegado a un muro). El daño por tick usa el
+  `endWorld` completo (`beam_math.lua` sin diff, `firing_mode.lua` intacto);
+  flare de la mano y umbral flare <24px intactos; crecimiento SPEC-D intacto.
+- Harness nuevo `tools/test_beam_short_wall.lua` 24/24 (<umbral no dibuja /
+  >=umbral dibuja / daño no llamado / haz largo+crecimiento intactos /
+  flare mano intacto); `tools/test_fx_beam_render_skip.lua` migrado
+  (el caso aim-up 10px ahora espera 0 segmentos por W2; unitarios del skip intactos).
+
 ### W1 — Alas al activar: son del item del jugador (sin código; verificado por grep).
 
 ### SPEC-B — Tap-beam estilo cómic GL (solo sprite, sin Lua)
