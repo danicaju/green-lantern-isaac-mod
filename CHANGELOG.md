@@ -4,6 +4,18 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### SPEC-B — Tap-beam estilo cómic GL (solo sprite, sin Lua)
+- `resources/gfx/effects/gl_ring_beam.png`: filas tap y0-127 redibujadas
+  (núcleo blanco grueso + halo verde 2 capas + estela cómica con dientes,
+  líneas de velocidad y arrowhead, 4 frames con fase); base toda clara
+  (min canal 168 en opacos) para que `Color()` siga tiñendo.
+- Intactos: atlas 64x256, celdas tap 64x32 + pivot (5,16), `.anm2` sin
+  cambios (40 anims Idle/RegularTear*/BloodTear*/Rotate* a crops válidos),
+  filas y128-255 (ContinuousBeam) byte-idénticas, cero cambios Lua
+  (`EnforceRingBeamTearSprite`/`glBeamScale`/`ring_aim.lua` sin tocar).
+- Harness `tools/test_tap_beam_sprite.py` 117/117 + fuente reproducible
+  `tools/gen_tap_beam_sprite.py`.
+
 ### SPEC-D — Rayo continuo con crecimiento fluido estilo Brimstone (solo render)
 - `modules/core.lua`: `CONTINUOUS_BEAM_GROWTH_FRAMES = 10` + estado por jugador
   `beamGrowthFrame/beamGrowthDir(lastBeamDir)/beamGrowthBaseLen` en `GetPlayerData`
