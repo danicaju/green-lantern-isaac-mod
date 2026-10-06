@@ -192,7 +192,10 @@ return function(Core)
 
         local screenDelta = endScreen - startScreen
         local totalScreenLen = screenDelta:Length()
-        if totalScreenLen < 4.0 then return end
+        -- SPEC-W2 (solo render): bajo el minimo no se dibuja ningun segmento.
+        -- El dano usa el endWorld completo; el flare de la mano se pinta aparte.
+        local minRenderLen = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or 44.0
+        if totalScreenLen < minRenderLen then return end
 
         -- SPEC-D: solo render — el dano usa el endWorld completo (beam_math intacto);
         -- aqui el haz crece 0->full en N frames y el flare sigue la punta visible.
