@@ -61,6 +61,9 @@ Core.HAL_CONTINUOUS_WILL_DRAIN = 0.06
 -- SPEC-D: el haz crece 0->full en N renders; el harness calienta la rampa
 -- antes de asertar posiciones (ver runRender).
 Core.CONTINUOUS_BEAM_GROWTH_FRAMES = 10
+-- SPEC-W2: espejo de SECTION 1 (modules/core.lua). El stub no carga core.lua;
+-- sin esta linea el early-out tiraria del fallback `or 44.0` en vez del valor unico.
+Core.CONTINUOUS_BEAM_MIN_RENDER_LEN = 44.0
 
 -- Captura de renders.
 local renderLog = {}
@@ -235,24 +238,18 @@ if #beamRendersUp > 0 then
           string.format("aim-up largo: primer render debe estar a X>=~14, fue %.3f", firstX))
 end
 
--- Aim-up con haz corto (10px screen) → el haz es más corto que el skip, así que NO se
--- recorta: se dibuja entero. La función ComputeBeamRenderStartSkip devuelve 0 en ese caso.
+-- SPEC-W2 (migrado): haz de 10px contra muro ya NO se dibuja entero — esta por
+-- debajo de Core.CONTINUOUS_BEAM_MIN_RENDER_LEN (~44px) y el early-out de W2
+-- domina (solo render; dano/raycast intactos). La funcion pura
+-- ComputeBeamRenderStartSkip sigue devolviendo 0 en ese caso (ver asserts
+-- unitarios arriba); simplemente RenderGLContinuousBeam retorna antes de usarla.
 runRender(10, true)
 local beamRendersShortUp = 0
 for _, r in ipairs(renderLog) do
     if r.sprite == "Beam" then beamRendersShortUp = beamRendersShortUp + 1 end
 end
-check(beamRendersShortUp > 0,
-       "aim-up con haz<=skip: se dibuja entero (skip devuelve 0; no queda nada recortable)")
-if beamRendersShortUp > 0 then
-    -- Verifica que el primer segmento sí está en X=0 (no se aplicó skip).
-    local firstX = nil
-    for _, r in ipairs(renderLog) do
-        if r.sprite == "Beam" then firstX = r.pos.X; break end
-    end
-    check(firstX ~= nil and firstX < 0.001,
-          string.format("aim-up haz corto: primer render debe estar en X=0, fue %.3f", firstX or -1))
-end
+check(beamRendersShortUp == 0,
+       "aim-up haz 10px < MIN_RENDER_LEN: 0 segmentos (SPEC-W2, solo render)")
 
 -- Sin aim-up: primer render debe estar exactamente en X=0 (dist inicial 0).
 runRender(200, false)
