@@ -111,19 +111,59 @@ return function(Core)
             end
         end
 
-        -- Power Battery passive held spark (siempre visible mientras Battery en primaria; alpha pulsante suave, sin gate on/off)
-        if Core.ITEM_POWER_BATTERY and player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == Core.ITEM_POWER_BATTERY then
-            local sparkSpr = Core.GetGLSparkSprite()
-            if sparkSpr then
-                sparkSpr:SetFrame("Idle", math.floor(frame / 2) % 4)
-                sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.45 + 0.25 * (1 - math.abs((frame % 48) / 24 - 1)), 0.10, 0.50, 0.15)
-                sparkSpr.Scale = Vector(0.65, 0.65)
-                -- Orbita rectangular alrededor del jugador. Antes: Vector(cos(0.2t)*14, -18 + sin(0.2t)*6)
-                local bx = ((frame % 28) - 14) * (14 / 14)
-                local by = ((frame % 14) - 7) * (6 / 7)
-                local bPos = player.Position + Vector(bx, -18 + by)
-                sparkSpr:Render(Isaac.WorldToScreen(bPos) + rOffset, Vector.Zero, Vector.Zero)
-            end
+    end
+
+    -- Power Battery construct orbital with Green Lantern emblem
+    -- Orbits fluently around player's waist/torso in 2.5D perspective with depth sorting:
+    -- - isBehind == true: renders when oy < 0 (behind player, called from MC_PRE_PLAYER_RENDER)
+    -- - isBehind == false: renders when oy >= 0 (in front of player, called from MC_POST_PLAYER_RENDER)
+    -- - isBehind == nil: fallback if MC_PRE_PLAYER_RENDER is unavailable
+    function Core.RenderGLBatteryOrbital(player, renderOffset, isBehind)
+        if not player then return end
+        if not Core.ITEM_POWER_BATTERY or Core.ITEM_POWER_BATTERY < 0 then
+            Core.LoadItemIDs()
         end
+        if not Core.ITEM_POWER_BATTERY or Core.ITEM_POWER_BATTERY < 0 then return end
+
+        local hasBattery = false
+        if player.HasCollectible and player:HasCollectible(Core.ITEM_POWER_BATTERY) then
+            hasBattery = true
+        elseif player.GetActiveItem and (player:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == Core.ITEM_POWER_BATTERY
+               or (ActiveSlot.SLOT_POCKET and player:GetActiveItem(ActiveSlot.SLOT_POCKET) == Core.ITEM_POWER_BATTERY)) then
+            hasBattery = true
+        end
+        if not hasBattery then return end
+
+        local getSprite = Core.GetGLBatteryOrbitalSparkSprite or Core.GetGLSparkSprite
+        local sparkSpr = getSprite and getSprite()
+        if not sparkSpr then return end
+
+        local data = Core.GetPlayerData(player)
+        local frame = Game():GetFrameCount()
+        local rOffset = renderOffset or Vector.Zero
+
+        -- Smooth continuous angle: advances smoothly at 60Hz via batteryOrbitAngle, or continuous frame angle
+        local angle = (data and data.batteryOrbitAngle) or (frame * 0.05)
+
+        -- Elliptical orbit matching Isaac's 2.5D perspective
+        local radX = 32.0
+        local radY = 18.0
+        local ox = math.cos(angle) * radX
+        local oy = math.sin(angle) * radY
+
+        -- Depth check: top half (oy < 0) is behind player, bottom half (oy >= 0) is in front of player
+        local isBehindOrbit = (oy < 0)
+        if isBehind == true and not isBehindOrbit then return end
+        if isBehind == false and isBehindOrbit then return end
+
+        -- Set sprite animation and render
+        sparkSpr:SetFrame("Idle", math.floor(frame / 3) % 4)
+        sparkSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0.08, 0.35, 0.12)
+        sparkSpr.Scale = Vector(0.70, 0.70)
+
+        -- Center around player's waist/torso (Y: -14)
+        local orbitalPos = player.Position + Vector(ox, -14 + oy)
+        local screenPos = Isaac.WorldToScreen(orbitalPos) + rOffset
+        sparkSpr:Render(screenPos, Vector.Zero, Vector.Zero)
     end
 end

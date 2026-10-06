@@ -11,6 +11,9 @@ return function(Core)
       end
       Core.RenderGLPlayerAura(player)
       Core.RenderGLSolidShieldBehind(player, renderOffset)
+      if Core.RenderGLBatteryOrbital then
+        Core.RenderGLBatteryOrbital(player, renderOffset, true)
+      end
       if Core.IsRingActive(player) then
         local data = Core.GetPlayerData(player)
         if Core.IsPlayerAimingUpForRender(player, data) then
@@ -34,8 +37,14 @@ return function(Core)
     if not ModCallbacks.MC_PRE_PLAYER_RENDER then
       Core.RenderGLPlayerAura(player)
       Core.RenderGLSolidShieldBehind(player, renderOffset)
+      if Core.RenderGLBatteryOrbital then
+        Core.RenderGLBatteryOrbital(player, renderOffset, nil)
+      end
     end
     Core.RenderGLSolidShieldFront(player, renderOffset)
+    if ModCallbacks.MC_PRE_PLAYER_RENDER and Core.RenderGLBatteryOrbital then
+      Core.RenderGLBatteryOrbital(player, renderOffset, false)
+    end
     Core.RenderGLActiveItemAndTrinketEffects(player, renderOffset)
     if not Core.IsRingActive(player) then return end
     local data = Core.GetPlayerData(player)
@@ -71,6 +80,22 @@ return function(Core)
         imVars.editModes = true
       end
     end
+
+    local isPaused = false
+    pcall(function() isPaused = Game():IsPaused() end)
+    if not isPaused then
+      local TWO_PI = math.pi * 2
+      for i = 0, Game():GetNumPlayers() - 1 do
+        local p = Isaac.GetPlayer(i)
+        if p then
+          local d = Core.GetPlayerData(p)
+          if d then
+            d.batteryOrbitAngle = ((d.batteryOrbitAngle or 0) + 0.035) % TWO_PI
+          end
+        end
+      end
+    end
+
     for i = 0, Game():GetNumPlayers() - 1 do
       local p = Isaac.GetPlayer(i)
       if p and (Core.IsHalJordan(p) or Core.IsTaintedHal(p)) then

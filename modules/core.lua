@@ -174,6 +174,7 @@ function Core.GetPlayerData(player)
             ringFlareTimer      = 0,
             lastRingHandOffset  = Vector(18, -14),
             batteryConstructTimer = 0,
+            batteryOrbitAngle    = 0.0,
             shieldDeflectTimer    = 0,
             fearSkullTimer        = 0,
             lastCollectibleCount = -1,

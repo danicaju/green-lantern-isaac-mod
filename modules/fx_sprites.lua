@@ -108,6 +108,7 @@ return function(Core)
     local glAuraSprite             = nil
     local glFlareSprite            = nil
     local glSparkSprite            = nil
+    local glBatteryOrbitalSparkSprite = nil -- dedicated to Power Battery construct orbital
     local glContBeamSprite         = nil
     local glSolidShieldOrbitalSprite = nil  -- dedicated to "Orbit"/"Deflect" animations
     local glSolidShieldAuraSprite    = nil  -- dedicated to "Aura" animation
@@ -164,6 +165,20 @@ return function(Core)
             end
         end
         return glSparkSprite
+    end
+
+    function Core.GetGLBatteryOrbitalSparkSprite()
+        if not glBatteryOrbitalSparkSprite and Sprite then
+            local s = Sprite()
+            local ok = pcall(function()
+                s:Load("gfx/effects/gl_lantern_spark.anm2", true)
+                s:Play("Idle", true)
+            end)
+            if ok then
+                glBatteryOrbitalSparkSprite = s
+            end
+        end
+        return glBatteryOrbitalSparkSprite
     end
 
     -- Two separate sprite instances for the shield so the aura and the orbital
