@@ -1,5 +1,17 @@
 -- modules/fx_shield_items.lua -- RSI: render de escudo solido + efectos de items/trinkets. Sin callbacks, todo via Core.
 return function(Core)
+    -- Duracion canonica del flash Deflect (frames). El valor manda en shield.lua;
+    -- aqui solo se usa para mapear timer -> frame 0-3. Timers heredados mayores se clampan.
+    local DEFLECT_DURATION = 12
+
+    -- Transicion de animacion orbital sin parpadeo: todo cambio va via Play
+    -- (Deflect tiene Loop=false; volver con SetFrame dejaba el ultimo frame congelado).
+    local function EnsureOrbitalAnim(orbitalSpr, data, name)
+        if data.shieldOrbitalAnim ~= name then
+            orbitalSpr:Play(name, true)
+            data.shieldOrbitalAnim = name
+        end
+    end
     function Core.RenderGLSolidShieldBehind(player, renderOffset)
         if not (player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
         local data = Core.GetPlayerData(player)
@@ -34,10 +46,15 @@ return function(Core)
         local shieldPos = Core.GetShieldOrbitPos(player, data) or (player.Position + Vector(36, 0))
         local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
+        -- Orbital siempre en Front (MC_POST_PLAYER_RENDER). SetFrame solo
+        -- intra-animacion para el frame determinista.
         if isDeflecting then
-            local defFrame = math.min(3, math.max(0, math.floor((12 - (data.shieldDeflectTimer or 0)) / 3)))
+            EnsureOrbitalAnim(orbitalSpr, data, "Deflect")
+            local clampedTimer = math.min(DEFLECT_DURATION, data.shieldDeflectTimer or 0)
+            local defFrame = math.min(3, math.max(0, math.floor((DEFLECT_DURATION - clampedTimer) / 3)))
             orbitalSpr:SetFrame("Deflect", defFrame)
         else
+            EnsureOrbitalAnim(orbitalSpr, data, "Orbit")
             orbitalSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
         end
         orbitalSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
