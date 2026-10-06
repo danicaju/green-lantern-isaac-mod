@@ -50,9 +50,12 @@ Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
 -- El haz visible crece 0->full en N frames al iniciar/cambiar de direccion.
 -- Raycast/dano/tick-rate intactos (viven en beam_math.lua con el endWorld completo).
 Core.CONTINUOUS_BEAM_GROWTH_FRAMES = 10
--- SPEC-W2: haz corto contra muro (solo render). Bajo este minimo en pantalla
--- no se dibuja ningun segmento. Dano/raycast intactos (viven en beam_math.lua).
-Core.CONTINUOUS_BEAM_MIN_RENDER_LEN = 44.0
+-- Minimo en pantalla para disparar/dibujar el haz (~4px umbral degenerado).
+-- Permite disparar pegado al muro sin bloquearse. Por debajo de SHORT_THIN_LEN
+-- el grosor se clampa a <=1.0 para no tapar la cara.
+Core.CONTINUOUS_BEAM_MIN_RENDER_LEN = 4.0
+-- Bajo esta longitud el haz corto se dibuja fino (clamp <=1.0).
+Core.CONTINUOUS_BEAM_SHORT_THIN_LEN = 44.0
 
 -- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con
 -- el calculo de modules/shield.lua (base 0.25, +0.05/Luck, cap 0.75). Las dos

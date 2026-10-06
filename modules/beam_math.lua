@@ -75,7 +75,15 @@ return function(Core)
     end
 
     -- Minimum beam world-distance (used for degenerate cases: started in wall, never entered room, bisect floor).
-    local MIN_BEAM_DIST = 12.0
+    local MIN_BEAM_DIST = 8.0
+
+    -- Si startWorld cayo fuera de la sala por el offset de la mano pegado al muro,
+    -- lo ajustamos al borde interior de la sala para garantizar origen visible.
+    if room.GetClampedPosition and room.IsPositionInRoom and not room:IsPositionInRoom(startWorld, 0) then
+      pcall(function()
+        startWorld = room:GetClampedPosition(startWorld, 2.0)
+      end)
+    end
 
     local function IsWallAt(p)
       if room.IsPositionInRoom and not room:IsPositionInRoom(p, 0) then

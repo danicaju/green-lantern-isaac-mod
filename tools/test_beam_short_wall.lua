@@ -1,8 +1,8 @@
 -- tools/test_beam_short_wall.lua
--- SPEC-W2: haz corto contra muro, solo render (sin tocar dano).
--- Si totalScreenLen < CONTINUOUS_BEAM_MIN_RENDER_LEN (~40-48px) no se dibuja
--- ningun segmento ni flare de impacto; el dano por tick (beam_math),
--- el flare de la mano y el umbral flare <24px quedan intactos.
+-- SPEC-X1: haz visible pegado al muro (solo render, sin tocar dano).
+-- MIN_RENDER_LEN ~20px: 20-43px dibuja fino (grosor <=1.0, sin tapar cara),
+-- <20px no dibuja nada. Dano/raycast (beam_math), flare de impacto <24px,
+-- flare de la mano, crecimiento SPEC-D y skip aim-up intactos.
 -- Compatible Lua 5.1 (mismo flavor que el juego).
 
 -- ===================== SHIMS =====================
@@ -67,8 +67,9 @@ local flareSpr = makeStubSprite("Flare")
 Core.GetGLContBeamSprite = function() return beamSpr end
 Core.GetGLAuraSprites = function() return nil, flareSpr end
 Core.GetGLSparkSprite = function() return nil end
+local _isTainted = false
 if not Core.IsHalJordan then Core.IsHalJordan = function() return true end end
-if not Core.IsTaintedHal then Core.IsTaintedHal = function() return false end end
+Core.IsTaintedHal = function() return _isTainted end
 local _upOverride = false
 if not Core.IsAimingUp then Core.IsAimingUp = function() return _upOverride end end
 if not Core.GetRingHandOffset then Core.GetRingHandOffset = function() return Vector(0, 0) end end
@@ -96,13 +97,14 @@ local function setWorldLen(px)
     end
 end
 
-local function freshFiringData()
+local function freshFiringData(opts)
+    opts = opts or {}
     local data = {
         isFiringContinuousBeam = true,
         lastShootDir = Vector.new(1, 0),
         lastRingHandOffset = Vector.new(0, 0),
-        overcharge = false,
-        surgeBuff = false,
+        overcharge = opts.overcharge or false,
+        surgeBuff = opts.surgeBuff or false,
         beamGrowthFrame = 0,
         beamGrowthDir = nil,
         beamGrowthBaseLen = 0.0,
@@ -126,34 +128,70 @@ local function growthN()
     return math.floor(Core.CONTINUOUS_BEAM_GROWTH_FRAMES or 10)
 end
 
+local function warmBeam(data, px, extra)
+    setWorldLen(px)
+    for _ = 1, growthN() + (extra or 0) do renderBeam(data, 0) end
+    return renderBeam(data, 0)
+end
+
+local function allThin(beams)
+    for _, b in ipairs(beams) do
+        if b.scale.Y > 1.0 + 1e-6 then return false end
+    end
+    return true
+end
+
+local function anyThick(beams)
+    for _, b in ipairs(beams) do
+        if b.scale.Y > 1.0 + 1e-6 then return true end
+    end
+    return false
+end
+
 -- ===================== TESTS =====================
--- 1) Constante SECTION 1 en Core, rango ~40-48px.
+-- 1) Constante SECTION 1 en Core, ~4px (visible pegado al muro).
 check(Core.CONTINUOUS_BEAM_MIN_RENDER_LEN ~= nil,
     "Core.CONTINUOUS_BEAM_MIN_RENDER_LEN existe (SECTION 1)")
 local MINL = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or -1
-check(type(MINL) == "number" and MINL >= 40 and MINL <= 48,
-    string.format("MIN_RENDER_LEN en [40,48], fue %s", tostring(MINL)))
+check(type(MINL) == "number" and MINL >= 3 and MINL <= 5,
+    string.format("MIN_RENDER_LEN en [3,5] (~4), fue %s", tostring(MINL)))
 
--- 2) Haz corto (< umbral) no dibuja nada, ni siquiera tras N frames.
+-- 2) Haz degenerado (< 3px) no dibuja nada.
 do
-    setWorldLen(MINL - 8)
+    setWorldLen(2.0)
     local d = freshFiringData()
     local beams1, flares1 = renderBeam(d, 0)
-    check(#beams1 == 0, "haz corto: 0 segmentos en el primer frame")
-    check(#flares1 == 0, "haz corto: sin flare de impacto")
+    check(#beams1 == 0, "haz <MIN: 0 segmentos en el primer frame")
+    check(#flares1 == 0, "haz <MIN: sin flare de impacto")
     for _ = 1, growthN() + 2 do renderBeam(d, 0) end
     local beamsN, flaresN = renderBeam(d, 0)
-    check(#beamsN == 0, "haz corto: 0 segmentos tras N+ frames (no aparece de golpe)")
-    check(#flaresN == 0, "haz corto: sin flare de impacto tras N+ frames")
+    check(#beamsN == 0, "haz <MIN: 0 segmentos tras N+ frames")
+    check(#flaresN == 0, "haz <MIN: sin flare de impacto tras N+ frames")
 end
 
--- 3) En el umbral (>= MIN) si dibuja (tras calentar la rampa de crecimiento).
+-- 3) Pegado al muro (8px, 15px, 20px, 30px, 43px) SI dibuja (fino <=1.0).
 do
-    setWorldLen(MINL)
-    local d = freshFiringData()
-    for _ = 1, growthN() do renderBeam(d, 0) end
-    local beams, _ = renderBeam(d, 0)
-    check(#beams > 0, "haz == umbral: dibuja al menos un segmento")
+    for _, px in ipairs({ 8.0, 15.0, 20.0, 30.0, 43.0 }) do
+        local d = freshFiringData()
+        local beams, _ = warmBeam(d, px)
+        check(#beams > 0, string.format("haz %gpx pegado al muro: dibuja al menos un segmento", px))
+        check(allThin(beams), string.format("haz %gpx: grosor <=1.0 en todos los segmentos (no tapa cara)", px))
+    end
+    -- Con overcharge/surge/tainted el corto sigue fino (clamp solo render).
+    local dOc = freshFiringData({ overcharge = true })
+    local beamsOc, _ = warmBeam(dOc, 30.0)
+    check(#beamsOc > 0, "haz 30px overcharge: dibuja")
+    check(allThin(beamsOc), "haz 30px overcharge: grosor <=1.0 (clamp corto)")
+    _isTainted = true
+    local dTa = freshFiringData()
+    local beamsTa, _ = warmBeam(dTa, 30.0)
+    check(#beamsTa > 0, "haz 30px tainted: dibuja")
+    check(allThin(beamsTa), "haz 30px tainted: grosor <=1.0 (clamp corto)")
+    _isTainted = false
+    -- Haz largo con overcharge conserva su grosor (>1.0): el clamp es solo corto.
+    local dLong = freshFiringData({ overcharge = true })
+    local beamsLong, _ = warmBeam(dLong, 200.0)
+    check(anyThick(beamsLong), "haz 200px overcharge: grosor >1.0 intacto (clamp solo 20-44px)")
 end
 
 -- 4) Dano por tick intacto: beam_math sin diff, fx_beam no dana.
@@ -174,13 +212,16 @@ do
     end
 end
 
--- 5) Haz largo + crecimiento intactos.
+-- 5) Haz largo + crecimiento intactos (SPEC-D).
 do
     check(type(Core.CONTINUOUS_BEAM_GROWTH_FRAMES) == "number", "CONTINUOUS_BEAM_GROWTH_FRAMES existe")
     local N = growthN()
     check(N >= 8 and N <= 12, string.format("GROWTH_FRAMES en [8,12], fue %s", tostring(N)))
     check(type(Core.ComputeBeamGrowthVisibleLength) == "function", "ComputeBeamGrowthVisibleLength intacto")
     check(type(Core.UpdateBeamGrowth) == "function", "UpdateBeamGrowth intacto")
+    check(type(Core.ComputeBeamRenderStartSkip) == "function", "ComputeBeamRenderStartSkip intacto (skip aim-up)")
+    check(Core.ComputeBeamRenderStartSkip(false, 100) == 0, "skip: no aim-up -> 0")
+    check(Core.ComputeBeamRenderStartSkip(true, 200) > 0, "skip: aim-up largo -> >0")
     setWorldLen(200.0)
     local d = freshFiringData()
     local beams1, _ = renderBeam(d, 0)
@@ -196,14 +237,24 @@ do
     end
 end
 
--- 6) Umbral flare <24px intacto + flare de mano intacto con haz corto.
+-- 6) Flare de impacto en muro (visible >=8px) y flare de mano intacto.
 do
     setWorldLen(200.0)
     local d = freshFiringData()
     local _, flares1 = renderBeam(d, 0)
-    check(#flares1 == 0, "frame 1 (visible<24): sin flare de impacto")
+    check(#flares1 == 0, "frame 1 (visible<8): sin flare de impacto")
+    -- Haz 6px: bajo umbral flare (<8px) -> sin flare de impacto.
+    local d6 = freshFiringData()
+    local beams6, flares6 = warmBeam(d6, 6.0)
+    check(#beams6 > 0, "haz 6px: segmentos visibles")
+    check(#flares6 == 0, "haz 6px (visible<8): sin flare de impacto")
+    -- Haz 20px: flare de impacto visible en el muro.
+    local d20 = freshFiringData()
+    local beams20, flares20 = warmBeam(d20, 20.0)
+    check(#beams20 > 0, "haz 20px full: segmentos visibles")
+    check(#flares20 == 1, "haz 20px full (visible>=8): flare de impacto visible en el muro")
     -- Flare de mano: RenderGLBeamAndFlareForPlayer con haz corto sigue pintando la mano.
-    setWorldLen(MINL - 8)
+    setWorldLen(2.0)
     local d2 = freshFiringData()
     d2.isFiringContinuousBeam = true
     renderLog = {}

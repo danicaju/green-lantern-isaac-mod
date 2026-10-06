@@ -4,6 +4,13 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### SPEC-X1 — Haz visible pegado al muro (fino, sin tapar la cara)
+- Pegado a un muro el haz continuo ahora sí se ve (antes desaparecía por
+  debajo de ~44px); de cerca se dibuja fino para no tapar la cara, de lejos
+  conserva su grosor (tainted/overcharge/surge intactos).
+- Solo render: daño/raycast, flare de la mano, umbral de flare y crecimiento
+  intactos. Harness `tools/test_beam_short_wall.lua` 41/41.
+
 ### W4 — Icono activa grande: slot fijo del engine (sin código; verificado sin API de resize/repos).
 
 ### W2 — Haz corto contra muro: no se dibuja (solo render)

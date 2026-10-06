@@ -25,10 +25,8 @@ return function(Core)
   end
 
   local function ReflectChance(player)
-    return math.min(
-      Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK,
-      Core.SHIELD_REFLECT_MAX
-    )
+    local chance = math.min(Core.SHIELD_REFLECT_BASE + player.Luck * Core.SHIELD_REFLECT_PER_LUCK, Core.SHIELD_REFLECT_MAX)
+    return chance
   end
 
   -- Active orbital construct shield: rotation, enemy projectile deflection, and contact construct damage

@@ -8,14 +8,17 @@ return function(Core)
     -- (Deflect tiene Loop=false; volver con SetFrame dejaba el ultimo frame congelado).
     local function EnsureOrbitalAnim(orbitalSpr, data, name)
         if data.shieldOrbitalAnim ~= name then
-            orbitalSpr:Play(name, true)
+            if orbitalSpr.Play then
+                orbitalSpr:Play(name, true)
+            end
             data.shieldOrbitalAnim = name
         end
     end
     function Core.RenderGLSolidShieldBehind(player, renderOffset)
         if not (player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
         local data = Core.GetPlayerData(player)
-        local auraSpr = Core.GetGLSolidShieldAuraSprite()
+        local getAura = Core.GetGLSolidShieldAuraSprite or Core.GetGLSolidShieldSprite
+        local auraSpr = getAura and getAura()
         if not auraSpr then return end
 
         local frame = Game():GetFrameCount()
@@ -36,7 +39,8 @@ return function(Core)
     function Core.RenderGLSolidShieldFront(player, renderOffset)
         if not (player and Core.ITEM_SOLID_LIGHT_SHIELD and Core.ITEM_SOLID_LIGHT_SHIELD > 0 and player:HasCollectible(Core.ITEM_SOLID_LIGHT_SHIELD)) then return end
         local data = Core.GetPlayerData(player)
-        local orbitalSpr = Core.GetGLSolidShieldOrbitalSprite()
+        local getOrbital = Core.GetGLSolidShieldOrbitalSprite or Core.GetGLSolidShieldSprite
+        local orbitalSpr = getOrbital and getOrbital()
         if not orbitalSpr then return end
 
         -- Orbital shield always rendered in MC_POST_PLAYER_RENDER (delante del jugador).

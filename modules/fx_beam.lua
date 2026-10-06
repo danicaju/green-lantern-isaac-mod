@@ -163,6 +163,17 @@ return function(Core)
         return Core.ComputeBeamGrowthVisibleLength(total, data.beamGrowthFrame, data.beamGrowthBaseLen)
     end
 
+    -- SPEC-X1 (solo render): haz corto contra muro fino para no tapar la cara.
+    -- Por debajo de SHORT_THIN_LEN el grosor se clampa a <=1.0; el haz largo
+    -- conserva su grosor (tainted/overcharge/surge intactos).
+    local function clampShortBeamThickness(baseThickness, totalLen)
+        local thinLen = Core.CONTINUOUS_BEAM_SHORT_THIN_LEN or 44.0
+        if totalLen < thinLen and baseThickness > 1.0 then
+            return 1.0
+        end
+        return baseThickness
+    end
+
     function Core.RenderGLContinuousBeam(player, data, flareSpr, frame)
         if not (data and data.isFiringContinuousBeam) then
             -- SPEC-D: al soltar el disparo el proximo haz vuelve a crecer desde 0.
@@ -192,19 +203,19 @@ return function(Core)
 
         local screenDelta = endScreen - startScreen
         local totalScreenLen = screenDelta:Length()
-        -- SPEC-W2 (solo render): bajo el minimo no se dibuja ningun segmento.
-        -- El dano usa el endWorld completo; el flare de la mano se pinta aparte.
-        local minRenderLen = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or 44.0
+        -- Bajo 4px (degenerado) no dibuja; a partir de 4px dibuja incluso pegado al muro.
+        local minRenderLen = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or 4.0
         if totalScreenLen < minRenderLen then return end
 
         -- SPEC-D: solo render — el dano usa el endWorld completo (beam_math intacto);
         -- aqui el haz crece 0->full en N frames y el flare sigue la punta visible.
         local visibleLen = Core.UpdateBeamGrowth(data, dir, totalScreenLen)
-        if visibleLen < 4.0 then return end
+        if visibleLen < 2.0 then return end
 
         local screenDir = screenDelta / totalScreenLen
         local screenAngle = screenDir:GetAngleDegrees()
-        local thickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
+        local baseThickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
+        local thickness = clampShortBeamThickness(baseThickness, totalScreenLen)
         local segWidth = 48.0
         local segStep  = 48.0
         local aimingUp = Core.IsAimingUp(player, dir)
@@ -228,10 +239,8 @@ return function(Core)
             dist = dist + segStep
         end
 
-        -- Render bright emerald construct impact flare at the VISIBLE beam tip.
-        -- Guard: skip on very short beams to avoid a bright flare stacked on the player.
-        -- Alpha scales with VISIBLE length: 0 at <=24px, 1 at >=120px, linear in between.
-        local GL_BEAM_FLARE_MIN_DIST = 24.0
+        -- Render bright emerald construct impact flare at the VISIBLE beam tip on the wall.
+        local GL_BEAM_FLARE_MIN_DIST = 8.0
         local GL_BEAM_FLARE_FULL_DIST = 120.0
         if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST then
             local flareAlpha = (visibleLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
