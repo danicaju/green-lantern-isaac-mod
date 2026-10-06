@@ -4,6 +4,8 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### W4 — Icono activa grande: slot fijo del engine (sin código; verificado sin API de resize/repos).
+
 ### W2 — Haz corto contra muro: no se dibuja (solo render)
 - `modules/core.lua`: `CONTINUOUS_BEAM_MIN_RENDER_LEN = 44.0` (SECTION 1).
 - `modules/fx_beam.lua`: en `RenderGLContinuousBeam`, si `totalScreenLen`
