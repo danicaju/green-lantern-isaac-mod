@@ -24,6 +24,8 @@ Core.PLAYER_TAINTED_HAL       = nil
 -- Balance Hal Jordan (solo via MC_EVALUATE_CACHE en modules/stats.lua).
 Core.HAL_SPEED_BONUS          = 0.15
 Core.HAL_SHOT_SPEED_BONUS     = 0.30
+Core.HAL_WILL_BASE_MULT       = 1.10
+Core.HAL_FIREDELAY_BONUS      = 2
 
 -- Willpower y rayo continuo.
 Core.WILLPOWER_MAX                 = 100.0
@@ -54,8 +56,8 @@ Core.SHIELD_REFLECT_PER_LUCK   = 0.05
 Core.SHIELD_REFLECT_MAX        = 0.75
 
 -- Tainted Hal.
-Core.TAINTED_DMG_MULTIPLIER   = 1.5
-Core.TAINTED_TEARS_PENALTY    = -1.5
+Core.TAINTED_DMG_MULTIPLIER   = 1.35
+Core.TAINTED_TEARS_PENALTY    = -2.0
 Core.TAINTED_FEAR_CHANCE      = 0.25
 Core.MAX_STOLEN_RINGS         = 10
 Core.STOLEN_RING_DMG          = 0.3
