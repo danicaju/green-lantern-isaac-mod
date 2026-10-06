@@ -18,12 +18,13 @@ return function(Core)
 
       if cacheFlag == CacheFlag.CACHE_DAMAGE then
         if not data.ringDepleted then
-          -- While the Power Ring is active, scale damage from 1.00x -> 1.15x (+0.10 peak bonus = 1.25x at 100% Willpower)
+          -- While the Power Ring is active, scale damage along 1.10x -> 1.25x
+          -- (+0.10 extra at full Willpower = 1.35x peak).
           local will = data.willpower or Core.WILLPOWER_MAX
           local willRatio = math.max(0.0, math.min(1.0, will / Core.WILLPOWER_MAX))
-          local willMult = 1.00 + (0.15 * willRatio)
+          local willMult = (Core.HAL_WILL_BASE_MULT or 1.10) + (0.15 * willRatio)
           if will >= 99.5 then
-            willMult = willMult + 0.10 -- 1.25x DMG at 100% Willpower!
+            willMult = willMult + 0.10 -- 1.35x DMG at 100% Willpower!
           end
           player.Damage = player.Damage * willMult
         end
@@ -33,6 +34,14 @@ return function(Core)
       if cacheFlag == CacheFlag.CACHE_SHOTSPEED then
         if not data.ringDepleted then
           player.ShotSpeed = player.ShotSpeed + Core.HAL_SHOT_SPEED_BONUS
+        end
+      end
+
+      if cacheFlag == CacheFlag.CACHE_FIREDELAY then
+        -- SPEC-C: Hal dispara un poco mas lento para que el hold domine al click.
+        -- Solo con el anillo activo: depletado dispara lagrimas normales sin penalizar.
+        if not data.ringDepleted then
+          player.MaxFireDelay = player.MaxFireDelay + (Core.HAL_FIREDELAY_BONUS or 2)
         end
       end
 
@@ -58,7 +67,7 @@ return function(Core)
     -- TAINTED HAL STATS (no passive or active damage scaling from Emblem meter / Coast City)
     if Core.IsTaintedHal(player) then
       if cacheFlag == CacheFlag.CACHE_DAMAGE then
-        player.Damage = player.Damage * Core.TAINTED_DMG_MULTIPLIER
+        player.Damage = player.Damage * (Core.TAINTED_DMG_MULTIPLIER or 1.35)
         local rings = Core.GetPlayerData(player).stolenRings or 0
         if rings > 0 then
           player.Damage = player.Damage + math.min(rings, Core.MAX_STOLEN_RINGS) * Core.STOLEN_RING_DMG
@@ -66,7 +75,7 @@ return function(Core)
       end
 
       if cacheFlag == CacheFlag.CACHE_FIREDELAY then
-        player.MaxFireDelay = math.max(player.MaxFireDelay + math.abs(Core.TAINTED_TEARS_PENALTY) * 3, 6)
+        player.MaxFireDelay = math.max(player.MaxFireDelay + math.abs(Core.TAINTED_TEARS_PENALTY or -2.0) * 3, 6)
       end
 
       if cacheFlag == CacheFlag.CACHE_FLYING then
