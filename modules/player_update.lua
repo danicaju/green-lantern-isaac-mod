@@ -72,7 +72,7 @@ return function(Core)
             end
         end
 
-        if Core.IsHalJordan(player) and data.ringDepleted then
+        if Core.IsHalJordan(player) and (data.ringDepleted or (data.willpower or 0) <= 0) then
             local frame = Game():GetFrameCount()
             if data.lastDepletedRegenFrame ~= frame then
                 data.lastDepletedRegenFrame = frame

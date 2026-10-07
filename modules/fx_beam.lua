@@ -213,6 +213,7 @@ return function(Core)
         if visibleLen < 2.0 then return end
 
         local screenDir = screenDelta / totalScreenLen
+        local screenAngle = (screenDir.GetAngleDegrees and screenDir:GetAngleDegrees()) or (math.atan2(screenDir.Y, screenDir.X) * 180 / math.pi)
         local baseThickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
         if Core.HasBirthright and Core.HasBirthright(player) and Core.IsHalJordan(player) then
             baseThickness = baseThickness * 1.30

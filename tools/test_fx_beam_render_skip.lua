@@ -69,23 +69,33 @@ Core.CONTINUOUS_BEAM_MIN_RENDER_LEN = 44.0
 local renderLog = {}
 local function clearLog() renderLog = {} end
 
--- Stub de sprite que registra cada Render().
+-- Stub de sprite que registra cada Render(). Simula metatable de Sprite de Isaac (Rotation numerico estricto).
 local function makeStubSprite(name)
-    local s = {
+    local raw = {
         _name = name,
         Scale = Vector(1,1),
         Rotation = 0,
         Color = Color(1,1,1,1,0,0,0),
         _frame = nil,
     }
-    function s:SetFrame(n, f) self._frame = n end
+    local s = {}
+    setmetatable(s, {
+        __index = raw,
+        __newindex = function(t, k, v)
+            if k == "Rotation" then
+                assert(type(v) == "number", "Sprite.Rotation must be a number, got " .. type(v))
+            end
+            raw[k] = v
+        end
+    })
+    function s:SetFrame(n, f) raw._frame = n end
     function s:Render(pos, off, src)
         table.insert(renderLog, {
             sprite = name,
             pos = pos,
-            scale = self.Scale,
-            rotation = self.Rotation,
-            frame = self._frame,
+            scale = raw.Scale,
+            rotation = raw.Rotation,
+            frame = raw._frame,
         })
     end
     return s
@@ -262,6 +272,8 @@ if #beamRendersFlat > 0 then
     local firstX = beamRendersFlat[1].pos.X
     check(firstX < 0.001,
           string.format("no aim-up: primer render debe estar en X=0, fue %.3f", firstX))
+    check(type(beamRendersFlat[1].rotation) == "number",
+          string.format("no aim-up: rotation debe ser numerico, fue %s", type(beamRendersFlat[1].rotation)))
 end
 
 -- Aim-up con haz 60 → primer render debe estar en X >= ~14 (no en 0).
