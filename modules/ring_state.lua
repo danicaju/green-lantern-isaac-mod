@@ -79,10 +79,17 @@ return function(Core)
             Core.SetEntityScaleAndColor(fx, 0.65, Color(0.2, 1.0, 0.4, 0.9, 0.15, 0.65, 0.2))
         end)
         pcall(function()
-            player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
-            player:EvaluateItems()
+            if CacheFlag then
+                player:AddCacheFlags(CacheFlag.CACHE_FLYING)
+                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+                player:AddCacheFlags(CacheFlag.CACHE_SHOTSPEED)
+                player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
+                player:EvaluateItems()
+            end
         end)
-        Core.RefreshCharacterCostume(player)
+        if Core.RefreshCharacterCostume then
+            Core.RefreshCharacterCostume(player)
+        end
     end
 
     -- Restore Hal Jordan's Green Lantern Ring power and cleanly reset shooting state so discrete left-click beams fire straight & true
@@ -90,7 +97,7 @@ return function(Core)
         if not player or not Core.IsHalJordan(player) then return end
         local data = Core.GetPlayerData(player)
         local wasDepleted = data.ringDepleted
-        local willpowerMax = Core.WILLPOWER_MAX or 100.0
+        local willpowerMax = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX or 100.0
         data.willpower    = math.max(0.0, math.min(willpowerMax, newWillpower or willpowerMax))
         data.ringDepleted = (data.willpower <= 0)
         if wasDepleted and not data.ringDepleted then
@@ -121,7 +128,14 @@ return function(Core)
                         local td = tear:GetData()
                         local spawner = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
                         if spawner and spawner.Index == player.Index and not (td and (td.isGLRingBeam or td.isGiantFist)) then
-                            tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
+                            if tear.AddTearFlags then
+                                tear:AddTearFlags(TearFlags.TEAR_PIERCING)
+                                tear:AddTearFlags(TearFlags.TEAR_SPECTRAL)
+                            elseif tear.TearFlags then
+                                pcall(function()
+                                    tear.TearFlags = tear.TearFlags + (TearFlags and TearFlags.TEAR_PIERCING or 0) + (TearFlags and TearFlags.TEAR_SPECTRAL or 0)
+                                end)
+                            end
                             local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
                             Core.ApplyRingBeamSprite(tear, baseScale * math.sqrt(sizeFactor))
                         end
@@ -139,12 +153,19 @@ return function(Core)
             end)
         end
         pcall(function()
-            player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
-            player:EvaluateItems()
+            if CacheFlag then
+                player:AddCacheFlags(CacheFlag.CACHE_FLYING)
+                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+                player:AddCacheFlags(CacheFlag.CACHE_SHOTSPEED)
+                player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
+                player:EvaluateItems()
+            end
         end)
-        if Core.CanUseContinuousBeam(player) then
+        if Core.CanUseContinuousBeam and Core.CanUseContinuousBeam(player) then
             player.FireDelay = math.max(player.FireDelay or 0, 2)
         end
-        Core.RefreshCharacterCostume(player)
+        if Core.RefreshCharacterCostume then
+            Core.RefreshCharacterCostume(player)
+        end
     end
 end

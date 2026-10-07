@@ -10,11 +10,13 @@ return function(Core)
     if itemID ~= Core.ITEM_GATLING then return end
 
     local data = Core.GetPlayerData(player)
-    data.gatlingTimer = Core.GATLING_DURATION or 300
+    local hasCarBattery = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CAR_BATTERY) or 356)
+    local baseDuration = Core.GATLING_DURATION or 300
+    data.gatlingTimer = hasCarBattery and math.floor(baseDuration * 1.5) or baseDuration
     data.ringFlareTimer = 20
 
     -- Floating text indicator
-    data.oathText = "GATLING OVERCHARGE!"
+    data.oathText = hasCarBattery and "GATLING EXTENDED BARRAGE!" or "GATLING OVERCHARGE!"
     data.oathTextTimer = 45
 
     pcall(function()
@@ -25,8 +27,12 @@ return function(Core)
     player:AnimateHappy()
 
     -- Re-evaluate fire delay and tear flags immediately
-    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG | CacheFlag.CACHE_SHOTSPEED)
-    player:EvaluateItems()
+    if CacheFlag then
+      player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
+      player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
+      player:AddCacheFlags(CacheFlag.CACHE_SHOTSPEED)
+      player:EvaluateItems()
+    end
 
     return true
   end)
@@ -40,8 +46,12 @@ return function(Core)
           data.gatlingTimer = data.gatlingTimer - 1
           if data.gatlingTimer == 0 then
             -- Reset stats cleanly when timer expires
-            player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG | CacheFlag.CACHE_SHOTSPEED)
-            player:EvaluateItems()
+            if CacheFlag then
+              player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
+              player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
+              player:AddCacheFlags(CacheFlag.CACHE_SHOTSPEED)
+              player:EvaluateItems()
+            end
           end
         end
       end
@@ -59,7 +69,14 @@ return function(Core)
     if data and data.gatlingTimer and data.gatlingTimer > 0 then
       if not Core.IsRingActive(player) then
         tear:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.08, 0.65, 0.12)
-        tear.TearFlags = tear.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+        if tear.AddTearFlags then
+          tear:AddTearFlags(TearFlags.TEAR_SPECTRAL)
+          tear:AddTearFlags(TearFlags.TEAR_PIERCING)
+        elseif tear.TearFlags then
+          pcall(function()
+            tear.TearFlags = tear.TearFlags + (TearFlags and TearFlags.TEAR_SPECTRAL or 0) + (TearFlags and TearFlags.TEAR_PIERCING or 0)
+          end)
+        end
         pcall(function()
           local vol = (Core.SFX_VOLUME_MULT or 1.0)
           local pitch = 1.1 + (math.random() * 0.3)

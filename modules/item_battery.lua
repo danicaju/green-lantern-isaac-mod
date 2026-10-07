@@ -16,24 +16,26 @@ return function(Core)
     data.batteryConstructTimer = 45
     data.ringFlareTimer = 20
 
+    local hasCarBattery = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CAR_BATTERY) or 356)
+
     pcall(function()
       SFXManager():Play(SoundEffect.SOUND_BATTERYCHARGE, 1.0, 0, false, 1.0)
       SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER, 0.85, 0, false, 1.2)
       local shock = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.HALO, 0, player.Position, Vector.Zero, player)
       if shock then
         shock:GetSprite().Color = Color(0.15, 1.0, 0.35, 0.9, 0.1, 0.7, 0.15)
-        shock.Scale = 1.8
+        shock.Scale = hasCarBattery and 2.6 or 1.8
       end
     end)
 
     local statusMsg = "WILLPOWER RESTORED!"
     if Core.IsHalJordan(player) then
       local vol = (Core.SFX_VOLUME_MULT or 1.0)
-      if (not wasDepleted) and prevWill >= Core.OVERCHARGE_T2_THRESHOLD then
+      if hasCarBattery or ((not wasDepleted) and prevWill >= Core.OVERCHARGE_T2_THRESHOLD) then
         data.overcharge = true
         data.overchargeTier = 2
         data.surgeBuff = false
-        statusMsg = "OVERCHARGE MAX! (+25% DMG)"
+        statusMsg = hasCarBattery and "CAR BATTERY DUAL OVERCHARGE! (+25% DMG)" or "OVERCHARGE MAX! (+25% DMG)"
         pcall(function()
           local sfx = (SoundEffect and SoundEffect.SOUND_HOLY) or 0
           if sfx > 0 then SFXManager():Play(sfx, 0.95 * vol, 0, false, 1.30) end
@@ -53,7 +55,11 @@ return function(Core)
         data.surgeBuff = true
       end
       local maxWillTarget = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
-      Core.RestoreHalRingPower(player, maxWillTarget, statusMsg)
+      if Core.RestoreHalRingPower then
+        Core.RestoreHalRingPower(player, maxWillTarget, statusMsg)
+      else
+        data.willpower = maxWillTarget
+      end
       -- T5: juramento poetico "IN BRIGHTEST DAY..." tras el refill (Hal).
       -- Convive con el statusMsg mecanico (que RestoreHalRingPower usa solo
       -- en reboot real via ring_state.lua); aqui siempre se sobreescribe el
@@ -105,8 +111,11 @@ return function(Core)
       refillAmount = 25.0
     end
     local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
-    local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
-    Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
+    if Core.RestoreHalRingPower then
+      Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
+    else
+      data.willpower = newWill
+    end
     pcall(function()
       local vol = (Core.SFX_VOLUME_MULT or 1.0)
       local sfx = (SoundEffect and SoundEffect.SOUND_BATTERYCHARGE) or 0

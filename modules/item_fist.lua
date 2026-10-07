@@ -36,7 +36,15 @@ return function(Core)
       direction = direction:Normalized()
     end
 
-    local spawnOffset  = Core.GetRingBeamTearSpawnOffset(player, direction)
+    local hasCarBattery = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CAR_BATTERY) or 356)
+    local frame = Game():GetFrameCount()
+    local data = Core.GetPlayerData(player)
+    local isSecondFist = (data.lastCarFistFrame == frame)
+    data.lastCarFistFrame = frame
+    local perp = Vector(-direction.Y, direction.X)
+    local lateral = isSecondFist and (perp * 22) or (hasCarBattery and (perp * -22) or Vector.Zero)
+
+    local spawnOffset  = Core.GetRingBeamTearSpawnOffset(player, direction) + lateral
     local fistVelocity = direction * 20.0
     local tearVar      = (TearVariant and TearVariant.TOOTH) or 0
     local ent = Isaac.Spawn(

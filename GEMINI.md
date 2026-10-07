@@ -11,11 +11,11 @@
 
 ### Rule 1: Automated Unit Testing
 Whenever any Lua file in `main.lua` or `modules/*.lua` is modified:
-- Run all 25 unit tests using `lua.exe`:
+- Run all 26 unit tests using `lua.exe`:
   ```powershell
   Get-ChildItem tools/test_*.lua | ForEach-Object { $out = & "lua.exe" $_.FullName 2>&1; if ($LASTEXITCODE -ne 0) { Write-Host "FAILED: $($_.Name)"; Write-Host $out } else { Write-Host "PASSED: $($_.Name)" } }
   ```
-- All 25 tests MUST pass before completing any turn.
+- All 26 tests MUST pass before completing any turn.
 
 ### Rule 2: Steam Mod Directory Mirroring
 Whenever any file is created or modified in `resources/`, `content/`, `modules/`, or `main.lua`:

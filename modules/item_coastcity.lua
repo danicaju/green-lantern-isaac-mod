@@ -12,8 +12,15 @@ return function(Core)
 
     -- Stored Green Lantern Emblems slightly extend vortex duration & pull (NEVER increases player Damage!)
     local sparkRatio = math.max(0.0, math.min(1.0, (data.emeraldSparks or 0.0) / Core.SPARK_MAX))
+    local hasCarBattery = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CAR_BATTERY) or 356)
+
     local sparkBonus = 1.0 + sparkRatio * 0.20
     local durationBonus = math.floor(sparkRatio * 45) -- up to +1.5s vortex duration at full meter
+    if hasCarBattery then
+      sparkBonus = sparkBonus * 1.5
+      durationBonus = durationBonus + 60 -- +2s extended vortex duration
+    end
+
     data.coastCityBoost  = 1.0
     data.emeraldSparks   = 0.0
     data.coastCityActive = true
@@ -33,14 +40,15 @@ return function(Core)
 
     -- T5: juramento poetico "I AM PARALLAX!" al activar Coast City (Tainted).
     if Core.IsTaintedHal(player) then
-      data.oathText      = "I AM PARALLAX!"
+      data.oathText      = hasCarBattery and "PARALLAX DUAL VORTEX!" or "I AM PARALLAX!"
       data.oathTextTimer = 90
     end
 
     pcall(function()
-      SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85, 0, false, 0.88)
-      SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2, 0.70, 0, false, 1.30)
-      Game():ShakeScreen(4)
+      local vol = (Core.SFX_VOLUME_MULT or 1.0)
+      SFXManager():Play(SoundEffect.SOUND_SUPERHOLY, 0.85 * vol, 0, false, 0.88)
+      SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2, 0.70 * vol, 0, false, 1.30)
+      if Core.SCREEN_SHAKE_ENABLED ~= false then Game():ShakeScreen(hasCarBattery and 6 or 4) end
     end)
 
     -- Inflict Fear (3s) and a light 0.50x DMG pulse to vulnerable enemies in the room

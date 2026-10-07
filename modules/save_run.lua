@@ -24,20 +24,24 @@ return function(Core)
       emeraldSparks = data.emeraldSparks,
       stolenRings = data.stolenRings,
       overchargeTier = data.overchargeTier,
+      ringDepleted = (data.ringDepleted == true),
+      birthrightInitialized = (data.birthrightInitialized == true),
     }
   end
 
   local function Apply(player, entry)
     local data = Core.GetPlayerData(player)
     if type(entry) ~= "table" then entry = {} end
-    local wMax = Core.WILLPOWER_MAX or 100.0
+    local wMax = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX or 100.0
     local sMax = Core.SPARK_MAX or 100.0
-    local rMax = Core.MAX_STOLEN_RINGS or 10
+    local rMax = (Core.GetMaxStolenRings and Core.GetMaxStolenRings(player)) or Core.MAX_STOLEN_RINGS or 10
     data.willpower = Clamp(Num(entry.willpower, wMax), 0, wMax)
     data.emeraldSparks = Clamp(Num(entry.emeraldSparks, 0.0), 0, sMax)
     data.stolenRings = math.floor(Clamp(Num(entry.stolenRings, 0), 0, rMax))
     data.overchargeTier = math.floor(Clamp(Num(entry.overchargeTier, 0), 0, 2))
     data.overcharge = (data.overchargeTier or 0) > 0
+    data.ringDepleted = (entry.ringDepleted == true)
+    data.birthrightInitialized = (entry.birthrightInitialized == true)
   end
 
   -- Slot COMPARTIDO SaveModData (un solo string por mod en Isaac) con secciones
