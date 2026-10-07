@@ -149,9 +149,16 @@ return function(Core)
     if segLen < 1.0 then return end
     local segDir = seg / segLen
 
+    local hasBR = Core.HasBirthright and Core.HasBirthright(player)
     local beamScale = Core.IsTaintedHal(player) and 1.25 or (data.overcharge and 1.35 or (data.surgeBuff and 1.15 or 1.0))
+    if hasBR and Core.IsHalJordan(player) then
+      beamScale = beamScale * 1.35
+    end
     local baseRadius = 18.0 * beamScale
     local tickDmg = (player.Damage or 3.5) * Core.HAL_CONTINUOUS_BEAM_DMG_MULT
+    if hasBR and Core.IsHalJordan(player) then
+      tickDmg = tickDmg * 1.42
+    end
     -- Tainted: Fear por probabilidad en cada tick (no garantizado)
     local taintedFearRoll = Core.IsTaintedHal(player)
       and (math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25))
@@ -179,7 +186,7 @@ return function(Core)
                 if ed then ed.lastGLContBeamTickFrame = frame end
                 local fearMult = 1.0
                 if Core.FEAR_VULN_ENABLED ~= false and ent:HasEntityFlags(EntityFlag.FLAG_FEAR) then
-                  fearMult = 1.25
+                  fearMult = (hasBR and Core.IsTaintedHal(player)) and 1.50 or 1.25
                 end
                 local tookDmg = ent:TakeDamage(tickDmg * fearMult, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
                 if tookDmg ~= false then

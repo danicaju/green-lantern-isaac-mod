@@ -87,6 +87,12 @@ Core.SPARK_DROP_CHANCE_NORMAL = 0.08
 Core.COAST_CITY_DURATION  = 150
 Core.GATLING_DURATION     = 300
 
+-- Opciones de accesibilidad y audio
+Core.SCREEN_SHAKE_ENABLED = true
+Core.HUD_GL_DISPLAY       = true
+Core.SFX_VOLUME_MULT      = 1.0
+Core.BIRTHRIGHT_ENABLED   = true
+
 -- Estado compartido: un vortice Coast City por jugador (co-op seguro).
 Core.activeCoastCityByPlayer = {}
 

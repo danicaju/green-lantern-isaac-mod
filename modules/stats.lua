@@ -70,7 +70,8 @@ return function(Core)
         player.Damage = player.Damage * (Core.TAINTED_DMG_MULTIPLIER or 1.35)
         local rings = Core.GetPlayerData(player).stolenRings or 0
         if rings > 0 then
-          player.Damage = player.Damage + math.min(rings, Core.MAX_STOLEN_RINGS) * Core.STOLEN_RING_DMG
+          local maxRings = (Core.GetMaxStolenRings and Core.GetMaxStolenRings(player)) or Core.MAX_STOLEN_RINGS or 10
+          player.Damage = player.Damage + math.min(rings, maxRings) * Core.STOLEN_RING_DMG
         end
       end
 

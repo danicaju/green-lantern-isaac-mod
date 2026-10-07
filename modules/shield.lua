@@ -86,7 +86,12 @@ return function(Core)
                   data.shieldDeflectTimer = 12
 
                   pcall(function()
-                    SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.9, 0, false, 1.35)
+                    local vol = (Core.SFX_VOLUME_MULT or 1.0)
+                    local sfxClink = (SoundEffect and (SoundEffect.SOUND_METAL_CLINK or SoundEffect.SOUND_SHIELD_DEFLECT)) or 0
+                    if sfxClink > 0 then
+                      SFXManager():Play(sfxClink, 0.85 * vol, 0, false, 1.25)
+                    end
+                    SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.70 * vol, 0, false, 1.35)
                   end)
 
                   -- Target nearest enemy if possible, else reverse projectile velocity or reflect outward
@@ -187,7 +192,12 @@ return function(Core)
         data.shieldBlockedFrame = Game():GetFrameCount()
 
         pcall(function()
-          SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 1.0, 0, false, 1.35)
+          local vol = (Core.SFX_VOLUME_MULT or 1.0)
+          local sfxClink = (SoundEffect and (SoundEffect.SOUND_METAL_CLINK or SoundEffect.SOUND_SHIELD_DEFLECT)) or 0
+          if sfxClink > 0 then
+            SFXManager():Play(sfxClink, 0.90 * vol, 0, false, 1.20)
+          end
+          SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.80 * vol, 0, false, 1.35)
           local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length() * 1.2)
           local tearVar    = (TearVariant and TearVariant.BLUE) or 0
           local ent        = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, srcEnt.Position, reflectVel, player)

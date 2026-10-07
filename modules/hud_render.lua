@@ -119,6 +119,7 @@ return function(Core)
         d.wasHoldingShootOnRender = holdingNow
       end
     end
+    if Core.HUD_GL_DISPLAY == false then return end
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
     local hudOffset = (Options and Options.HUDOffset) or 0
     local baseX = 48 + math.floor(hudOffset * 20)
@@ -130,7 +131,8 @@ return function(Core)
         local hudY = baseY + (i * 14)
         local data = Core.GetPlayerData(player)
         if Core.IsHalJordan(player) then
-          local pct = math.max(0.0, math.min(1.0, (data.willpower or 0) / Core.WILLPOWER_MAX))
+          local maxWill = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+          local pct = math.max(0.0, math.min(1.0, (data.willpower or 0) / maxWill))
           local BAR_W = 36
           Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
           local r, g, b = 0.1, 0.95, 0.3

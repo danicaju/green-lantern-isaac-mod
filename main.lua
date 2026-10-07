@@ -29,6 +29,7 @@ include("modules.item_coastcity")(Core)
 
 include("modules.shield")(Core)
 include("modules.trinket_fear")(Core)
+include("modules.birthright")(Core)
 
 include("modules.tainted_hearts")(Core)
 include("modules.tainted_sparks")(Core)

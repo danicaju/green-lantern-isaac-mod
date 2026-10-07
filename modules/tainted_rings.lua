@@ -35,7 +35,8 @@ return function(Core)
           for _, ent in ipairs(Isaac.FindInRadius(player.Position, 50, EntityPartition.PICKUP)) do
             local ed = ent:GetData()
             if ed and ed.canBeConsumedByHal then
-              if (data.stolenRings or 0) >= Core.MAX_STOLEN_RINGS then
+              local maxRings = (Core.GetMaxStolenRings and Core.GetMaxStolenRings(player)) or Core.MAX_STOLEN_RINGS or 10
+              if (data.stolenRings or 0) >= maxRings then
                 pcall(function()
                   SFXManager():Play(SoundEffect.SOUND_BOSS2INTRO_ERRORBUZZ, 0.8, 0, false, 1.0)
                 end)

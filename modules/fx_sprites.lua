@@ -87,6 +87,30 @@ return function(Core)
                     "Impureza Amarilla", "es")
             end
 
+            -- Birthright Registrations
+            if EID.addBirthright then
+                if Core.PLAYER_HAL and Core.PLAYER_HAL >= 0 then
+                    for _, lang in ipairs({"en_us", "en_us_detailed"}) do
+                        EID:addBirthright(Core.PLAYER_HAL,
+                            "Willpower capacity increased to 150%#Continuous beam width +30% & damage +42%#Permanent Overcharge (+15%/+25% DMG) while above 100% Willpower",
+                            "Hal Jordan", lang)
+                    end
+                    EID:addBirthright(Core.PLAYER_HAL,
+                        "Capacidad de Voluntad aumentada al 150%#Anchura del rayo +30% y daño +42%#Sobrecarga permanente (+15%/+25% Daño) al superar el 100% de Voluntad",
+                        "Hal Jordan", "es")
+                end
+                if Core.PLAYER_TAINTED_HAL and Core.PLAYER_TAINTED_HAL >= 0 then
+                    for _, lang in ipairs({"en_us", "en_us_detailed"}) do
+                        EID:addBirthright(Core.PLAYER_TAINTED_HAL,
+                            "Max Stolen Rings cap increased to 15#Emits an emerald fear wave on hostile room entry#Damage multiplier against Feared enemies increased to +50%",
+                            "Parallax", lang)
+                    end
+                    EID:addBirthright(Core.PLAYER_TAINTED_HAL,
+                        "Límite de Anillos Robados aumentado a 15#Emite una onda esmeralda de miedo al entrar a salas hostiles#Multiplicador de daño contra enemigos asustados aumentado al +50%",
+                        "Parallax", "es")
+                end
+            end
+
             eidRegistered = true
         end)
     end

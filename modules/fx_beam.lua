@@ -213,8 +213,10 @@ return function(Core)
         if visibleLen < 2.0 then return end
 
         local screenDir = screenDelta / totalScreenLen
-        local screenAngle = screenDir:GetAngleDegrees()
         local baseThickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
+        if Core.HasBirthright and Core.HasBirthright(player) and Core.IsHalJordan(player) then
+            baseThickness = baseThickness * 1.30
+        end
         local thickness = clampShortBeamThickness(baseThickness, totalScreenLen)
         local segWidth = 48.0
         local segStep  = 48.0

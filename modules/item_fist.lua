@@ -59,8 +59,9 @@ return function(Core)
     end
 
     pcall(function()
-      SFXManager():Play(SoundEffect.SOUND_PUNCH, 1.0, 0, false, 0.85)
-      Game():ShakeScreen(6)
+      local vol = (Core.SFX_VOLUME_MULT or 1.0)
+      SFXManager():Play(SoundEffect.SOUND_PUNCH, 1.0 * vol, 0, false, 0.85)
+      if Core.SCREEN_SHAKE_ENABLED ~= false then Game():ShakeScreen(6) end
       local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, player.Position + spawnOffset, Vector.Zero, player)
       if fx then
         fx:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.9, 0.1, 0.6, 0.15)
@@ -101,8 +102,9 @@ return function(Core)
             or gtype == GridEntityType.GRID_POOP then
               gridEntity:Destroy(false)
               pcall(function()
-                SFXManager():Play(SoundEffect.SOUND_ROCK_CRUMBLE, 1.0, 0, false, 1.0)
-                Game():ShakeScreen(4)
+                local vol = (Core.SFX_VOLUME_MULT or 1.0)
+                SFXManager():Play(SoundEffect.SOUND_ROCK_CRUMBLE, 1.0 * vol, 0, false, 1.0)
+                if Core.SCREEN_SHAKE_ENABLED ~= false then Game():ShakeScreen(4) end
                 local poof = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, gridEntity.Position, Vector.Zero, nil)
                 if poof then
                   poof:GetSprite().Color = Color(0.15, 1.0, 0.35, 0.85, 0.1, 0.6, 0.1)

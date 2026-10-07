@@ -18,8 +18,9 @@ return function(Core)
     data.oathTextTimer = 45
 
     pcall(function()
-      SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER, 1.0, 0, false, 1.3)
-      SFXManager():Play(SoundEffect.SOUND_GUNSHOT, 0.8, 0, false, 1.2)
+      local vol = (Core.SFX_VOLUME_MULT or 1.0)
+      SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER, 1.0 * vol, 0, false, 1.3)
+      SFXManager():Play(SoundEffect.SOUND_GUNSHOT, 0.85 * vol, 0, false, 1.25)
     end)
     player:AnimateHappy()
 
@@ -60,8 +61,9 @@ return function(Core)
         tear:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.08, 0.65, 0.12)
         tear.TearFlags = tear.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         pcall(function()
+          local vol = (Core.SFX_VOLUME_MULT or 1.0)
           local pitch = 1.1 + (math.random() * 0.3)
-          SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.7, 0, false, pitch)
+          SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.75 * vol, 0, false, pitch)
         end)
       end
     end

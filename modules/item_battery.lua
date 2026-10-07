@@ -28,22 +28,32 @@ return function(Core)
 
     local statusMsg = "WILLPOWER RESTORED!"
     if Core.IsHalJordan(player) then
+      local vol = (Core.SFX_VOLUME_MULT or 1.0)
       if (not wasDepleted) and prevWill >= Core.OVERCHARGE_T2_THRESHOLD then
         data.overcharge = true
         data.overchargeTier = 2
         data.surgeBuff = false
         statusMsg = "OVERCHARGE MAX! (+25% DMG)"
+        pcall(function()
+          local sfx = (SoundEffect and SoundEffect.SOUND_HOLY) or 0
+          if sfx > 0 then SFXManager():Play(sfx, 0.95 * vol, 0, false, 1.30) end
+        end)
       elseif (not wasDepleted) and prevWill >= Core.OVERCHARGE_T1_THRESHOLD then
         data.overcharge = true
         data.overchargeTier = 1
         data.surgeBuff = false
         statusMsg = "OVERCHARGE! (+15% DMG)"
+        pcall(function()
+          local sfx = (SoundEffect and SoundEffect.SOUND_HOLY) or 0
+          if sfx > 0 then SFXManager():Play(sfx, 0.85 * vol, 0, false, 1.20) end
+        end)
       else
         data.overcharge = false
         data.overchargeTier = 0
         data.surgeBuff = true
       end
-      Core.RestoreHalRingPower(player, Core.WILLPOWER_MAX, statusMsg)
+      local maxWillTarget = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+      Core.RestoreHalRingPower(player, maxWillTarget, statusMsg)
       -- T5: juramento poetico "IN BRIGHTEST DAY..." tras el refill (Hal).
       -- Convive con el statusMsg mecanico (que RestoreHalRingPower usa solo
       -- en reboot real via ring_state.lua); aqui siempre se sobreescribe el
@@ -94,7 +104,13 @@ return function(Core)
     elseif pickup.SubType == 2 then
       refillAmount = 25.0
     end
-    local newWill = math.min(Core.WILLPOWER_MAX, (data.willpower or 0) + refillAmount)
+    local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+    local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
     Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
+    pcall(function()
+      local vol = (Core.SFX_VOLUME_MULT or 1.0)
+      local sfx = (SoundEffect and SoundEffect.SOUND_BATTERYCHARGE) or 0
+      if sfx > 0 then SFXManager():Play(sfx, 0.85 * vol, 0, false, 1.1) end
+    end)
   end)
 end
