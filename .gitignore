@@ -1,3 +1,5 @@
 # OpenCode local config (contiene referencias a credenciales via entorno)
 opencode.json
 opencode.jsonc
+__pycache__/
+*.pyc

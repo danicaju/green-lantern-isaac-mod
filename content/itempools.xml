@@ -1,14 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Merges into vanilla pools by pool name. Weights keep mod items rare. -->
+<!--
+    itempools.xml for Green Lantern Mod
+    Merges cleanly into vanilla Repentance+ item pools using canonical lowercase pool names.
+    Weights keep mod items well-balanced alongside vanilla items.
+-->
 <ItemPools>
-    <Pool Name="Treasure Room">
-        <Item Name="Giant Fist" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
-        <Item Name="Solid Light Shield" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+    <!-- ===== TREASURE ROOM POOL ===== -->
+    <Pool Name="treasure">
+        <Item Name="Giant Fist" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Solid Light Shield" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Gatling" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== SHOP POOL ===== -->
+    <Pool Name="shop">
+        <Item Name="Power Battery" Weight="0.8" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Gatling" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== PLANETARIUM POOL ===== -->
+    <Pool Name="planetarium">
+        <Item Name="Green Lantern Ring" Weight="0.8" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== ANGEL ROOM POOL ===== -->
+    <Pool Name="angel">
+        <Item Name="Green Lantern Ring" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Solid Light Shield" Weight="0.8" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== DEVIL ROOM POOL ===== -->
+    <Pool Name="devil">
+        <Item Name="The Tragedy of Coast City" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== CURSE ROOM POOL ===== -->
+    <Pool Name="curse">
+        <Item Name="The Tragedy of Coast City" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+
+    <!-- ===== GREED MODE POOLS ===== -->
+    <Pool Name="greedTreasure">
+        <Item Name="Giant Fist" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Solid Light Shield" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Green Lantern Ring" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Gatling" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
     </Pool>
-    <Pool Name="Shop">
+    <Pool Name="greedShop">
+        <Item Name="Power Battery" Weight="0.8" DecreaseBy="1" RemoveOn="0.1"/>
         <Item Name="Gatling" Weight="0.5" DecreaseBy="1" RemoveOn="0.1"/>
-        <Item Name="Power Battery" Weight="0.4" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+    <Pool Name="greedAngel">
+        <Item Name="Green Lantern Ring" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+        <Item Name="Solid Light Shield" Weight="0.8" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+    <Pool Name="greedDevil">
+        <Item Name="The Tragedy of Coast City" Weight="0.6" DecreaseBy="1" RemoveOn="0.1"/>
+    </Pool>
+    <Pool Name="greedCurse">
+        <Item Name="The Tragedy of Coast City" Weight="0.7" DecreaseBy="1" RemoveOn="0.1"/>
     </Pool>
 </ItemPools>

@@ -27,35 +27,66 @@ return function(Core)
         Core.LoadItemIDs()
         if not Core.ITEM_POWER_BATTERY or Core.ITEM_POWER_BATTERY < 0 then return end
         pcall(function()
-            for _, lang in ipairs({"en_us", "en_us_detailed", "es"}) do
+            -- English (en_us, en_us_detailed)
+            for _, lang in ipairs({"en_us", "en_us_detailed"}) do
                 EID:addCollectible(Core.ITEM_POWER_BATTERY,
-                    "Refills Willpower to 100% and unleashes a close-range emerald pulse#At >=50% Willpower: Overcharge (+15% DMG + Piercing + Spectral for the room)#Below 50%: Restores Willpower & Ring capabilities",
+                    "Active (4 charges)#Refills Willpower to 100% and emits a close-range emerald pulse#At >=50% Willpower: Overcharge (+15% DMG, Piercing & Spectral for the room)#Below 50%: Restores Willpower & reboot Ring from offline state",
                     "Power Battery", lang)
                 EID:addCollectible(Core.ITEM_GIANT_FIST,
-                    "Fires a massive spectral piercing emerald fist#Deals 10x Player Damage and smashes rocks & obstacles",
+                    "Active (4 charges)#Fires a massive spectral piercing emerald construct fist#Deals 10x Player Damage and smashes rocks, poop & obstacles in its path",
                     "Giant Fist", lang)
                 EID:addCollectible(Core.ITEM_COAST_CITY,
-                    "Inflicts Fear (3s) and spawns a 5s Emerald Vortex that pulls nearby enemies toward the center#Collecting Green Lantern Emblems recharges the item and extends vortex duration",
+                    "Active (4 charges)#Inflicts Fear (3s) and spawns a 5s Emerald Vortex pulling enemies to the center#Collecting Green Lantern Emblems recharges 25% and extends vortex duration",
                     "The Tragedy of Coast City", lang)
                 if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
                     EID:addCollectible(Core.ITEM_GATLING,
-                        "10s of rapid-fire emerald beams with no Willpower cost",
+                        "Active (4 charges)#Activates a 10s emerald construct machine gun#Hal Jordan: Rapid-fire discrete emerald beams with 0 Willpower cost#Other Characters: Maximum fire rate (delay 2) firing piercing & spectral emerald construct bullets",
                         "Gatling", lang)
                 end
                 EID:addCollectible(Core.ITEM_SOLID_LIGHT_SHIELD,
-                    "+2 Soul Hearts#Grants an orbital shield that blocks shots#25%-75% chance (scales with Luck) to reflect enemy projectiles as spectral beams",
+                    "Passive#+2 Soul Hearts#Grants an orbital light shield that blocks enemy projectiles#25% to 75% chance (scales with Luck) to reflect blocked shots as spectral emerald energy beams",
                     "Solid Light Shield", lang)
                 if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 then
                     EID:addCollectible(Core.ITEM_POWER_RING,
-                        "Signature Green Lantern Power Ring worn on your hand#Tap/click to fire high-damage piercing & spectral emerald bolts#Hold fire to channel a continuous lower-damage emerald laser beam",
+                        "Passive#Grants flight & transforms tears into Hard-Light emerald energy#Tap/Click: High-damage piercing & spectral emerald bolts#Hold Fire: Channels a continuous emerald laser beam",
                         "Green Lantern Ring", lang)
                 end
                 if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 then
                     EID:addTrinket(Core.TRINKET_YELLOW_IMPURITY,
-                        "1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage briefly inflicts Fear (reversed movement for 2s)",
+                        "Trinket#1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage inflicts 2s Fear (inverted movement controls)",
                         "Yellow Impurity", lang)
                 end
             end
+
+            -- Spanish (es)
+            EID:addCollectible(Core.ITEM_POWER_BATTERY,
+                "Activo (4 cargas)#Recarga la Voluntad al 100% y emite un pulso esmeralda a corto alcance#Con >=50% Voluntad: Sobrecarga (+15% Daño, Disparos Perforantes y Espectrales en la sala)#Bajo 50%: Reinicia el anillo si estaba agotado",
+                "Batería de Poder", "es")
+            EID:addCollectible(Core.ITEM_GIANT_FIST,
+                "Activo (4 cargas)#Lanza un puño gigante de constructo perforante y espectral#Inflige x10 del Daño del jugador y destruye rocas, cacas y obstáculos",
+                "Puño Gigante", "es")
+            EID:addCollectible(Core.ITEM_COAST_CITY,
+                "Activo (4 cargas)#Aplica Miedo (3s) a todos los enemigos de la sala#Invoca un Vórtice Esmeralda de 5s que absorbe enemigos al centro#Recoger emblemas de linterna alarga el vórtice y recarga un 25% del objeto",
+                "La Tragedia de Coast City", "es")
+            if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
+                EID:addCollectible(Core.ITEM_GATLING,
+                    "Activo (4 cargas)#Invoca una ametralladora de constructo durante 10 segundos#Hal Jordan: Disparos de energía rápidos sin coste de Voluntad#Otros Personajes: Cadencia máxima (delay 2) con balas esmeralda perforantes y espectrales",
+                    "Ametralladora Gatling", "es")
+            end
+            EID:addCollectible(Core.ITEM_SOLID_LIGHT_SHIELD,
+                "Pasivo#+2 Corazones de Alma#Otorga un escudo orbital de constructo que bloquea proyectiles enemigos#25% a 75% de probabilidad (escala con Suerte) de reflejar disparos como rayos esmeralda espectrales",
+                "Escudo de Luz Sólida", "es")
+            if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 then
+                EID:addCollectible(Core.ITEM_POWER_RING,
+                    "Pasivo#Otorga vuelo y transforma los disparos en energía esmeralda de luz sólida#Click/Toque: Disparos perforantes y espectrales de alto daño#Mantener presionado: Canaliza un rayo láser continuo",
+                    "Anillo de Linterna Verde", "es")
+            end
+            if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 then
+                EID:addTrinket(Core.TRINKET_YELLOW_IMPURITY,
+                    "Trinket#Multiplicador de daño x1.5 (+50% Daño)#Recibir daño por contacto o explosión causa Miedo temporal (invierte los controles durante 2s)",
+                    "Impureza Amarilla", "es")
+            end
+
             eidRegistered = true
         end)
     end
@@ -75,8 +106,8 @@ return function(Core)
                 }
             elseif id == Core.ITEM_GATLING then
                 return "Gatling [4R Active]", {
-                    "10s rapid-fire emerald beams, no Willpower cost",
-                    "Click fast while it lasts"
+                    "10s emerald construct machine gun barrage",
+                    "Hal: 0 Willpower cost | Others: Max fire rate piercing rounds"
                 }
             elseif id == Core.ITEM_COAST_CITY then
                 return "The Tragedy of Coast City [4R Active]", {
