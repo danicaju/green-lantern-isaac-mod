@@ -18,11 +18,12 @@ def run_tests():
     print("RUNNING ISAAC MOD UNIT TESTS")
     print("=" * 60)
     tools_dir = os.path.join(PROJECT_DIR, "tools")
-    test_files = [f for f in sorted(os.listdir(tools_dir)) if f.startswith("test_") and f.endswith(".lua")]
+    lua_tests = [f for f in sorted(os.listdir(tools_dir)) if f.startswith("test_") and f.endswith(".lua")]
+    py_tests = [f for f in sorted(os.listdir(tools_dir)) if f.startswith("test_") and f.endswith(".py")]
     
     passed = 0
     failed = 0
-    for tf in test_files:
+    for tf in lua_tests:
         full_path = os.path.join(tools_dir, tf)
         res = subprocess.run(["lua.exe", full_path], capture_output=True, text=True)
         if res.returncode == 0:
@@ -33,8 +34,20 @@ def run_tests():
             print("        " + res.stderr.strip()[:200])
             failed += 1
 
+    for tf in py_tests:
+        full_path = os.path.join(tools_dir, tf)
+        res = subprocess.run([sys.executable, full_path], capture_output=True, text=True)
+        if res.returncode == 0:
+            print(f"  [PASS] {tf}")
+            passed += 1
+        else:
+            print(f"  [FAIL] {tf}")
+            print("        " + res.stderr.strip()[:200])
+            failed += 1
+
+    total = len(lua_tests) + len(py_tests)
     print("-" * 60)
-    print(f"Results: {passed} passed, {failed} failed (Total: {len(test_files)})")
+    print(f"Results: {passed} passed, {failed} failed (Total: {total})")
     return failed == 0
 
 def sync_to_steam():
