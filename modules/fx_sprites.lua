@@ -336,8 +336,14 @@ return function(Core)
             local vel = tear.Velocity
             local speed = (vel and vel:Length()) or 0.0
             ts.Rotation = (speed > 0.01) and vel:GetAngleDegrees() or 0.0
+            if Vector then ts.Scale = Vector(2.2, 2.2) end
+            if Color then ts.Color = Color(1, 1, 1, 1, 0, 0, 0) end
             local td = tear:GetData()
             td.isGLFist = true
+            td.glFistScale = 2.2
+            if vel and speed > 0.1 and Vector then
+                td.glFistVel = Vector(vel.X, vel.Y)
+            end
         end)
     end
 end

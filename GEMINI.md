@@ -45,8 +45,8 @@ Whenever any file is created or modified in `resources/`, `content/`, `modules/`
 ### Boss VS Screen Banners
 - **Canvas Size**: Canonical **192×64** pixels (`.png`).
 - **Color Palette**: `#C7B299` (`RGBA(199, 178, 153, 255)`) with anti-aliasing.
-- **Lettering Scale**: Text height must be **20–24 pixels** (content width ~100–125 px).
-- **Centering**: Center the text around **X = 88–92** on the 192px canvas. This prevents the left side of the name from colliding with the screen edge and keeps a clean margin before "VS".
+- **Lettering Scale**: Text height calibrated to **26 pixels** (content width ~130–155 px) matching authentic Isaac Repentance boss banner proportion.
+- **Alignment**: Position text starting at left margin **X = 12–14** to prevent rightward crowding against "VS", maintaining ample breathing room on screen.
 
 ### Active & Passive Items Universal Compatibility
 - All collectible items in `content/items.xml` must have useful, functional effects for **ALL characters** (Isaac, Cain, Judas, Samson, etc.), not just Hal Jordan.

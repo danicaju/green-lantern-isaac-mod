@@ -165,8 +165,16 @@ return function(Core)
               ts:Load("gfx/effects/gl_giant_fist.anm2", true)
               ts:Play("Idle", true)
           end
+          if td and td.glFistScale and Vector then
+              ts.Scale = Vector(td.glFistScale, td.glFistScale)
+          end
+          if Color and ts.Color then
+              ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
+          end
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
+          elseif td and td.glFistVel and td.glFistVel:Length() > 0.1 then
+              ts.Rotation = td.glFistVel:GetAngleDegrees()
           end
       end
   end
@@ -205,6 +213,15 @@ return function(Core)
       elseif td and td.isGLFist then
           -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
+          tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
+          if td.glFistVel and td.glFistVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
+              local currentSpeed = tear.Velocity:Length()
+              tear.Velocity = td.glFistVel:Normalized() * currentSpeed
+          end
+          tear.FallingAcceleration = -0.04
+          if tear.FallingSpeed and tear.FallingSpeed > 0 then
+              tear.FallingSpeed = 0.0
+          end
           EnforceGiantFistSprite(tear, td)
       end
   end)
@@ -223,6 +240,23 @@ return function(Core)
   -- Spawn a crisp emerald energy flash when a piercing Ring Beam slices through an enemy
   GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
       local td = tear:GetData()
+      if td and td.isGLFist then
+          if collider and collider.IsActiveEnemy and collider:IsActiveEnemy(false) and collider.IsVulnerableEnemy and collider:IsVulnerableEnemy() then
+              local frame = Game():GetFrameCount()
+              if not td.lastFistHitFrame or (frame - td.lastFistHitFrame) >= 4 then
+                  td.lastFistHitFrame = frame
+                  pcall(function()
+                      local vol = (Core.SFX_VOLUME_MULT or 1.0)
+                      SFXManager():Play(SoundEffect.SOUND_PUNCH, 0.95 * vol, 0, false, 0.95)
+                      local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, collider.Position, Vector.Zero, tear)
+                      if fx then
+                          Core.SetEntityScaleAndColor(fx, 0.85, Color(0.1, 1.0, 0.35, 0.9, 0.2, 0.8, 0.25))
+                      end
+                  end)
+              end
+          end
+          return
+      end
       if not (td and td.isGLRingBeam) then return end
       if not (collider and collider:IsActiveEnemy(false) and collider:IsVulnerableEnemy()) then return end
 

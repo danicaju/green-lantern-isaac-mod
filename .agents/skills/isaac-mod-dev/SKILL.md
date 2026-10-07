@@ -99,9 +99,9 @@ local screenPos = Isaac.WorldToScreen(worldPos) + renderOffset
 - **Path**: `resources/gfx/ui/boss/name_<character>.png`
 - **Canvas Size**: Canonical **192×64** pixels.
 - **Color**: Hand-lettered parchment `#C7B299` (`RGBA(199, 178, 153, 255)`) with anti-aliasing.
-- **Text Height**: **20–24 pixels** (matches vanilla scale for *Isaac*, *Judas*, *Samson*).
-- **Horizontal Center**: Centered around **X = 88–92** on the 192px canvas.
-  - *Why*: In `versusscreen.anm2`, `PlayerName` is placed at `X = -142`. Biasing slightly towards X=88 ensures full breathing room before "VS" and guarantees no collision with the left screen edge.
+- **Text Height**: **26 pixels** (matches authentic Repentance boss banner proportion for *Isaac*, *Judas*, *Samson*).
+- **Horizontal Alignment**: Position text starting at left margin **X = 12–14** on the 192px canvas.
+  - *Why*: In `versusscreen.anm2`, `PlayerName` is placed at `X = -142` with pivot 112. Starting around X=12–14 ensures full breathing room before "VS" and prevents crowding toward the center of the screen.
 
 ### Collectible & Trinket Icons
 - **Collectibles**: **32×32** pixels, centered, 1-pixel dark outline `#1C1615`.

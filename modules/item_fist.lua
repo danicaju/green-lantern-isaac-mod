@@ -46,7 +46,7 @@ return function(Core)
 
     local spawnOffset  = Core.GetRingBeamTearSpawnOffset(player, direction) + lateral
     local fistVelocity = direction * 20.0
-    local tearVar      = (TearVariant and TearVariant.TOOTH) or 0
+    local tearVar      = (TearVariant and TearVariant.DEFAULT) or 0
     local ent = Isaac.Spawn(
       EntityType.ENTITY_TEAR,
       tearVar,
@@ -58,10 +58,12 @@ return function(Core)
     local fist = ent and ent:ToTear()
 
     if fist then
-      fist.DepthOffset     = Core.IsAimingUp(player, direction) and -20 or 25
-      fist.CollisionDamage = player.Damage * 10
-      fist.Scale           = 3.5
-      fist.TearFlags       = fist.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_MEGA
+      fist.DepthOffset         = Core.IsAimingUp(player, direction) and -20 or 25
+      fist.CollisionDamage     = player.Damage * 10
+      fist.Scale               = 3.5
+      fist.FallingAcceleration = -0.04
+      fist.FallingSpeed        = 0.0
+      fist.TearFlags           = fist.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING | TearFlags.TEAR_MEGA
       Core.ApplyGiantFistSprite(fist)
       fist:GetData().isGiantFist = true
     end
