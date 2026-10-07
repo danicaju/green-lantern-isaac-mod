@@ -22,18 +22,19 @@ return function(Core)
         if not auraSpr then return end
 
         local frame = Game():GetFrameCount()
-        local rOffset = renderOffset or Vector.Zero
 
         -- 1. Hexagonal Construct Barrier Aura centered on player's torso
         local auraFrame = math.floor(frame / 4) % 2
         auraSpr:SetFrame("Aura", auraFrame)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
-        -- Pulsing alpha: alternating 0.36 / 0.52 every 4 frames. Was a sinusoidal pulse (eliminated per SPEC).
+        -- Pulsing alpha: alternating 0.36 / 0.52 every 4 frames.
         local auraAlpha = isDeflecting and 0.88 or ((math.floor(frame / 4) % 2 == 0) and 0.52 or 0.36)
         auraSpr.Color = Color(1.0, 1.0, 1.0, auraAlpha, 0, 0, 0)
         auraSpr.Scale = Vector(1.0, 1.0)
         local auraPos = player.Position + Vector(0, -14)
-        auraSpr:Render(Isaac.WorldToScreen(auraPos) + rOffset, Vector.Zero, Vector.Zero)
+        -- Note: Isaac.WorldToScreen already transforms world to screen coordinates in all room sizes.
+        -- Adding renderOffset from MC_POST_PLAYER_RENDER in large rooms was causing a camera-offset detachment bug.
+        auraSpr:Render(Isaac.WorldToScreen(auraPos), Vector.Zero, Vector.Zero)
     end
 
     function Core.RenderGLSolidShieldFront(player, renderOffset)
@@ -43,15 +44,10 @@ return function(Core)
         local orbitalSpr = getOrbital and getOrbital()
         if not orbitalSpr then return end
 
-        -- Orbital shield always rendered in MC_POST_PLAYER_RENDER (delante del jugador).
-        -- Reparto isometrico (sign-of-angle split) eliminado: el orbital vive siempre en Front.
         local frame = Game():GetFrameCount()
-        local rOffset = renderOffset or Vector.Zero
         local shieldPos = Core.GetShieldOrbitPos(player, data) or (player.Position + Vector(36, 0))
-        local sScreen = Isaac.WorldToScreen(shieldPos) + rOffset + Vector(0, -14)
+        local sScreen = Isaac.WorldToScreen(shieldPos) + Vector(0, -14)
         local isDeflecting = (data.shieldDeflectTimer and data.shieldDeflectTimer > 0)
-        -- Orbital siempre en Front (MC_POST_PLAYER_RENDER). SetFrame solo
-        -- intra-animacion para el frame determinista.
         if isDeflecting then
             EnsureOrbitalAnim(orbitalSpr, data, "Deflect")
             local clampedTimer = math.min(DEFLECT_DURATION, data.shieldDeflectTimer or 0)
@@ -69,7 +65,6 @@ return function(Core)
     function Core.RenderGLActiveItemAndTrinketEffects(player, renderOffset)
         local data = Core.GetPlayerData(player)
         local frame = Game():GetFrameCount()
-        local rOffset = renderOffset or Vector.Zero
 
         -- Power Battery manifestation construct projection
         if data.batteryConstructTimer and data.batteryConstructTimer > 0 then
@@ -78,10 +73,9 @@ return function(Core)
                 battSpr:SetFrame("Pulse", math.floor(frame / 2) % 4)
                 local alpha = math.min(1.0, data.batteryConstructTimer / 10.0)
                 battSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0.10, 0.55, 0.15)
-                -- Bob +/-3 alternando cada 18 frames aprox. Era un bob sinusoidal (eliminado per SPEC).
                 local bob = ((math.floor(frame * 0.18) % 2 == 0) and 1 or -1) * 3
                 local battPos = player.Position + Vector(0, -44 + bob)
-                battSpr:Render(Isaac.WorldToScreen(battPos) + rOffset, Vector.Zero, Vector.Zero)
+                battSpr:Render(Isaac.WorldToScreen(battPos), Vector.Zero, Vector.Zero)
             end
         end
 
@@ -93,7 +87,7 @@ return function(Core)
                 local alpha = math.min(1.0, data.fearSkullTimer / 10.0)
                 fearSpr.Color = Color(1.0, 1.0, 1.0, alpha, 0.35, 0.28, 0.0)
                 local skullPos = player.Position + Vector(0, -36)
-                fearSpr:Render(Isaac.WorldToScreen(skullPos) + rOffset, Vector.Zero, Vector.Zero)
+                fearSpr:Render(Isaac.WorldToScreen(skullPos), Vector.Zero, Vector.Zero)
             end
         elseif Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
             -- Ambient yellow fear ember crackling around player while held
@@ -102,11 +96,10 @@ return function(Core)
                 if fearSpr then
                     fearSpr:SetFrame("YellowSpark", math.floor(frame / 2) % 2)
                     fearSpr.Color = Color(1.0, 1.0, 1.0, 0.85, 0.30, 0.22, 0.0)
-                    -- Orbita rectangular alrededor del jugador. Antes: Vector(sin(0.25t)*15, -16 + cos(0.25t)*8)
                     local sx = ((frame % 32) - 16) * (15 / 16)
                     local sy = ((frame % 16) - 8)
                     local sparkPos = player.Position + Vector(sx, -16 + sy)
-                    fearSpr:Render(Isaac.WorldToScreen(sparkPos) + rOffset, Vector.Zero, Vector.Zero)
+                    fearSpr:Render(Isaac.WorldToScreen(sparkPos), Vector.Zero, Vector.Zero)
                 end
             end
         end
@@ -114,10 +107,6 @@ return function(Core)
     end
 
     -- Power Battery construct orbital with Green Lantern emblem
-    -- Orbits fluently around player's waist/torso in 2.5D perspective with depth sorting:
-    -- - isBehind == true: renders when oy < 0 (behind player, called from MC_PRE_PLAYER_RENDER)
-    -- - isBehind == false: renders when oy >= 0 (in front of player, called from MC_POST_PLAYER_RENDER)
-    -- - isBehind == nil: fallback if MC_PRE_PLAYER_RENDER is unavailable
     function Core.RenderGLBatteryOrbital(player, renderOffset, isBehind)
         if not player then return end
         if not Core.ITEM_POWER_BATTERY or Core.ITEM_POWER_BATTERY < 0 then
@@ -140,7 +129,6 @@ return function(Core)
 
         local data = Core.GetPlayerData(player)
         local frame = Game():GetFrameCount()
-        local rOffset = renderOffset or Vector.Zero
 
         -- Smooth continuous angle: advances smoothly at 60Hz via batteryOrbitAngle, or continuous frame angle
         local angle = (data and data.batteryOrbitAngle) or (frame * 0.05)
@@ -163,7 +151,7 @@ return function(Core)
 
         -- Center around player's waist/torso (Y: -14)
         local orbitalPos = player.Position + Vector(ox, -14 + oy)
-        local screenPos = Isaac.WorldToScreen(orbitalPos) + rOffset
+        local screenPos = Isaac.WorldToScreen(orbitalPos)
         sparkSpr:Render(screenPos, Vector.Zero, Vector.Zero)
     end
 end

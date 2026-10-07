@@ -34,7 +34,7 @@
     <active
         id="6"
         name="Gatling"
-        description="10s rapid-fire emerald beams with no Willpower cost"
+        description="10s emerald construct machine gun / free ring beams"
         gfx="collectible_gatling.png"
         maxcharges="4"
         chargetype="normal"

@@ -117,5 +117,17 @@ return function(Core)
         player.Damage = player.Damage * 1.5
       end
     end
+
+    -- GATLING CONSTRUCT OVERCHARGE (active for ALL characters during gatlingTimer)
+    if data and data.gatlingTimer and data.gatlingTimer > 0 then
+      if cacheFlag == CacheFlag.CACHE_FIREDELAY then
+        -- Drops MaxFireDelay to rapid machine gun speed (2 delay = ~15 tears/sec)
+        player.MaxFireDelay = math.min(player.MaxFireDelay, 2)
+      elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
+        player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+      elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
+        player.ShotSpeed = player.ShotSpeed + 0.30
+      end
+    end
   end)
 end
