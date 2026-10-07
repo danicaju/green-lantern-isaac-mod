@@ -58,6 +58,9 @@ return function(Core)
       {"Muestra u oculta las barras de porcentaje y medidores de Voluntad/Sparks en pantalla."})
     AddNumber("Accessibility", "SFX_VOLUME_MULT", "Volumen efectos constructos", 0.0, 1.5, 0.1,
       {"Multiplicador de volumen para sonidos de constructos esmeralda y choques."})
+    AddBool("Accessibility", "BOSS_OATH_CUES_ENABLED", "Juramentos en sala de jefe",
+      {"Muestra el juramento dramatico y destello de anillo al entrar a una sala de jefe.",
+       "Hal: 'NO EVIL SHALL ESCAPE MY SIGHT!' | Parallax: 'FEAR THE LIGHT OF PARALLAX!'"})
 
     -- === 2. CONTROLS & FEEL ===
     AddInt("Controls", "HAL_CONTINUOUS_HOLD_FRAMES", "Frames para rayo continuo", 4, 30, 1,

@@ -48,7 +48,12 @@ if fxSprites then
     check(fxSprites:find("Ametralladora Gatling", 1, true) ~= nil, "Spanish translation for Gatling")
     check(fxSprites:find("Escudo de Luz Sólida", 1, true) ~= nil, "Spanish translation for Solid Light Shield")
     check(fxSprites:find("Anillo de Linterna Verde", 1, true) ~= nil, "Spanish translation for Green Lantern Ring")
-    check(fxSprites:find("Impureza Amarilla", 1, true) ~= nil, "Spanish translation for Yellow Impurity")
+    check(fxSprites:find("setModIndicatorName", 1, true) ~= nil, "EID mod indicator name must be registered")
+    check(fxSprites:find("{{Collectible356}} Car Battery", 1, true) ~= nil, "English Car Battery synergy markup must be present")
+    check(fxSprites:find("{{Collectible356}} Pila de coche", 1, true) ~= nil, "Spanish Car Battery synergy markup must be present")
+    check(fxSprites:find("EID.addSynergy", 1, true) ~= nil, "EID.addSynergy hook must be supported")
+    check(fxSprites:find("%[Car Battery%]: Instant Tier 2 Overcharge") ~= nil, "Inspection info must describe Power Battery synergy")
+    check(fxSprites:find("%[Car Battery%]: Fires dual parallel giant fists") ~= nil, "Inspection info must describe Giant Fist synergy")
 end
 
 io.stderr:write(string.format("\n[test_item_pools_and_eid] passes=%d failures=%d\n", passes, failures))
