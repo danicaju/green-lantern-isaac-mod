@@ -41,9 +41,7 @@ return function(Core)
             data.allowingTapTear              = false
             pcall(function()
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
-                player:EvaluateItems()
             end)
-            Core.RefreshCharacterCostume(player)
         end
 
         -- TAINTED HAL INIT
@@ -72,12 +70,9 @@ return function(Core)
             data.continuousLaser              = nil
             data.continuousBeamGraceTimer     = 0
             data.allowingTapTear              = false
-            Core.EnforceTaintedHalNoRedHearts(player)
             pcall(function()
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
-                player:EvaluateItems()
             end)
-            Core.RefreshCharacterCostume(player)
         end
     end)
 end
