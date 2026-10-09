@@ -101,6 +101,16 @@ return function(Core)
             if trail then
               trail:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.65, 0.05, 0.5, 0.1)
               trail.Scale = 0.6
+              local eff = trail:ToEffect()
+              if eff then
+                eff.Timeout = 90
+                if eff.SetTimeout then eff:SetTimeout(90) end
+              end
+              local ed = trail:GetData()
+              if ed then
+                ed.isGLFistPoison = true
+                ed.glPoisonLife = 90
+              end
             end
           end)
         end
@@ -132,6 +142,23 @@ return function(Core)
           end
         end
       end
+    end
+  end)
+
+  -- Fade out and dissipate Giant Fist poison smoke clouds over time
+  GL:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, function(_, effect)
+    local isSmoke = (EffectVariant and EffectVariant.SMOKE_CLOUD and effect.Variant == EffectVariant.SMOKE_CLOUD) or (effect.Variant == 39)
+    if not isSmoke then return end
+    local ed = effect:GetData()
+    if not (ed and ed.isGLFistPoison) then return end
+    ed.glPoisonLife = (ed.glPoisonLife or 90) - 1
+    if ed.glPoisonLife <= 0 then
+      effect:Remove()
+    elseif ed.glPoisonLife < 25 then
+      local alpha = math.max(0.05, (ed.glPoisonLife / 25) * 0.65)
+      pcall(function()
+        effect:GetSprite().Color = Color(0.1, 1.0, 0.35, alpha, 0.05, 0.5, 0.1)
+      end)
     end
   end)
 end
