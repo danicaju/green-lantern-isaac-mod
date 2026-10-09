@@ -7,18 +7,9 @@ return function(Core)
   function Core.CanUseContinuousBeam(player)
     if not (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then return false end
     if not Core.IsRingActive(player) then return false end
-    -- Allow charge/override weapons (Brimstone, Mom's Knife, Tech X, Technology, Monstro's Lung, etc.) to use their own mechanics
     if CollectibleType then
       local overrideItems = {
-        CollectibleType.COLLECTIBLE_BRIMSTONE,
         CollectibleType.COLLECTIBLE_MOMS_KNIFE,
-        CollectibleType.COLLECTIBLE_TECH_X,
-        CollectibleType.COLLECTIBLE_TECHNOLOGY,
-        CollectibleType.COLLECTIBLE_MONSTROS_LUNG,
-        CollectibleType.COLLECTIBLE_CHOCOLATE_MILK,
-        CollectibleType.COLLECTIBLE_CURSED_EYE,
-        CollectibleType.COLLECTIBLE_EPIC_FETUS,
-        CollectibleType.COLLECTIBLE_DR_FETUS,
         CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE,
         CollectibleType.COLLECTIBLE_SPIRIT_SWORD,
       }
@@ -45,7 +36,8 @@ return function(Core)
     local count = 1
     if not (player and CollectibleType) then return count end
     pcall(function()
-      if CollectibleType.COLLECTIBLE_QUAD_SHOT and player:HasCollectible(CollectibleType.COLLECTIBLE_QUAD_SHOT) then
+      if (CollectibleType.COLLECTIBLE_MUTANT_SPIDER and player:HasCollectible(CollectibleType.COLLECTIBLE_MUTANT_SPIDER))
+        or (CollectibleType.COLLECTIBLE_QUAD_SHOT and player:HasCollectible(CollectibleType.COLLECTIBLE_QUAD_SHOT)) then
         count = 4
       elseif CollectibleType.COLLECTIBLE_INNER_EYE and player:HasCollectible(CollectibleType.COLLECTIBLE_INNER_EYE) then
         count = 3
@@ -63,6 +55,31 @@ return function(Core)
       end
     end)
     return math.min(count, 8)
+  end
+
+  function Core.GetContinuousBeamAngles(player)
+    if not player then return { 0 } end
+    local count = Core.GetTapTearCount(player)
+    local hasWiz = CollectibleType and CollectibleType.COLLECTIBLE_THE_WIZ and player:HasCollectible(CollectibleType.COLLECTIBLE_THE_WIZ)
+    if hasWiz then
+      return { -45, 45 }
+    end
+    if count <= 1 then
+      return { 0 }
+    elseif count == 2 then
+      return { -4.5, 4.5 }
+    elseif count == 3 then
+      return { -9.0, 0, 9.0 }
+    elseif count == 4 then
+      return { -13.5, -4.5, 4.5, 13.5 }
+    else
+      local angles = {}
+      local step = 30.0 / math.max(1, count - 1)
+      for i = 1, count do
+        table.insert(angles, -15.0 + (i - 1) * step)
+      end
+      return angles
+    end
   end
 
   -- Raycast from startWorld along dir across the current Room until hitting a wall (passing spectrally over rocks/pits)

@@ -197,66 +197,66 @@ return function(Core)
 
         local handOffset  = data.lastRingHandOffset or Core.GetRingHandOffset(player, dir)
         local startWorld  = player.Position + handOffset
-        local endWorld    = Core.ComputeContinuousBeamEndWorld(startWorld, dir)
         local startScreen = Isaac.WorldToScreen(startWorld)
-        local endScreen   = Isaac.WorldToScreen(endWorld)
+        local angles = (Core.GetContinuousBeamAngles and Core.GetContinuousBeamAngles(player)) or { 0 }
 
-        local screenDelta = endScreen - startScreen
-        local totalScreenLen = screenDelta:Length()
-        -- Bajo 4px (degenerado) no dibuja; a partir de 4px dibuja incluso pegado al muro.
-        local minRenderLen = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or 4.0
-        if totalScreenLen < minRenderLen then return end
+        for _, ang in ipairs(angles) do
+            local rayDir = (ang == 0) and dir or (dir.Rotated and dir:Rotated(ang) or dir)
+            local endWorld    = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir)
+            local endScreen   = Isaac.WorldToScreen(endWorld)
 
-        -- SPEC-D: solo render — el dano usa el endWorld completo (beam_math intacto);
-        -- aqui el haz crece 0->full en N frames y el flare sigue la punta visible.
-        local visibleLen = Core.UpdateBeamGrowth(data, dir, totalScreenLen)
-        if visibleLen < 2.0 then return end
+            local screenDelta = endScreen - startScreen
+            local totalScreenLen = screenDelta:Length()
+            local minRenderLen = Core.CONTINUOUS_BEAM_MIN_RENDER_LEN or 4.0
+            if totalScreenLen >= minRenderLen then
+                local visibleLen = Core.UpdateBeamGrowth(data, rayDir, totalScreenLen)
+                if visibleLen >= 2.0 then
+                    local screenDir = screenDelta / totalScreenLen
+                    local screenAngle = (screenDir.GetAngleDegrees and screenDir:GetAngleDegrees()) or (math.atan2(screenDir.Y, screenDir.X) * 180 / math.pi)
+                    local baseThickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
+                    if Core.HasBirthright and Core.HasBirthright(player) and Core.IsHalJordan(player) then
+                        baseThickness = baseThickness * 1.30
+                    end
+                    if CollectibleType and CollectibleType.COLLECTIBLE_BRIMSTONE and player:HasCollectible(CollectibleType.COLLECTIBLE_BRIMSTONE) then
+                        baseThickness = baseThickness * 1.45
+                    end
+                    local thickness = clampShortBeamThickness(baseThickness, totalScreenLen)
+                    local segWidth = 48.0
+                    local segStep  = 48.0
+                    local aimingUp = Core.IsAimingUp(player, rayDir)
+                    local dist     = Core.ComputeBeamRenderStartSkip(aimingUp, totalScreenLen)
+                    local animFrame = math.floor(frame / 2) % 4
 
-        local screenDir = screenDelta / totalScreenLen
-        local screenAngle = (screenDir.GetAngleDegrees and screenDir:GetAngleDegrees()) or (math.atan2(screenDir.Y, screenDir.X) * 180 / math.pi)
-        local baseThickness = Core.IsTaintedHal(player) and 1.18 or (data.overcharge and 1.22 or (data.surgeBuff and 1.10 or 1.0))
-        if Core.HasBirthright and Core.HasBirthright(player) and Core.IsHalJordan(player) then
-            baseThickness = baseThickness * 1.30
-        end
-        local thickness = clampShortBeamThickness(baseThickness, totalScreenLen)
-        local segWidth = 48.0
-        local segStep  = 48.0
-        local aimingUp = Core.IsAimingUp(player, dir)
-        local dist     = Core.ComputeBeamRenderStartSkip(aimingUp, totalScreenLen)
-        local animFrame = math.floor(frame / 2) % 4
+                    while dist < visibleLen do
+                        local rem = visibleLen - dist
+                        local xScale = 1.0
+                        if rem < segWidth then
+                            xScale = math.max(0.05, rem / segWidth)
+                        end
+                        beamSpr:SetFrame("ContinuousBeam", animFrame)
+                        beamSpr.Rotation = screenAngle
+                        beamSpr.Scale = Vector(xScale, thickness)
+                        beamSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
+                        beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
+                        if rem <= segWidth then
+                            break
+                        end
+                        dist = dist + segStep
+                    end
 
-        while dist < visibleLen do
-            local rem = visibleLen - dist
-            local xScale = 1.0
-            if rem < segWidth then
-                xScale = math.max(0.05, rem / segWidth)
+                    local GL_BEAM_FLARE_MIN_DIST = 8.0
+                    local GL_BEAM_FLARE_FULL_DIST = 120.0
+                    if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST then
+                        local flareAlpha = (visibleLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
+                        if flareAlpha < 0.0 then flareAlpha = 0.0 elseif flareAlpha > 1.0 then flareAlpha = 1.0 end
+                        local flarePos = startScreen + screenDir * visibleLen
+                        flareSpr:SetFrame("RingFlare", math.floor(frame / 2) % 4)
+                        flareSpr.Scale = Vector(0.95 * thickness, 0.95 * thickness)
+                        flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha, 0.15, 0.50, 0.18)
+                        flareSpr:Render(flarePos, Vector.Zero, Vector.Zero)
+                    end
+                end
             end
-            beamSpr:SetFrame("ContinuousBeam", animFrame)
-            beamSpr.Rotation = screenAngle
-            beamSpr.Scale = Vector(xScale, thickness)
-            beamSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
-            beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
-            if rem <= segWidth then
-                break
-            end
-            dist = dist + segStep
-        end
-
-        -- Render bright emerald construct impact flare at the VISIBLE beam tip on the wall.
-        local GL_BEAM_FLARE_MIN_DIST = 8.0
-        local GL_BEAM_FLARE_FULL_DIST = 120.0
-        if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST then
-            local flareAlpha = (visibleLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
-            if flareAlpha < 0.0 then
-                flareAlpha = 0.0
-            elseif flareAlpha > 1.0 then
-                flareAlpha = 1.0
-            end
-            local flarePos = startScreen + screenDir * visibleLen
-            flareSpr:SetFrame("RingFlare", math.floor(frame / 2) % 4)
-            flareSpr.Scale = Vector(0.95 * thickness, 0.95 * thickness)
-            flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha, 0.15, 0.50, 0.18)
-            flareSpr:Render(flarePos, Vector.Zero, Vector.Zero)
         end
     end
 

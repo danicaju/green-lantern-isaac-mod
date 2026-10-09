@@ -93,10 +93,14 @@ return function(Core)
           player.FireDelay = math.max(player.FireDelay, 5)
           data.ringFlareTimer = 4
           if frame % Core.HAL_CONTINUOUS_TICK_FRAMES == 0 then
+            local angles = (Core.GetContinuousBeamAngles and Core.GetContinuousBeamAngles(player)) or { 0 }
             local startWorld = player.Position + handOffset
-            local endWorld = Core.ComputeContinuousBeamEndWorld(startWorld, shootDir)
-            local dmgStart = Core.IsAimingUp(player, shootDir) and (player.Position + Vector(0, -8)) or startWorld
-            Core.TickContinuousBeamDamage(player, data, dmgStart, endWorld)
+            for _, ang in ipairs(angles) do
+              local rayDir = (ang == 0) and shootDir or (shootDir.Rotated and shootDir:Rotated(ang) or shootDir)
+              local endWorld = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir)
+              local dmgStart = Core.IsAimingUp(player, rayDir) and (player.Position + Vector(0, -8)) or startWorld
+              Core.TickContinuousBeamDamage(player, data, dmgStart, endWorld)
+            end
           end
           if Core.IsHalJordan(player) then
             local drain = Core.HAL_CONTINUOUS_WILL_DRAIN
