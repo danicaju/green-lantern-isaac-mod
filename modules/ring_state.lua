@@ -43,25 +43,6 @@ return function(Core)
             if Core.COSTUME_TAINTED_HAL and Core.COSTUME_TAINTED_HAL >= 0 then
                 player:TryRemoveNullCostume(Core.COSTUME_TAINTED_HAL)
             end
-            if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
-                local itemConfig = (Isaac and Isaac.GetItemConfig and Isaac.GetItemConfig())
-                if itemConfig and player.RemoveCostume then
-                    local colls = itemConfig.GetCollectibles and itemConfig:GetCollectibles()
-                    local maxC = (colls and colls.Size) or 800
-                    for cId = 1, maxC do
-                        if player:HasCollectible(cId) then
-                            local conf = itemConfig:GetCollectible(cId)
-                            if conf then player:RemoveCostume(conf) end
-                        end
-                    end
-                elseif player.TryRemoveCollectibleCostume then
-                    for cId = 1, 800 do
-                        if player:HasCollectible(cId) then
-                            player:TryRemoveCollectibleCostume(cId, false)
-                        end
-                    end
-                end
-            end
         end)
     end
 

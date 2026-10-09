@@ -89,7 +89,7 @@ local pWiz = makePlayerWithItems({ CollectibleType.COLLECTIBLE_THE_WIZ })
 local anglesWiz = Core.GetContinuousBeamAngles(pWiz)
 check(#anglesWiz == 2 and anglesWiz[1] == -45 and anglesWiz[2] == 45, "The Wiz must give diagonal angles (-45, 45)")
 
--- ===================== TEST 3: COSTUME STRIPPING =====================
+-- ===================== TEST 3: COSTUMES PRESERVED =====================
 local fState = assert(io.open("modules/ring_state.lua", "r"))
 local srcState = fState:read("*a"); fState:close()
 srcState = srcState:gsub("|", "+")
@@ -102,16 +102,15 @@ local pCostume = {
   RemoveCostume = function(_, conf) table.insert(removedCostumes, conf.ID) end,
   TryRemoveNullCostume = function() end,
 }
-Isaac = {
-  GetItemConfig = function()
-    return {
-      GetCollectibles = function() return { Size = 30 } end,
-      GetCollectible = function(_, id) return { ID = id } end,
-    }
-  end,
-}
 Core.RefreshCharacterCostume(pCostume)
-check(#removedCostumes == 1 and removedCostumes[1] == 25, "RefreshCharacterCostume strips collectible costumes")
+check(#removedCostumes == 0, "RefreshCharacterCostume must preserve item costumes so appearance changes naturally")
+
+-- ===================== TEST 4: GIANT FIST POISON DISSIPATION =====================
+local fFist = assert(io.open("modules/item_fist.lua", "r"))
+local srcFist = fFist:read("*a"); fFist:close()
+check(srcFist:find("isGLFistPoison") ~= nil, "Giant Fist must tag poison smoke with isGLFistPoison")
+check(srcFist:find("MC_POST_EFFECT_UPDATE") ~= nil, "Giant Fist must listen to MC_POST_EFFECT_UPDATE for poison dissipation")
+check(srcFist:find("glPoisonLife") ~= nil, "Giant Fist must track glPoisonLife for smooth fade and removal")
 
 -- ===================== SUMMARY =====================
 io.stderr:write(string.format("\n[test_user_fixes_synergies] passes=%d failures=%d\n", passes, failures))
