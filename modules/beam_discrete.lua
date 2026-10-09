@@ -17,23 +17,35 @@ return function(Core)
       if not Core.IsRingActive(player) then return end
 
       local data = Core.GetPlayerData(player)
+      local td = tear:GetData()
+
+      if data.spawningGiantFist or (td and (td.isGiantFist or td.isGLFist)) then
+          tear:GetData().isGiantFist = true
+          tear:GetData().isGLFist = true
+          tear.Visible = false
+          pcall(function()
+              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+          end)
+          return
+      end
 
       -- Suppress unbuffered C++ tears when CanUseContinuousBeam(player) is active (so holding shoot never fires a Frame-1 discrete bolt!)
       if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
-          local td = tear:GetData()
-          if not (td and td.isGiantFist) then
-              if data.isFiringContinuousBeam or (Core.CanUseContinuousBeam(player) and not data.allowingTapTear) then
-                  if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
-                      local rawDir = tear.Velocity:Normalized()
-                      data.lastShootDir = Vector(rawDir.X, rawDir.Y)
-                      if (data.shootHoldFrames or 0) == 0 then
-                          data.shootHoldFrames         = 1
-                          data.firedSmallBeamThisPress = false
-                      end
+          if data.isFiringContinuousBeam or (Core.CanUseContinuousBeam(player) and not data.allowingTapTear) then
+              tear.Visible = false
+              pcall(function()
+                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+              end)
+              if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
+                  local rawDir = tear.Velocity:Normalized()
+                  data.lastShootDir = Vector(rawDir.X, rawDir.Y)
+                  if (data.shootHoldFrames or 0) == 0 then
+                      data.shootHoldFrames         = 1
+                      data.firedSmallBeamThisPress = false
                   end
-                  tear:Remove()
-                  return
               end
+              tear:Remove()
+              return
           end
       end
 
@@ -84,6 +96,10 @@ return function(Core)
       -- Grant Piercing (pass through enemies) + Spectral (pass through rocks/objects)
       -- (Fear de Tainted ya no va en el flag: se tira probabilidad al impactar)
       tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
+      tear.Visible = false
+      pcall(function()
+          if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+      end)
       -- Balance click-vs-hold: el beam discreto pega una fraccion del dano de ficha
       -- (el Puño Gigante queda excluido: lleva su propio 10x)
       local btd = tear:GetData()
@@ -183,6 +199,10 @@ return function(Core)
   GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
       local td = tear:GetData()
       if td and td.isGLRingBeam then
+          tear.Visible = false
+          pcall(function()
+              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+          end)
           tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
 
           -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)
@@ -211,6 +231,10 @@ return function(Core)
 
           EnforceRingBeamTearSprite(tear, td)
       elseif td and td.isGLFist then
+          tear.Visible = false
+          pcall(function()
+              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+          end)
           -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
           tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25

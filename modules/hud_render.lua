@@ -200,5 +200,58 @@ return function(Core)
         end
       end
     end
+
+    -- Render discrete ring beams and Giant Fist constructs with pure custom sprites (never showing vanilla tears)
+    pcall(function()
+      local tears = Isaac.FindByType(EntityType.ENTITY_TEAR, -1, -1, false)
+      if tears and #tears > 0 then
+        if not Core.glBeamTearSprite and Sprite then
+          local s = Sprite()
+          s:Load("gfx/effects/gl_ring_beam.anm2", true)
+          s:Play("Idle", true)
+          Core.glBeamTearSprite = s
+        end
+        if not Core.glFistTearSprite and Sprite then
+          local s = Sprite()
+          s:Load("gfx/effects/gl_giant_fist.anm2", true)
+          s:Play("Idle", true)
+          Core.glFistTearSprite = s
+        end
+        local animFrame = math.floor(currentGameFrame / 2) % 4
+        for _, ent in ipairs(tears) do
+          local tear = ent:ToTear()
+          if tear and tear:Exists() and not tear:IsDead() then
+            local td = tear:GetData()
+            if td and td.isGLRingBeam then
+              tear.Visible = false
+              pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
+              if Core.glBeamTearSprite then
+                local screenPos = Isaac.WorldToScreen(tear.Position)
+                local scale = td.glBeamScale or 1.0
+                Core.glBeamTearSprite:SetFrame("Idle", animFrame)
+                local rot = (tear.Velocity and tear.Velocity:Length() > 0.1) and tear.Velocity:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
+                Core.glBeamTearSprite.Rotation = rot
+                Core.glBeamTearSprite.Scale = Vector(scale, scale)
+                Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+              end
+            elseif td and (td.isGLFist or td.isGiantFist) then
+              tear.Visible = false
+              pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
+              if Core.glFistTearSprite then
+                local screenPos = Isaac.WorldToScreen(tear.Position)
+                local scale = td.glFistScale or 2.2
+                Core.glFistTearSprite:SetFrame("Idle", animFrame)
+                local rot = (tear.Velocity and tear.Velocity:Length() > 0.1) and tear.Velocity:GetAngleDegrees() or (td.glFistVel and td.glFistVel:GetAngleDegrees() or 0)
+                Core.glFistTearSprite.Rotation = rot
+                Core.glFistTearSprite.Scale = Vector(scale, scale)
+                Core.glFistTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                Core.glFistTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+              end
+            end
+          end
+        end
+      end
+    end)
   end)
 end
