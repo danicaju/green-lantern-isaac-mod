@@ -67,6 +67,11 @@ return function(Core)
 
         if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
             player.SpriteOffset = Vector.Zero
+            local colCount = player.GetCollectibleCount and player:GetCollectibleCount()
+            if colCount and colCount ~= data.lastCollectibleCount then
+                data.lastCollectibleCount = colCount
+                Core.RefreshCharacterCostume(player)
+            end
             if data.ringFlareTimer and data.ringFlareTimer > 0 then
                 data.ringFlareTimer = data.ringFlareTimer - 1
             end
