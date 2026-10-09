@@ -118,18 +118,20 @@ return function(Core)
     end
   end)
 
-  -- Hambre de Parallax: sin kills el medidor decae (fuerza juego agresivo)
-  GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
-    local frame = Game():GetFrameCount()
-    for i = 0, Game():GetNumPlayers() - 1 do
-      local player = Isaac.GetPlayer(i)
-      if Core.IsTaintedHal(player) then
-        local data = Core.GetPlayerData(player)
-        if (data.emeraldSparks or 0) > 0
-          and frame - (data.lastSparkKillFrame or -9999) > Core.SPARK_DECAY_GRACE_FRAMES then
-          data.emeraldSparks = math.max(0, data.emeraldSparks - Core.SPARK_DECAY_PER_SEC / 30)
+  -- Hambre de Parallax: sin kills el medidor decae (desactivado por balance, SPARK_DECAY_PER_SEC = 0)
+  if Core.SPARK_DECAY_PER_SEC and Core.SPARK_DECAY_PER_SEC > 0 then
+    GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
+      local frame = Game():GetFrameCount()
+      for i = 0, Game():GetNumPlayers() - 1 do
+        local player = Isaac.GetPlayer(i)
+        if Core.IsTaintedHal(player) then
+          local data = Core.GetPlayerData(player)
+          if (data.emeraldSparks or 0) > 0
+            and frame - (data.lastSparkKillFrame or -9999) > Core.SPARK_DECAY_GRACE_FRAMES then
+            data.emeraldSparks = math.max(0, data.emeraldSparks - Core.SPARK_DECAY_PER_SEC / 30)
+          end
         end
       end
-    end
-  end)
+    end)
+  end
 end
