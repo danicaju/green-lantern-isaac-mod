@@ -46,7 +46,7 @@ Whenever any file is created or modified in `resources/`, `content/`, `modules/`
 - **Canvas Size**: Canonical **192×64** pixels (`.png`).
 - **Color Palette**: `#C7B299` (`RGBA(199, 178, 153, 255)`) with anti-aliasing.
 - **Lettering Scale**: Text height calibrated to **26 pixels** (content width ~130–155 px) matching authentic Isaac Repentance boss banner proportion.
-- **Alignment**: Position text starting at left margin **X = 12–14** to prevent rightward crowding against "VS", maintaining ample breathing room on screen.
+- **Alignment**: Center text horizontally around **X = 104–106** (matching Isaac's XPivot 112 in `versusscreen.anm2`). This prevents text clipping against the left screen boundary while preserving ample spacing before the "VS" emblem.
 
 ### Active & Passive Items Universal Compatibility
 - All collectible items in `content/items.xml` must have useful, functional effects for **ALL characters** (Isaac, Cain, Judas, Samson, etc.), not just Hal Jordan.
