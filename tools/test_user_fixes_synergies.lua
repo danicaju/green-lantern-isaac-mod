@@ -111,7 +111,22 @@ local srcFist = fFist:read("*a"); fFist:close()
 check(srcFist:find("isGLFistPoison") ~= nil, "Giant Fist must tag poison smoke with isGLFistPoison")
 check(srcFist:find("MC_POST_EFFECT_UPDATE") ~= nil, "Giant Fist must listen to MC_POST_EFFECT_UPDATE for poison dissipation")
 check(srcFist:find("glPoisonLife") ~= nil, "Giant Fist must track glPoisonLife for smooth fade and removal")
+-- ===================== TEST 5: STICKY TEARS HANDLING =====================
+local fHud = assert(io.open("modules/hud_render.lua", "r"))
+local srcHud = fHud:read("*a"); fHud:close()
+check(srcHud:find("StickTarget") ~= nil, "hud_render.lua must check StickTarget for sticky tears")
+check(srcHud:find("RingFlare") ~= nil, "hud_render.lua must render RingFlare construct node when stuck")
 
--- ===================== SUMMARY =====================
+local fDisc = assert(io.open("modules/beam_discrete.lua", "r"))
+local srcDisc = fDisc:read("*a"); fDisc:close()
+check(srcDisc:find("StickTarget") ~= nil, "beam_discrete.lua must check StickTarget for sticky tears")
+
+-- ===================== TEST 6: BOSS VS BANNERS =====================
+local fHal = io.open("resources/gfx/ui/boss/name_hal_jordan.png", "rb")
+check(fHal ~= nil, "name_hal_jordan.png must exist")
+if fHal then fHal:close() end
+local fThal = io.open("resources/gfx/ui/boss/name_tainted_hal.png", "rb")
+check(fThal ~= nil, "name_tainted_hal.png must exist")
+if fThal then fThal:close() end
 io.stderr:write(string.format("\n[test_user_fixes_synergies] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end

@@ -199,6 +199,20 @@ return function(Core)
   GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
       local td = tear:GetData()
       if td and td.isGLRingBeam then
+          local isStuck = false
+          pcall(function()
+              if tear.StickTarget ~= nil then isStuck = true end
+              if tear.StickTimer and tear.StickTimer > 0 then isStuck = true end
+              if tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 0.8 then isStuck = true end
+          end)
+          if isStuck then
+              tear.Visible = true
+              pcall(function()
+                  if tear:GetSprite() then tear:GetSprite().Color = Color(0.1, 1.0, 0.35, 1.0, 0.1, 0.5, 0.1) end
+              end)
+              return
+          end
+
           tear.Visible = false
           pcall(function()
               if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end

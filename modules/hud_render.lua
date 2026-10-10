@@ -223,17 +223,50 @@ return function(Core)
           if tear and tear:Exists() and not tear:IsDead() then
             local td = tear:GetData()
             if td and td.isGLRingBeam then
-              tear.Visible = false
-              pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
-              if Core.glBeamTearSprite then
-                local screenPos = Isaac.WorldToScreen(tear.Position)
-                local scale = td.glBeamScale or 1.0
-                Core.glBeamTearSprite:SetFrame("Idle", animFrame)
-                local rot = (tear.Velocity and tear.Velocity:Length() > 0.1) and tear.Velocity:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
-                Core.glBeamTearSprite.Rotation = rot
-                Core.glBeamTearSprite.Scale = Vector(scale, scale)
-                Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
-                Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+              local isStuck = false
+              pcall(function()
+                if tear.StickTarget ~= nil then isStuck = true end
+                if tear.StickTimer and tear.StickTimer > 0 then isStuck = true end
+                if tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 0.8 then isStuck = true end
+              end)
+
+              if isStuck then
+                -- When stuck to a mob, restore visible tear with emerald construct tint so vanilla sticky animations (boogers, spores, explosive bombs) render properly
+                tear.Visible = true
+                pcall(function()
+                  if tear:GetSprite() then
+                    tear:GetSprite().Color = Color(0.1, 1.0, 0.35, 1.0, 0.1, 0.5, 0.1)
+                  end
+                end)
+                -- Render a pulsing emerald hard-light energy flare/node embedded in the mob instead of a static horizontal beam
+                local flareSpr = Core.GetGLAuraSprites and select(2, Core.GetGLAuraSprites())
+                if flareSpr then
+                  local screenPos = Isaac.WorldToScreen(tear.Position)
+                  local pulse = 0.65 + 0.20 * math.sin(currentGameFrame * 0.25)
+                  flareSpr:SetFrame("RingFlare", math.floor(currentGameFrame / 2) % 4)
+                  flareSpr.Scale = Vector(pulse, pulse)
+                  flareSpr.Color = Color(0.2, 1.0, 0.4, 0.85, 0.1, 0.6, 0.15)
+                  flareSpr:Render(screenPos, Vector.Zero, Vector.Zero)
+                end
+              else
+                tear.Visible = false
+                pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
+                if Core.glBeamTearSprite then
+                  local screenPos = Isaac.WorldToScreen(tear.Position)
+                  local scale = td.glBeamScale or 1.0
+                  Core.glBeamTearSprite:SetFrame("Idle", animFrame)
+                  local currentVel = tear.Velocity
+                  local targetRot = (currentVel and currentVel:Length() > 0.1) and currentVel:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
+                  if td.lastBeamRot then
+                    local diff = (targetRot - td.lastBeamRot + 180) % 360 - 180
+                    targetRot = td.lastBeamRot + diff * 0.4
+                  end
+                  td.lastBeamRot = targetRot
+                  Core.glBeamTearSprite.Rotation = targetRot
+                  Core.glBeamTearSprite.Scale = Vector(scale, scale)
+                  Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                  Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+                end
               end
             elseif td and (td.isGLFist or td.isGiantFist) then
               tear.Visible = false
