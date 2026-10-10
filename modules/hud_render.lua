@@ -159,15 +159,10 @@ return function(Core)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
-            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz.
-            -- Con juego congelado (pausa/menu) el Game frame no avanza: no consume timer.
-            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then
-              data.oathTextTimer = data.oathTextTimer - 1
-            end
+            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
             if data.oathText then
-              local headPos = Isaac.WorldToScreen(player.Position + Vector(0, -48))
-              local textAlpha = math.min(0.95, data.oathTextTimer / 20.0)
-              Core.DrawHudText(data.oathText, math.floor(headPos.X - 38), math.floor(headPos.Y), r, g, b, textAlpha)
+              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48))
+              Core.DrawHudText(data.oathText, math.floor(hp.X - 38), math.floor(hp.Y), r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
             end
           end
         end
@@ -186,15 +181,10 @@ return function(Core)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
-            -- POST_RENDER corre a 60Hz: decrementa cada 2 frames para duracion real ~30Hz.
-            -- Con juego congelado (pausa/menu) el Game frame no avanza: no consume timer.
-            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then
-              data.oathTextTimer = data.oathTextTimer - 1
-            end
+            if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
             if data.oathText then
-              local headPos = Isaac.WorldToScreen(player.Position + Vector(0, -48))
-              local textAlpha = math.min(0.95, data.oathTextTimer / 20.0)
-              Core.DrawHudText(data.oathText, math.floor(headPos.X - 38), math.floor(headPos.Y), r, g, b, textAlpha)
+              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48))
+              Core.DrawHudText(data.oathText, math.floor(hp.X - 38), math.floor(hp.Y), r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
             end
           end
         end
@@ -230,42 +220,58 @@ return function(Core)
                 if tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 0.8 then isStuck = true end
               end)
 
+              tear.Visible = false
+              pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
+
               if isStuck then
-                -- When stuck to a mob, restore visible tear with emerald construct tint so vanilla sticky animations (boogers, spores, explosive bombs) render properly
-                tear.Visible = true
-                pcall(function()
-                  if tear:GetSprite() then
-                    tear:GetSprite().Color = Color(0.1, 1.0, 0.35, 1.0, 0.1, 0.5, 0.1)
-                  end
-                end)
-                -- Render a pulsing emerald hard-light energy flare/node embedded in the mob instead of a static horizontal beam
+                local screenPos = Isaac.WorldToScreen(tear.Position)
+                if Core.glBeamTearSprite then
+                  Core.glBeamTearSprite:SetFrame("EnergyNode", animFrame)
+                  Core.glBeamTearSprite.Scale = Vector(1.1, 1.1)
+                  Core.glBeamTearSprite.Rotation = (currentGameFrame * 6) % 360
+                  Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                  Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+                end
                 local flareSpr = Core.GetGLAuraSprites and select(2, Core.GetGLAuraSprites())
                 if flareSpr then
-                  local screenPos = Isaac.WorldToScreen(tear.Position)
-                  local pulse = 0.65 + 0.20 * math.sin(currentGameFrame * 0.25)
-                  flareSpr:SetFrame("RingFlare", math.floor(currentGameFrame / 2) % 4)
+                  local pulse = 0.70 + 0.20 * math.sin(currentGameFrame * 0.3)
+                  flareSpr:SetFrame("RingFlare", animFrame)
                   flareSpr.Scale = Vector(pulse, pulse)
-                  flareSpr.Color = Color(0.2, 1.0, 0.4, 0.85, 0.1, 0.6, 0.15)
+                  flareSpr.Color = Color(0.2, 1.0, 0.4, 0.9, 0.1, 0.7, 0.2)
                   flareSpr:Render(screenPos, Vector.Zero, Vector.Zero)
                 end
               else
-                tear.Visible = false
-                pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
                 if Core.glBeamTearSprite then
                   local screenPos = Isaac.WorldToScreen(tear.Position)
                   local scale = td.glBeamScale or 1.0
-                  Core.glBeamTearSprite:SetFrame("Idle", animFrame)
-                  local currentVel = tear.Velocity
-                  local targetRot = (currentVel and currentVel:Length() > 0.1) and currentVel:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
-                  if td.lastBeamRot then
-                    local diff = (targetRot - td.lastBeamRot + 180) % 360 - 180
-                    targetRot = td.lastBeamRot + diff * 0.4
+                  local flags = tear.TearFlags
+                  local isOrb = (flags and TearFlags and (Core.HasTearFlag(flags, TearFlags.TEAR_HOMING) or Core.HasTearFlag(flags, TearFlags.TEAR_MAGNET) or Core.HasTearFlag(flags, TearFlags.TEAR_ORBIT) or Core.HasTearFlag(flags, TearFlags.TEAR_SPIRAL) or Core.HasTearFlag(flags, TearFlags.TEAR_BOOMERANG) or Core.HasTearFlag(flags, TearFlags.TEAR_WIGGLE)))
+                  local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+                  if sp and not isOrb then
+                    isOrb = (CollectibleType.COLLECTIBLE_JACOBS_LADDER and sp:HasCollectible(CollectibleType.COLLECTIBLE_JACOBS_LADDER)) or (CollectibleType.COLLECTIBLE_LODESTONE and sp:HasCollectible(CollectibleType.COLLECTIBLE_LODESTONE)) or (CollectibleType.COLLECTIBLE_TINY_PLANET and sp:HasCollectible(CollectibleType.COLLECTIBLE_TINY_PLANET))
                   end
-                  td.lastBeamRot = targetRot
-                  Core.glBeamTearSprite.Rotation = targetRot
-                  Core.glBeamTearSprite.Scale = Vector(scale, scale)
-                  Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
-                  Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+                  if (not isOrb) and tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 2.2 then isOrb = true end
+
+                  if isOrb then
+                    Core.glBeamTearSprite:SetFrame("EnergyOrb", animFrame)
+                    Core.glBeamTearSprite.Rotation = (currentGameFrame * 8) % 360
+                    Core.glBeamTearSprite.Scale = Vector(scale * 1.15, scale * 1.15)
+                    Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                    Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+                  else
+                    Core.glBeamTearSprite:SetFrame("Idle", animFrame)
+                    local currentVel = tear.Velocity
+                    local targetRot = (currentVel and currentVel:Length() > 0.1) and currentVel:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
+                    if td.lastBeamRot then
+                      local diff = (targetRot - td.lastBeamRot + 180) % 360 - 180
+                      targetRot = td.lastBeamRot + diff * 0.4
+                    end
+                    td.lastBeamRot = targetRot
+                    Core.glBeamTearSprite.Rotation = targetRot
+                    Core.glBeamTearSprite.Scale = Vector(scale, scale)
+                    Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                    Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
+                  end
                 end
               end
             elseif td and (td.isGLFist or td.isGiantFist) then

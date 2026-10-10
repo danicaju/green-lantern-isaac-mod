@@ -89,19 +89,22 @@ return function(Core)
       tear.FallingAcceleration = -0.04
       tear.FallingSpeed = 0.0
       local ts = tear:GetSprite()
-      ts:Load("gfx/effects/gl_ring_beam.anm2", true)
-      ts:Play("Idle", true)
-      local angle = (tear.Velocity and tear.Velocity:Length() > 0.01) and tear.Velocity:GetAngleDegrees() or 0.0
-      ts.Rotation = angle
-      local s = scaleMult or 1.0
-      ts.Scale = Vector(s, s)
-      ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
+      if ts then
+        ts:Load("gfx/effects/gl_ring_beam.anm2", true)
+        ts:Play("Idle", true)
+        local angle = (tear.Velocity and tear.Velocity:Length() > 0.01) and tear.Velocity:GetAngleDegrees() or 0.0
+        ts.Rotation = angle
+        local s = scaleMult or 1.0
+        ts.Scale = Vector(s, s)
+        ts.Color = Color(0, 0, 0, 0)
+      end
       local td = tear:GetData()
       td.isGLRingBeam = true
-      td.glBeamScale = s
+      td.glBeamScale = scaleMult or 1.0
       if tear.Velocity and tear.Velocity:Length() > 0.1 then
         td.glBeamVel = Vector(tear.Velocity.X, tear.Velocity.Y)
       end
+      tear.Visible = false
     end)
   end
 

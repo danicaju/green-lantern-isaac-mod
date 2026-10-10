@@ -150,19 +150,20 @@ return function(Core)
   end)
 
   local function EnforceRingBeamTearSprite(tear, td)
+      tear.Visible = false
       local ts = tear:GetSprite()
       if ts then
           if ts:GetAnimation() ~= "Idle" then
               ts:Load("gfx/effects/gl_ring_beam.anm2", true)
               ts:Play("Idle", true)
           end
-          if td.glBeamScale then
+          if td and td.glBeamScale then
               ts.Scale = Vector(td.glBeamScale, td.glBeamScale)
           end
-          ts.Color = Color(1, 1, 1, 1, 0, 0, 0)
+          ts.Color = Color(0, 0, 0, 0)
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
-          elseif td.glBeamVel and td.glBeamVel:Length() > 0.1 then
+          elseif td and td.glBeamVel and td.glBeamVel:Length() > 0.1 then
               ts.Rotation = td.glBeamVel:GetAngleDegrees()
           end
       end
@@ -206,9 +207,9 @@ return function(Core)
               if tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 0.8 then isStuck = true end
           end)
           if isStuck then
-              tear.Visible = true
+              tear.Visible = false
               pcall(function()
-                  if tear:GetSprite() then tear:GetSprite().Color = Color(0.1, 1.0, 0.35, 1.0, 0.1, 0.5, 0.1) end
+                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
               end)
               return
           end
