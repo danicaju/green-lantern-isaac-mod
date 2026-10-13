@@ -137,6 +137,38 @@ simulateUpdate(tearTB, pWithTB)
 check(tearTB.Velocity.X == 0 and tearTB.Velocity.Y == -14, "Tractor Beam: tear velocity allowed to stay purely vertical (0, -14)")
 check(tearTB:GetData().glBeamVel.X == 0 and tearTB:GetData().glBeamVel.Y == -14, "Tractor Beam: glBeamVel synchronized to vertical (0, -14)")
 
+-- 5. Continuous Beam angles & direction alignment (modules/beam_math.lua & modules/fx_beam.lua)
+Core.IsRingActive = function() return true end
+CollectibleType.COLLECTIBLE_MUTANT_SPIDER = 153
+dofile("modules/beam_math.lua")(Core)
+dofile("modules/ring_aim.lua")(Core)
+
+-- Player with Mutant Spider (4-shot) WITHOUT Tractor Beam -> 4 angles spread
+local pMutantNoTB = {
+    HasCollectible = function(_, id) return id == 153 end,
+}
+local anglesNormal = Core.GetContinuousBeamAngles(pMutantNoTB)
+check(#anglesNormal == 4, "Without Tractor Beam: multi-shot produces multiple spread angles")
+
+-- Player with Mutant Spider WITH Tractor Beam -> 1 angle { 0 }
+local pMutantWithTB = {
+    HasCollectible = function(_, id) return id == 153 or id == 397 end,
+    GetHeadDirection = function() return Direction.UP end,
+}
+local anglesTB = Core.GetContinuousBeamAngles(pMutantWithTB)
+check(#anglesTB == 1 and anglesTB[1] == 0, "With Tractor Beam: multi-shot angles collapsed into single beam { 0 }")
+
+-- Continuous Beam origin & direction alignment
+local continuousAim = Vector(0.707, -0.707) -- Diagonal aim input
+local contDirNormal = continuousAim
+check(contDirNormal.X > 0.5 and contDirNormal.Y < -0.5, "Without Tractor Beam: continuous beam aim direction preserved diagonally")
+
+local contDirTB = Core.GetTractorBeamDirection(pMutantWithTB, continuousAim)
+check(contDirTB.X == 0 and contDirTB.Y == -1, "With Tractor Beam: continuous beam aim direction locked to cardinal UP (0, -1)")
+
+local handOffsetTB = Core.GetRingHandOffset(pMutantWithTB, contDirTB)
+check(handOffsetTB.X == 0, "With Tractor Beam UP: hand offset has X=0, centering beam on player position")
+
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_tractor_beam] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end

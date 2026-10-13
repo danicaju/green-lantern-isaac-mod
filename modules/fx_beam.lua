@@ -196,10 +196,21 @@ return function(Core)
             dir = dir:Normalized()
         end
 
+        local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
+        if hasTB then
+            dir = Core.GetTractorBeamDirection(player, dir)
+        end
+
         local handOffset  = data.lastRingHandOffset or Core.GetRingHandOffset(player, dir)
+        if hasTB and math.abs(dir.X) < 0.01 then
+            handOffset = Vector(0, dir.Y < 0 and -32 or -6)
+        end
         local startWorld  = player.Position + handOffset
         local startScreen = Isaac.WorldToScreen(startWorld)
         local angles = (Core.GetContinuousBeamAngles and Core.GetContinuousBeamAngles(player)) or { 0 }
+        if hasTB then
+            angles = { 0 }
+        end
 
         for _, ang in ipairs(angles) do
             local rayDir = (ang == 0) and dir or (dir.Rotated and dir:Rotated(ang) or dir)
@@ -283,7 +294,13 @@ return function(Core)
             end
 
             local handOffset = (hasActiveFlare and data.lastRingHandOffset) or Core.GetRingHandOffset(player, shootInput)
-            if aimingUp then
+            local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
+            if hasTB then
+                local tbDir = Core.GetTractorBeamDirection(player, shootInput)
+                if math.abs(tbDir.X) < 0.01 then
+                    handOffset = Vector(0, tbDir.Y < 0 and -38 or -6)
+                end
+            elseif aimingUp then
                 handOffset = Vector(0, -38)
             end
             local handScreenPos = Isaac.WorldToScreen(player.Position + handOffset)

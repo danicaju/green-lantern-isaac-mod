@@ -38,6 +38,9 @@ return function(Core)
               end)
               if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
                   local rawDir = tear.Velocity:Normalized()
+                  if Core.HasTractorBeam and Core.HasTractorBeam(player) then
+                      rawDir = Core.GetTractorBeamDirection(player, rawDir)
+                  end
                   data.lastShootDir = Vector(rawDir.X, rawDir.Y)
                   if (data.shootHoldFrames or 0) == 0 then
                       data.shootHoldFrames         = 1

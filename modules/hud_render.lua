@@ -104,6 +104,9 @@ return function(Core)
         local holdingNow = (shootIn and shootIn:Length() > 0.1) or false
         if holdingNow then
           local rawDir = shootIn:Normalized()
+          if Core.HasTractorBeam and Core.HasTractorBeam(p) then
+            rawDir = Core.GetTractorBeamDirection(p, rawDir)
+          end
           d.renderLastShootDir = Vector(rawDir.X, rawDir.Y)
           if d.wasHoldingShootOnRender == false then
             d.sawShootPressBetweenFrames = true

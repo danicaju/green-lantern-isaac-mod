@@ -60,11 +60,14 @@ return function(Core)
       end
       if isHoldingShoot and canUseBeam then
         local rawDir = shootInput:Normalized()
-        local shootDir = Vector(rawDir.X, rawDir.Y)
-        if Core.HasTractorBeam(player) then
+        local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
+        if hasTB then
           shootDir = Core.GetTractorBeamDirection(player, shootDir)
         end
         local handOffset = Core.GetRingHandOffset(player, shootDir)
+        if hasTB and math.abs(shootDir.X) < 0.01 then
+          handOffset = Vector(0, shootDir.Y < 0 and -32 or -6)
+        end
         data.lastShootDir = shootDir
         data.lastRingHandOffset = handOffset
         if (data.shootHoldFrames or 0) == 0 then

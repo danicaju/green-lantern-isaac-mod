@@ -58,6 +58,9 @@ return function(Core)
 
   function Core.GetContinuousBeamAngles(player)
     if not player then return { 0 } end
+    if Core.HasTractorBeam and Core.HasTractorBeam(player) then
+      return { 0 }
+    end
     local count = Core.GetTapTearCount(player)
     local hasWiz = CollectibleType and CollectibleType.COLLECTIBLE_THE_WIZ and player:HasCollectible(CollectibleType.COLLECTIBLE_THE_WIZ)
     if hasWiz then
