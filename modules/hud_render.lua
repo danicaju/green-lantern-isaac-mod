@@ -271,12 +271,20 @@ return function(Core)
                   else
                     Core.glBeamTearSprite:SetFrame("Idle", animFrame)
                     local currentVel = tear.Velocity
+                    local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+                    local hasTB = (sp and Core.HasTractorBeam and Core.HasTractorBeam(sp)) or (TearFlags and TearFlags.TEAR_TRACTOR_BEAM and flags and Core.HasTearFlag(flags, TearFlags.TEAR_TRACTOR_BEAM))
                     local targetRot = (currentVel and currentVel:Length() > 0.1) and currentVel:GetAngleDegrees() or (td.glBeamVel and td.glBeamVel:GetAngleDegrees() or 0)
-                    if td.lastBeamRot then
+                    if hasTB and sp then
+                      local tbDir = Core.GetTractorBeamDirection(sp, currentVel)
+                      targetRot = (tbDir.GetAngleDegrees and tbDir:GetAngleDegrees()) or (math.atan2(tbDir.Y, tbDir.X) * 180 / math.pi)
+                      td.lastBeamRot = targetRot
+                    elseif td.lastBeamRot then
                       local diff = (targetRot - td.lastBeamRot + 180) % 360 - 180
                       targetRot = td.lastBeamRot + diff * 0.4
+                      td.lastBeamRot = targetRot
+                    else
+                      td.lastBeamRot = targetRot
                     end
-                    td.lastBeamRot = targetRot
                     Core.glBeamTearSprite.Rotation = targetRot
                     Core.glBeamTearSprite.Scale = Vector(scale, scale)
                     Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
@@ -292,6 +300,11 @@ return function(Core)
                 local scale = td.glFistScale or 2.2
                 Core.glFistTearSprite:SetFrame("Idle", animFrame)
                 local rot = (tear.Velocity and tear.Velocity:Length() > 0.1) and tear.Velocity:GetAngleDegrees() or (td.glFistVel and td.glFistVel:GetAngleDegrees() or 0)
+                local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+                if sp and Core.HasTractorBeam and Core.HasTractorBeam(sp) then
+                  local tbDir = Core.GetTractorBeamDirection(sp, tear.Velocity)
+                  rot = (tbDir.GetAngleDegrees and tbDir:GetAngleDegrees()) or (math.atan2(tbDir.Y, tbDir.X) * 180 / math.pi)
+                end
                 Core.glFistTearSprite.Rotation = rot
                 Core.glFistTearSprite.Scale = Vector(scale, scale)
                 Core.glFistTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)

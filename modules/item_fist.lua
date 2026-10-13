@@ -35,6 +35,9 @@ return function(Core)
     else
       direction = direction:Normalized()
     end
+    if Core.HasTractorBeam and Core.HasTractorBeam(player) then
+      direction = Core.GetTractorBeamDirection(player, direction)
+    end
 
     local hasCarBattery = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CAR_BATTERY) or 356)
     local frame = Game():GetFrameCount()

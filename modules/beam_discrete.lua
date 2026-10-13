@@ -67,21 +67,30 @@ return function(Core)
       end
 
       -- 1. Snap projectile spawn position to the outstretched Power Ring hand!
+      local hasTB = (Core.HasTractorBeam and Core.HasTractorBeam(player)) or (TearFlags and TearFlags.TEAR_TRACTOR_BEAM and Core.HasTearFlag(tear.TearFlags, TearFlags.TEAR_TRACTOR_BEAM))
       local baseDir     = (data.allowingTapTear and data.tapBurstBaseDir) or tear.Velocity
+      if hasTB then
+          baseDir = Core.GetTractorBeamDirection(player, baseDir)
+          if tear.Velocity and tear.Velocity:Length() > 0.1 then
+              tear.Velocity = baseDir * tear.Velocity:Length()
+          end
+      end
       local handOffset  = Core.GetRingHandOffset(player, baseDir)
       local spawnOffset = Core.GetRingBeamTearSpawnOffset(player, baseDir)
       local perpOffset  = Vector.Zero
-      if data.allowingTapTear and (data.tapBurstCount or 1) > 1 and baseDir:Length() > 0.1 then
-          local dir        = baseDir:Normalized()
-          local perp       = Vector(-dir.Y, dir.X)
-          local laneOffset = (data.tapBurstIndex or 1) - ((data.tapBurstCount or 1) + 1) * 0.5
-          perpOffset       = perp * math.max(-14.0, math.min(14.0, laneOffset * 5.5))
-      elseif data.multiShotIndex > 0 and tear.Velocity:Length() > 0.1 then
-          local dir = tear.Velocity:Normalized()
-          local perp = Vector(-dir.Y, dir.X)
-          local side = (data.multiShotIndex % 2 == 1) and 1 or -1
-          local tier = math.ceil(data.multiShotIndex / 2)
-          perpOffset = perp * (side * math.min(tier * 5.5, 14.0))
+      if not hasTB then
+          if data.allowingTapTear and (data.tapBurstCount or 1) > 1 and baseDir:Length() > 0.1 then
+              local dir        = baseDir:Normalized()
+              local perp       = Vector(-dir.Y, dir.X)
+              local laneOffset = (data.tapBurstIndex or 1) - ((data.tapBurstCount or 1) + 1) * 0.5
+              perpOffset       = perp * math.max(-14.0, math.min(14.0, laneOffset * 5.5))
+          elseif data.multiShotIndex > 0 and tear.Velocity:Length() > 0.1 then
+              local dir = tear.Velocity:Normalized()
+              local perp = Vector(-dir.Y, dir.X)
+              local side = (data.multiShotIndex % 2 == 1) and 1 or -1
+              local tier = math.ceil(data.multiShotIndex / 2)
+              perpOffset = perp * (side * math.min(tier * 5.5, 14.0))
+          end
       end
 
       tear.Position     = player.Position + spawnOffset + perpOffset
@@ -229,9 +238,14 @@ return function(Core)
                   or Core.HasTearFlag(flags, TearFlags.TEAR_BOOMERANG)
                   or Core.HasTearFlag(flags, TearFlags.TEAR_SPIRAL)
                   or Core.HasTearFlag(flags, TearFlags.TEAR_WIGGLE)
+                  or (TearFlags.TEAR_TRACTOR_BEAM and Core.HasTearFlag(flags, TearFlags.TEAR_TRACTOR_BEAM))
               then
                   hasCurvingSynergy = true
               end
+          end
+          local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+          if sp and Core.HasTractorBeam and Core.HasTractorBeam(sp) then
+              hasCurvingSynergy = true
           end
           if not hasCurvingSynergy then
               if td.glBeamVel and td.glBeamVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
@@ -241,6 +255,10 @@ return function(Core)
               tear.FallingAcceleration = -0.04
               if tear.FallingSpeed and tear.FallingSpeed > 0 then
                   tear.FallingSpeed = 0.0
+              end
+          else
+              if tear.Velocity and tear.Velocity:Length() > 0.1 then
+                  td.glBeamVel = Vector(tear.Velocity.X, tear.Velocity.Y)
               end
           end
 
@@ -252,10 +270,17 @@ return function(Core)
           end)
           -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
-          tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
-          if td.glFistVel and td.glFistVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
-              local currentSpeed = tear.Velocity:Length()
-              tear.Velocity = td.glFistVel:Normalized() * currentSpeed
+          local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+          local fistHasTB = (sp and Core.HasTractorBeam and Core.HasTractorBeam(sp)) or (TearFlags and TearFlags.TEAR_TRACTOR_BEAM and flags and Core.HasTearFlag(flags, TearFlags.TEAR_TRACTOR_BEAM))
+          if not fistHasTB then
+              if td.glFistVel and td.glFistVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then
+                  local currentSpeed = tear.Velocity:Length()
+                  tear.Velocity = td.glFistVel:Normalized() * currentSpeed
+              end
+          else
+              if tear.Velocity and tear.Velocity:Length() > 0.1 then
+                  td.glFistVel = Vector(tear.Velocity.X, tear.Velocity.Y)
+              end
           end
           tear.FallingAcceleration = -0.04
           if tear.FallingSpeed and tear.FallingSpeed > 0 then
