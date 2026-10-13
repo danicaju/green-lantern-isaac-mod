@@ -18,12 +18,7 @@ if PROJECT_DIR not in sys.path:
 VANILLA_PATH = r"C:\Program Files (x86)\Steam\steamapps\common\The Binding of Isaac Rebirth\extracted_resources\resources\gfx\characters\costumes\character_001_isaac.png"
 CURRENT_HAL_PATH = os.path.join(PROJECT_DIR, r"resources\gfx\characters\hal_jordan.png")
 CURRENT_TAINTED_PATH = os.path.join(PROJECT_DIR, r"resources\gfx\characters\tainted_hal.png")
-
-# Artifact directories
-ARTIFACT_DIRS = [
-    r"C:\Users\danic\.gemini\antigravity\brain\9da71cf0-d896-4c4f-9028-8fd34b5177fe",
-    r"C:\Users\danic\.gemini\antigravity\brain\c85d05f1-0104-407a-a3c0-1180d226af49"
-]
+ARTIFACT_DIR = r"C:\Users\danic\.gemini\antigravity\brain\c85d05f1-0104-407a-a3c0-1180d226af49"
 
 EXTRACTED_RES = r"C:\Program Files (x86)\Steam\steamapps\common\The Binding of Isaac Rebirth\extracted_resources\resources\gfx"
 PATH_2020 = os.path.join(EXTRACTED_RES, r"characters\costumes\costume_245_2020.png")
@@ -41,53 +36,48 @@ SKIN_BASE = (204, 152, 128, 255)
 SKIN_SHADOW = (172, 118, 96, 255)
 
 # Hal Jordan Hair (Warm pilot chestnut brown #67442b from user sketch)
-HAIR_DARK = (54, 32, 20, 255)
-HAIR_BASE = (98, 62, 38, 255)
-HAIR_MID = (125, 82, 52, 255)
-HAIR_LIGHT = (158, 108, 70, 255)
+HAIR_DARK = (44, 26, 17, 255)
+HAIR_BASE = (103, 68, 43, 255)
+HAIR_MID = (128, 86, 56, 255)
+HAIR_LIGHT = (165, 115, 75, 255)
 
 # Parallax Silver Temples
-SILVER_DARK = (95, 110, 120, 255)
-SILVER_BASE = (170, 182, 192, 255)
-SILVER_LIGHT = (235, 240, 245, 255)
-THAL_HAIR_BASE = (65, 50, 42, 255)
+SILVER_DARK = (100, 115, 125, 255)
+SILVER_BASE = (175, 188, 196, 255)
+SILVER_LIGHT = (235, 242, 246, 255)
+THAL_HAIR_BASE = (72, 54, 46, 255)
 
 # Hal Jordan Domino Mask (Iconic emerald hero mask)
-MASK_OUTLINE = (6, 44, 16, 255)
-MASK_DARK = (12, 82, 30, 255)
-MASK_BASE = (24, 158, 58, 255)
-MASK_LIGHT = (56, 218, 94, 255)
-MASK_GLOW = (125, 248, 156, 255)
+MASK_OUTLINE = (6, 52, 18, 255)
+MASK_DEEP = (12, 85, 32, 255)
+MASK_BASE = (24, 168, 62, 255)
+MASK_LIGHT = (58, 232, 102, 255)
+MASK_GLOW = (135, 255, 165, 255)
 
 # Eyes (Glowing White Comic Hero Lenses)
 WHITE = (255, 255, 255, 255)
-EYE_GLOW = (220, 255, 235, 255)
-EYE_RIM = (90, 230, 160, 255)
+EYE_GLOW = (220, 255, 232, 255)
+EYE_RIM = (105, 240, 174, 255)
 
 # Parallax Eyes (Piercing Cosmic Yellow Glow)
-PARALLAX_YELLOW_DEEP = (190, 150, 15, 255)
-PARALLAX_YELLOW_BASE = (255, 220, 40, 255)
-PARALLAX_YELLOW_GLOW = (255, 255, 170, 255)
+PARALLAX_YELLOW_DEEP = (200, 160, 20, 255)
+PARALLAX_YELLOW_BASE = (255, 225, 45, 255)
+PARALLAX_YELLOW_GLOW = (255, 255, 175, 255)
 
 # Hal Jordan Suit (Directly from User Sketch)
-SUIT_DARK_OUTLINE = (10, 34, 16, 255)
-SUIT_DARK_BASE = (20, 72, 35, 255)
-SUIT_DARK_LIGHT = (32, 98, 48, 255)
+# Dark Forest Green: shoulders, outer torso, sleeves, waist, pants
+SUIT_DARK_OUTLINE = (10, 36, 18, 255)
+SUIT_DARK_BASE = (22, 78, 38, 255)
+SUIT_DARK_LIGHT = (34, 106, 54, 255)
 
-SUIT_LIGHT_OUTLINE = (16, 68, 30, 255)
-SUIT_LIGHT_BASE = (84, 196, 102, 255)
-SUIT_LIGHT_BRIGHT = (130, 230, 148, 255)
-SUIT_LIGHT_DARK = (50, 150, 72, 255)
+# Light Vibrant Emerald Green: chest plate, gauntlets/gloves, boots
+SUIT_LIGHT_BASE = (92, 204, 112, 255)
+SUIT_LIGHT_BRIGHT = (138, 235, 154, 255)
+SUIT_LIGHT_DARK = (52, 158, 76, 255)
 
 # Chest Emblem (Lantern Logo)
-EMBLEM_LINE = (12, 54, 22, 255)
-EMBLEM_CORE = (160, 245, 180, 255)
-
-# Gauntlets and Boots
-GLOVE_LIGHT = (125, 230, 142, 255)
-GLOVE_BASE = (80, 192, 98, 255)
-BOOT_LIGHT = (125, 230, 142, 255)
-BOOT_BASE = (80, 192, 98, 255)
+EMBLEM_LINE = (14, 60, 26, 255)
+EMBLEM_CORE = (180, 250, 190, 255)
 
 # Power Ring
 RING_GEM = (0, 255, 128, 255)
@@ -95,17 +85,17 @@ RING_AURA = (140, 255, 190, 255)
 THAL_RING_YELLOW = (255, 230, 40, 255)
 
 # Parallax Suit & Billowing Cape
-PARALLAX_CAPE_BASE = (22, 130, 62, 255)
-PARALLAX_CAPE_DARK = (10, 65, 30, 255)
-PARALLAX_CAPE_LIGHT = (45, 175, 88, 255)
-PARALLAX_ARMOR_BASE = (22, 28, 26, 255)
-PARALLAX_ARMOR_LIGHT = (40, 52, 48, 255)
+PARALLAX_CAPE_BASE = (24, 140, 68, 255)
+PARALLAX_CAPE_DARK = (10, 75, 34, 255)
+PARALLAX_CAPE_LIGHT = (48, 190, 96, 255)
+PARALLAX_ARMOR_BASE = (24, 30, 28, 255)
+PARALLAX_ARMOR_LIGHT = (44, 56, 52, 255)
 PARALLAX_CREST_GOLD = (255, 215, 30, 255)
 
 # ==================== HEAD GENERATION ====================
 
 def clean_base_head(base_head):
-    """Removes tears and crying mouth from vanilla Isaac head."""
+    """Removes tears and crying mouth to expose a clean facial canvas."""
     img = base_head.copy().convert("RGBA")
     pix = img.load()
     for y in range(12, 24):
@@ -123,142 +113,118 @@ def render_hal_head_front(base_head, is_shooting=False):
     img = clean_base_head(base_head)
     pix = img.load()
 
-    hair_map = {}
-
-    # Fill base skull crown (y=2..7)
+    hair_pixels = set()
     for y in range(2, 8):
         for x in range(2, 30):
             if pix[x, y][3] > 30:
-                hair_map[(x, y)] = HAIR_BASE
+                hair_pixels.add((x, y))
 
-    # Organic spiky tufts on top (solidly rooted to skull)
-    # Left tuft (pointing up-left, x=7..10, y=1..3)
-    for x, y in [(8, 1), (9, 1), (7, 2), (8, 2), (9, 2), (10, 2), (7, 3), (8, 3), (9, 3), (10, 3)]:
-        hair_map[(x, y)] = HAIR_BASE
-    # Center tuft (pointing up-right, x=14..18, y=1..3)
-    for x, y in [(15, 1), (16, 1), (14, 2), (15, 2), (16, 2), (17, 2), (14, 3), (15, 3), (16, 3), (17, 3)]:
-        hair_map[(x, y)] = HAIR_BASE
-    # Right tuft (pointing up-right, x=21..24, y=1..3)
-    for x, y in [(22, 1), (23, 1), (21, 2), (22, 2), (23, 2), (24, 2), (21, 3), (22, 3), (23, 3), (24, 3)]:
-        hair_map[(x, y)] = HAIR_BASE
+    # Spikes extending above skull Y=2 matching user sketch:
+    left_spike = [(7, 1), (8, 1), (7, 2), (8, 2), (9, 2)]
+    center_spike = [(16, 0), (17, 0), (15, 1), (16, 1), (17, 1), (18, 1),
+                    (14, 2), (15, 2), (16, 2), (17, 2), (18, 2), (19, 2)]
+    right_spike = [(24, 1), (25, 1), (23, 2), (24, 2), (25, 2), (26, 2)]
+    side_spikes = [(3, 6), (2, 7), (3, 7), (2, 8), (3, 8), (4, 8),
+                   (28, 6), (28, 7), (29, 7), (27, 8), (28, 8), (29, 8)]
 
-    # Sideburns down both sides
-    for y in range(7, 13):
-        hair_map[(3, y)] = HAIR_BASE
-        hair_map[(4, y)] = HAIR_BASE
-        if y <= 10: hair_map[(5, y)] = HAIR_BASE
-        hair_map[(27, y)] = HAIR_BASE
-        hair_map[(28, y)] = HAIR_BASE
-        if y <= 10: hair_map[(26, y)] = HAIR_BASE
+    for pt in left_spike + center_spike + right_spike + side_spikes:
+        hair_pixels.add(pt)
 
-    # Brow bangs (framing forehead)
-    for y in range(7, 9):
-        for x in range(5, 10): hair_map[(x, y)] = HAIR_BASE
-        for x in range(22, 27): hair_map[(x, y)] = HAIR_BASE
-    hair_map[(5, 9)] = HAIR_BASE; hair_map[(6, 9)] = HAIR_BASE
-    hair_map[(25, 9)] = HAIR_BASE; hair_map[(26, 9)] = HAIR_BASE
+    # Forehead bangs with prominent central triangular dip
+    bangs = [
+        (4, 8), (5, 8), (6, 8), (7, 8), (8, 8), (9, 8), (10, 8), (11, 8), (12, 8), (13, 8),
+        (14, 8), (15, 8), (16, 8), (17, 8), (18, 8), (19, 8), (20, 8), (21, 8), (22, 8), (23, 8),
+        (24, 8), (25, 8), (26, 8), (27, 8),
+        (4, 9), (5, 9), (6, 9), (8, 9), (9, 9), (12, 9), (13, 9), (14, 9), (19, 9), (20, 9), (25, 9), (26, 9), (27, 9),
+        (4, 10), (5, 10), (12, 10), (13, 10), (26, 10), (27, 10),
+        (4, 11), (5, 11), (26, 11), (27, 11),
+        (4, 12), (27, 12),
+    ]
+    for pt in bangs:
+        hair_pixels.add(pt)
 
-    # Prominent central fringe lock dipping into forehead (sketch detail)
-    for y in range(7, 9):
-        for x in range(14, 18): hair_map[(x, y)] = HAIR_BASE
-    for x in range(14, 17): hair_map[(x, 9)] = HAIR_BASE
-    hair_map[(15, 10)] = HAIR_BASE
-
-    # Outlining for hair
-    outline_hair = set()
-    for (x, y) in hair_map.keys():
+    hair_outline_pts = set()
+    for (x, y) in hair_pixels:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
-            if (nx, ny) not in hair_map:
-                outline_hair.add((x, y))
+            if (nx, ny) not in hair_pixels:
+                hair_outline_pts.add((x, y))
                 break
 
-    for (x, y) in hair_map.keys():
-        if (x, y) in outline_hair:
+    for (x, y) in hair_pixels:
+        if (x, y) in hair_outline_pts:
             pix[x, y] = HAIR_OUTLINE
         else:
-            if y == 2 and x in (8, 9, 15, 16, 22, 23):
+            if y <= 2 and x in (8, 16, 17, 24):
                 pix[x, y] = HAIR_LIGHT
-            elif y in (3, 4) and (8 <= x <= 10 or 14 <= x <= 17 or 21 <= x <= 23):
+            elif y in (3, 4, 5) and (8 <= x <= 12 or 16 <= x <= 22):
                 pix[x, y] = HAIR_MID
-            elif y in (8, 9, 10):
-                pix[x, y] = HAIR_DARK if (x, y) in outline_hair else HAIR_BASE
+            elif y >= 8:
+                pix[x, y] = HAIR_BASE
             else:
                 pix[x, y] = HAIR_BASE
 
-    # Forehead skin exposed above eyes
-    for y in range(8, 12):
-        for x in range(7, 14):
-            if (x, y) not in hair_map and pix[x, y][3] > 30 and pix[x, y] != OUTLINE:
-                pix[x, y] = SKIN_LIGHT if y <= 10 else SKIN_BASE
-        for x in range(17, 25):
-            if (x, y) not in hair_map and pix[x, y][3] > 30 and pix[x, y] != OUTLINE:
-                pix[x, y] = SKIN_LIGHT if y <= 10 else SKIN_BASE
+    for y in range(8, 13):
+        for x in range(5, 27):
+            if (x, y) not in hair_pixels and pix[x, y][3] > 30 and pix[x, y] != OUTLINE:
+                pix[x, y] = SKIN_LIGHT if y <= 11 else SKIN_BASE
 
-    # 2. Sleek Iconic Green Lantern Domino Mask
+    # Green Lantern Domino Mask
     mask_pixels = set()
     for y in range(12, 19):
         for x in range(4, 28):
-            if (x, y) in hair_map: continue
-            in_m = False
-            # Nose bridge (y=14..15)
-            if y in (14, 15) and 13 <= x <= 18: in_m = True
-            # Left mask wing (surrounding left eye)
-            elif 5 <= x <= 12 and 13 <= y <= 18: in_m = True
-            elif y == 12 and (5 <= x <= 7 or 11 <= x <= 12): in_m = True # brow arch
-            elif y in (13, 14, 15) and x in (4, 5): in_m = True # pointed outer flare
-            # Right mask wing (surrounding right eye)
-            elif 19 <= x <= 26 and 13 <= y <= 18: in_m = True
-            elif y == 12 and (19 <= x <= 20 or 24 <= x <= 26): in_m = True # brow arch
-            elif y in (13, 14, 15) and x in (26, 27): in_m = True # pointed outer flare
-            if in_m and pix[x, y][3] > 30:
-                mask_pixels.add((x, y))
+            p = pix[x, y]
+            if p[3] > 30 and (x, y) not in hair_pixels:
+                in_mask = False
+                if 5 <= x <= 12 and 13 <= y <= 18: in_mask = True
+                elif 19 <= x <= 26 and 13 <= y <= 18: in_mask = True
+                elif (6 <= x <= 11 or 20 <= x <= 25) and y == 12: in_mask = True
+                elif 13 <= x <= 18 and 14 <= y <= 15: in_mask = True
+                elif (x in (4, 27) and y in (13, 14, 15)): in_mask = True
+                if in_mask: mask_pixels.add((x, y))
 
-    mask_outline = set()
+    mask_outline_pts = set()
     for (x, y) in mask_pixels:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
             if (nx, ny) not in mask_pixels:
-                mask_outline.add((x, y))
+                mask_outline_pts.add((x, y))
                 break
 
     for (x, y) in mask_pixels:
-        if (x, y) in mask_outline:
+        if (x, y) in mask_outline_pts:
             pix[x, y] = MASK_OUTLINE
         else:
-            if y == 13 and (6 <= x <= 11 or 20 <= x <= 25):
+            if y == 13 and (7 <= x <= 10 or 21 <= x <= 24):
                 pix[x, y] = MASK_LIGHT
-            elif y in (13, 14) and 13 <= x <= 18:
-                pix[x, y] = MASK_LIGHT if y == 13 else MASK_BASE
+            elif y in (13, 14):
+                pix[x, y] = MASK_LIGHT if (y == 13 and 14 <= x <= 17) else MASK_BASE
             elif y >= 17:
-                pix[x, y] = MASK_DARK
+                pix[x, y] = MASK_DEEP
             else:
                 pix[x, y] = MASK_BASE
 
-    # Comic Hero White Eyes (heroic almond shape inside mask)
-    for y in range(14, 17):
-        for x in range(7, 12):
-            if (x, y) in mask_pixels and (x, y) not in mask_outline:
-                if (y in (14, 16) and 8 <= x <= 11) or (y == 15 and 7 <= x <= 11):
-                    pix[x, y] = WHITE
-    pix[8, 14] = EYE_RIM; pix[11, 14] = EYE_RIM
-    pix[9, 15] = EYE_GLOW; pix[10, 15] = EYE_GLOW
-    pix[8, 16] = EYE_RIM; pix[11, 16] = EYE_RIM
+    # Glowing White Comic Eyes
+    for y in range(14, 18):
+        for x in range(7, 11):
+            if (x, y) in mask_pixels: pix[x, y] = WHITE
+    pix[7, 14] = EYE_RIM; pix[10, 14] = EYE_RIM
+    pix[7, 17] = MASK_DEEP; pix[10, 17] = MASK_DEEP
+    pix[8, 15] = EYE_GLOW; pix[9, 15] = EYE_GLOW
 
-    for y in range(14, 17):
-        for x in range(20, 25):
-            if (x, y) in mask_pixels and (x, y) not in mask_outline:
-                if (y in (14, 16) and 20 <= x <= 23) or (y == 15 and 20 <= x <= 24):
-                    pix[x, y] = WHITE
-    pix[20, 14] = EYE_RIM; pix[23, 14] = EYE_RIM
-    pix[21, 15] = EYE_GLOW; pix[22, 15] = EYE_GLOW
-    pix[20, 16] = EYE_RIM; pix[23, 16] = EYE_RIM
+    for y in range(14, 18):
+        for x in range(21, 25):
+            if (x, y) in mask_pixels: pix[x, y] = WHITE
+    pix[21, 14] = EYE_RIM; pix[24, 14] = EYE_RIM
+    pix[21, 17] = MASK_DEEP; pix[24, 17] = MASK_DEEP
+    pix[22, 15] = EYE_GLOW; pix[23, 15] = EYE_GLOW
 
-    # 3. Mouth (determined hero expression from sketch)
+    # Mouth & Chin
     if not is_shooting:
         pix[14, 20] = OUTLINE; pix[15, 20] = OUTLINE; pix[16, 20] = OUTLINE; pix[17, 20] = OUTLINE
         pix[13, 21] = OUTLINE
-        pix[14, 21] = WHITE; pix[15, 21] = WHITE; pix[16, 21] = WHITE; pix[17, 21] = (45, 18, 18, 255)
+        pix[14, 21] = WHITE; pix[15, 21] = WHITE; pix[16, 21] = WHITE
+        pix[17, 21] = (45, 18, 18, 255)
         pix[18, 21] = OUTLINE
         pix[14, 22] = OUTLINE; pix[15, 22] = OUTLINE; pix[16, 22] = OUTLINE; pix[17, 22] = OUTLINE
     else:
@@ -267,8 +233,7 @@ def render_hal_head_front(base_head, is_shooting=False):
         pix[13, 20] = OUTLINE; pix[13, 21] = OUTLINE
         pix[18, 20] = OUTLINE; pix[18, 21] = OUTLINE
         for mx in range(14, 18):
-            pix[mx, 20] = WHITE
-            pix[mx, 21] = (50, 16, 16, 255)
+            pix[mx, 20] = WHITE; pix[mx, 21] = (50, 16, 16, 255)
 
     return img
 
@@ -276,87 +241,85 @@ def render_hal_head_side(base_head, is_shooting=False):
     img = clean_base_head(base_head)
     pix = img.load()
 
-    hair_map = {}
-    for y in range(2, 20):
+    hair_pixels = set()
+    for y in range(2, 19):
         for x in range(2, 27):
-            if pix[x, y][3] > 30:
-                is_h = False
-                if y <= 7: is_h = True
-                elif x <= 13 and y <= 18: is_h = True
-                elif y in (8, 9) and x <= 22: is_h = True
-                elif y == 10 and (x <= 16 or (20 <= x <= 23)): is_h = True
-                elif y in (11, 12) and (x <= 13 or (21 <= x <= 22 and y == 11)): is_h = True
-                if is_h: hair_map[(x, y)] = HAIR_BASE
+            p = pix[x, y]
+            if p[3] > 30:
+                is_hair = False
+                if y <= 7: is_hair = True
+                elif y in (8, 9) and x <= 24: is_hair = True
+                elif y == 10 and (x <= 18 or (21 <= x <= 24)): is_hair = True
+                elif y in (11, 12) and (x <= 15 or (22 <= x <= 23 and y == 11)): is_hair = True
+                elif y in (13, 14) and x <= 13: is_hair = True
+                elif y in (15, 16) and x <= 11: is_hair = True
+                elif y in (17, 18) and x <= 9: is_hair = True
+                if is_hair: hair_pixels.add((x, y))
 
-    for x, y in [(13, 1), (14, 1), (12, 2), (13, 2), (14, 2), (15, 2), (21, 8), (22, 8), (22, 9)]:
-        hair_map[(x, y)] = HAIR_BASE
+    for pt in [(13, 0), (14, 0), (12, 1), (13, 1), (14, 1), (15, 1),
+               (11, 2), (12, 2), (13, 2), (14, 2), (15, 2), (16, 2),
+               (6, 1), (7, 1), (5, 2), (6, 2), (7, 2), (8, 2),
+               (22, 8), (23, 8), (24, 8), (22, 9), (23, 9), (24, 9), (23, 10)]:
+        hair_pixels.add(pt)
 
-    outline_hair = set()
-    for (x, y) in hair_map.keys():
+    hair_outline_pts = set()
+    for (x, y) in hair_pixels:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
-            if (nx, ny) not in hair_map:
-                outline_hair.add((x, y))
+            if (nx, ny) not in hair_pixels:
+                hair_outline_pts.add((x, y))
                 break
 
-    for (x, y) in hair_map.keys():
-        if (x, y) in outline_hair:
+    for (x, y) in hair_pixels:
+        if (x, y) in hair_outline_pts:
             pix[x, y] = HAIR_OUTLINE
         else:
-            if y <= 3 and 12 <= x <= 15:
+            if y <= 2 and x in (12, 13, 14):
                 pix[x, y] = HAIR_LIGHT
-            elif y in (4, 5, 6) and 6 <= x <= 16:
+            elif y in (3, 4, 5) and (8 <= x <= 18):
                 pix[x, y] = HAIR_MID
-            elif y >= 11:
-                pix[x, y] = HAIR_DARK if x <= 5 else HAIR_BASE
+            elif y >= 8:
+                pix[x, y] = HAIR_BASE
             else:
                 pix[x, y] = HAIR_BASE
 
-    # Profile Domino Mask
     mask_pixels = set()
     for y in range(12, 19):
-        for x in range(13, 25):
-            if (x, y) in hair_map: continue
-            in_m = False
-            if y in (12, 18) and 15 <= x <= 22: in_m = True
-            elif 13 <= y <= 17 and 14 <= x <= 23: in_m = True
-            elif x in (13, 14) and y in (14, 15): in_m = True
-            if in_m and pix[x, y][3] > 30:
-                mask_pixels.add((x, y))
+        for x in range(13, 24):
+            p = pix[x, y]
+            if p[3] > 30 and (x, y) not in hair_pixels:
+                in_mask = False
+                if y in (12, 18) and 14 <= x <= 21: in_mask = True
+                elif 13 <= y <= 17 and 13 <= x <= 22: in_mask = True
+                if in_mask: mask_pixels.add((x, y))
 
-    mask_outline = set()
+    mask_outline_pts = set()
     for (x, y) in mask_pixels:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
             if (nx, ny) not in mask_pixels:
-                mask_outline.add((x, y))
+                mask_outline_pts.add((x, y))
                 break
 
     for (x, y) in mask_pixels:
-        if (x, y) in mask_outline:
+        if (x, y) in mask_outline_pts:
             pix[x, y] = MASK_OUTLINE
         else:
-            pix[x, y] = MASK_LIGHT if y == 13 else (MASK_DARK if y >= 17 else MASK_BASE)
+            pix[x, y] = MASK_LIGHT if y == 13 else MASK_BASE
 
-    # Heroic comic eye profile
-    for y in range(14, 17):
-        for x in range(16, 22):
-            if (x, y) in mask_pixels and (x, y) not in mask_outline:
-                if (y in (14, 16) and 17 <= x <= 20) or (y == 15 and 16 <= x <= 21):
-                    pix[x, y] = WHITE
-    pix[17, 14] = EYE_RIM; pix[20, 14] = EYE_RIM
-    pix[18, 15] = EYE_GLOW; pix[19, 15] = EYE_GLOW
+    for y in range(14, 18):
+        for x in range(15, 20):
+            if (x, y) in mask_pixels: pix[x, y] = WHITE
+    pix[15, 14] = EYE_RIM; pix[19, 14] = EYE_RIM
+    pix[15, 17] = MASK_DEEP; pix[19, 17] = MASK_DEEP
+    pix[16, 15] = EYE_GLOW; pix[17, 15] = EYE_GLOW
 
-    # Mouth profile
     if not is_shooting:
-        pix[25, 20] = OUTLINE; pix[26, 20] = OUTLINE
-        pix[25, 21] = OUTLINE; pix[26, 21] = WHITE; pix[27, 21] = OUTLINE
-        pix[25, 22] = OUTLINE; pix[26, 22] = OUTLINE
+        pix[25, 17] = OUTLINE; pix[26, 17] = OUTLINE
     else:
-        pix[24, 19] = OUTLINE; pix[25, 19] = OUTLINE; pix[26, 19] = OUTLINE
-        pix[24, 20] = OUTLINE; pix[25, 20] = WHITE; pix[26, 20] = (50, 16, 16, 255); pix[27, 20] = OUTLINE
-        pix[24, 21] = OUTLINE; pix[25, 21] = WHITE; pix[26, 21] = (50, 16, 16, 255); pix[27, 21] = OUTLINE
-        pix[24, 22] = OUTLINE; pix[25, 22] = OUTLINE; pix[26, 22] = OUTLINE
+        pix[24, 17] = OUTLINE; pix[25, 17] = WHITE
+        pix[26, 17] = (50, 16, 16, 255); pix[27, 17] = OUTLINE
+        pix[25, 18] = OUTLINE; pix[26, 18] = OUTLINE
 
     return img
 
@@ -364,64 +327,50 @@ def render_hal_head_back(base_head, is_shooting=False):
     img = clean_base_head(base_head)
     pix = img.load()
 
-    hair_map = {}
-    for y in range(2, 19):
+    hair_pixels = set()
+    for y in range(2, 22):
         for x in range(2, 30):
-            if pix[x, y][3] > 30:
-                hair_map[(x, y)] = HAIR_BASE
+            p = pix[x, y]
+            if p[3] > 30:
+                is_hair = False
+                if y <= 18: is_hair = True
+                elif y in (19, 20) and (x <= 10 or x >= 21): is_hair = True
+                elif y == 21 and (x <= 7 or x >= 24): is_hair = True
+                if is_hair: hair_pixels.add((x, y))
 
-    for x, y in [(15, 1), (16, 1), (14, 2), (15, 2), (16, 2), (17, 2)]:
-        hair_map[(x, y)] = HAIR_BASE
+    for pt in [(7, 1), (8, 1), (7, 2), (8, 2), (9, 2),
+               (15, 0), (16, 0), (14, 1), (15, 1), (16, 1), (17, 1),
+               (13, 2), (14, 2), (15, 2), (16, 2), (17, 2), (18, 2),
+               (24, 1), (25, 1), (23, 2), (24, 2), (25, 2), (26, 2)]:
+        hair_pixels.add(pt)
 
-    outline_hair = set()
-    for (x, y) in hair_map.keys():
+    hair_outline_pts = set()
+    for (x, y) in hair_pixels:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nx, ny = x + dx, y + dy
-            if (nx, ny) not in hair_map:
-                outline_hair.add((x, y))
+            if (nx, ny) not in hair_pixels:
+                hair_outline_pts.add((x, y))
                 break
 
-    for (x, y) in hair_map.keys():
-        if (x, y) in outline_hair:
+    for (x, y) in hair_pixels:
+        if (x, y) in hair_outline_pts:
             pix[x, y] = HAIR_OUTLINE
         else:
-            if y <= 3 and x in (14, 15, 16, 17):
+            if y <= 2 and x in (8, 15, 16, 24):
                 pix[x, y] = HAIR_LIGHT
-            elif y in (4, 5, 6, 7) and x in (9, 10, 15, 16, 21, 22):
+            elif y in (4, 5, 6, 7, 8) and x in (9, 10, 15, 16, 21, 22):
                 pix[x, y] = HAIR_LIGHT if y in (5, 6) else HAIR_MID
-            elif y in (4, 5, 6, 7, 8):
+            elif y in (3, 4, 5, 6, 7, 8, 9):
                 pix[x, y] = HAIR_MID
-            elif y in (12, 13, 14) and x in (11, 20):
-                pix[x, y] = HAIR_DARK
-            elif y in (15, 16, 17) and x in (10, 21):
-                pix[x, y] = HAIR_DARK
             else:
                 pix[x, y] = HAIR_BASE
 
-    # Exposed nape
     for y in range(19, 26):
         for x in range(8, 24):
-            if (x, y) not in hair_map and pix[x, y][3] > 30 and pix[x, y] != OUTLINE:
+            if (x, y) not in hair_pixels and pix[x, y][3] > 30 and pix[x, y] != OUTLINE:
                 pix[x, y] = SKIN_SHADOW if y <= 21 else SKIN_BASE
 
     return img
-
-def render_hal_head_sad(base_head, is_side=False):
-    """Generates hurt/sad head with new hair & domino mask preserved."""
-    if not is_side:
-        img = render_hal_head_front(base_head, is_shooting=False)
-        pix = img.load()
-        # Sad eyes: white hero eyes with blue tear drops below
-        for x in range(14, 18):
-            pix[x, 21] = OUTLINE # closed grimace mouth
-            pix[x, 22] = SKIN_SHADOW
-        return img
-    else:
-        img = render_hal_head_side(base_head, is_shooting=False)
-        pix = img.load()
-        pix[25, 21] = OUTLINE
-        pix[26, 21] = OUTLINE
-        return img
 
 # ==================== TAINTED HAL (PARALLAX) HEADS ====================
 
@@ -429,45 +378,43 @@ def render_tainted_head_front(base_head, is_shooting=False):
     img = render_hal_head_front(base_head, is_shooting)
     pix = img.load()
 
-    for y in range(1, 14):
-        for x in range(2, 30):
-            if pix[x, y] in (HAIR_BASE, HAIR_MID):
-                pix[x, y] = THAL_HAIR_BASE
-            elif pix[x, y] == HAIR_LIGHT:
-                pix[x, y] = HAIR_MID
+    # Silver temples on both sides
+    for y in range(6, 13):
+        for x in range(4, 9):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID, HAIR_LIGHT, HAIR_DARK):
+                if y in (7, 8): pix[x, y] = SILVER_LIGHT
+                elif y in (9, 10): pix[x, y] = SILVER_BASE
+                else: pix[x, y] = SILVER_DARK
+        for x in range(23, 28):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID, HAIR_LIGHT, HAIR_DARK):
+                if y in (7, 8): pix[x, y] = SILVER_LIGHT
+                elif y in (9, 10): pix[x, y] = SILVER_BASE
+                else: pix[x, y] = SILVER_DARK
 
-    # Sleek silver hair streaks along temples
-    for y in range(7, 13):
-        for x in (5, 6):
-            if pix[x, y] in (THAL_HAIR_BASE, HAIR_MID, HAIR_DARK):
-                pix[x, y] = SILVER_LIGHT if y in (8, 9) else SILVER_BASE
-        for x in (25, 26):
-            if pix[x, y] in (THAL_HAIR_BASE, HAIR_MID, HAIR_DARK):
-                pix[x, y] = SILVER_LIGHT if y in (8, 9) else SILVER_BASE
+    for y in range(2, 8):
+        for x in range(9, 23):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID): pix[x, y] = THAL_HAIR_BASE
 
-    # Corrupted darker domino mask
     for y in range(12, 19):
         for x in range(4, 28):
             if pix[x, y] == MASK_BASE: pix[x, y] = SUIT_DARK_BASE
             elif pix[x, y] == MASK_LIGHT: pix[x, y] = SUIT_DARK_LIGHT
-            elif pix[x, y] == MASK_DARK: pix[x, y] = SUIT_DARK_OUTLINE
+            elif pix[x, y] == MASK_DEEP: pix[x, y] = SUIT_DARK_OUTLINE
 
     # Piercing Cosmic Yellow Eyes
-    for y in range(14, 17):
-        for x in range(7, 12):
+    for y in range(14, 18):
+        for x in range(7, 11):
             if pix[x, y] in (WHITE, EYE_GLOW, EYE_RIM):
                 pix[x, y] = PARALLAX_YELLOW_BASE
-    pix[9, 15] = PARALLAX_YELLOW_GLOW; pix[10, 15] = PARALLAX_YELLOW_GLOW
-    pix[8, 14] = PARALLAX_YELLOW_DEEP; pix[11, 14] = PARALLAX_YELLOW_DEEP
-    pix[8, 16] = PARALLAX_YELLOW_DEEP; pix[11, 16] = PARALLAX_YELLOW_DEEP
+    pix[8, 15] = PARALLAX_YELLOW_GLOW; pix[9, 15] = PARALLAX_YELLOW_GLOW
+    pix[7, 14] = PARALLAX_YELLOW_DEEP; pix[10, 14] = PARALLAX_YELLOW_DEEP
 
-    for y in range(14, 17):
-        for x in range(20, 25):
+    for y in range(14, 18):
+        for x in range(21, 25):
             if pix[x, y] in (WHITE, EYE_GLOW, EYE_RIM):
                 pix[x, y] = PARALLAX_YELLOW_BASE
-    pix[21, 15] = PARALLAX_YELLOW_GLOW; pix[22, 15] = PARALLAX_YELLOW_GLOW
-    pix[20, 14] = PARALLAX_YELLOW_DEEP; pix[23, 14] = PARALLAX_YELLOW_DEEP
-    pix[20, 16] = PARALLAX_YELLOW_DEEP; pix[23, 16] = PARALLAX_YELLOW_DEEP
+    pix[22, 15] = PARALLAX_YELLOW_GLOW; pix[23, 15] = PARALLAX_YELLOW_GLOW
+    pix[21, 14] = PARALLAX_YELLOW_DEEP; pix[24, 14] = PARALLAX_YELLOW_DEEP
 
     return img
 
@@ -475,57 +422,34 @@ def render_tainted_head_side(base_head, is_shooting=False):
     img = render_hal_head_side(base_head, is_shooting)
     pix = img.load()
 
-    for y in range(1, 20):
-        for x in range(2, 27):
-            if pix[x, y] in (HAIR_BASE, HAIR_MID):
-                pix[x, y] = THAL_HAIR_BASE
-            elif pix[x, y] == HAIR_LIGHT:
-                pix[x, y] = HAIR_MID
+    for y in range(7, 14):
+        for x in range(7, 14):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID, HAIR_LIGHT):
+                if y in (8, 9): pix[x, y] = SILVER_LIGHT
+                elif y in (10, 11): pix[x, y] = SILVER_BASE
+                else: pix[x, y] = SILVER_DARK
 
-    # Sleek silver hair streak above ear
-    for y in range(9, 13):
-        for x in (10, 11):
-            if pix[x, y] in (THAL_HAIR_BASE, HAIR_MID, HAIR_DARK):
-                pix[x, y] = SILVER_LIGHT if y in (10, 11) else SILVER_BASE
-
-    for y in range(12, 19):
-        for x in range(13, 25):
-            if pix[x, y] == MASK_BASE: pix[x, y] = SUIT_DARK_BASE
-            elif pix[x, y] == MASK_LIGHT: pix[x, y] = SUIT_DARK_LIGHT
-            elif pix[x, y] == MASK_DARK: pix[x, y] = SUIT_DARK_OUTLINE
-
-    for y in range(14, 17):
-        for x in range(16, 22):
+    for y in range(14, 18):
+        for x in range(15, 20):
             if pix[x, y] in (WHITE, EYE_GLOW, EYE_RIM):
                 pix[x, y] = PARALLAX_YELLOW_BASE
-    pix[18, 15] = PARALLAX_YELLOW_GLOW; pix[19, 15] = PARALLAX_YELLOW_GLOW
-    pix[17, 14] = PARALLAX_YELLOW_DEEP; pix[20, 14] = PARALLAX_YELLOW_DEEP
-    pix[17, 16] = PARALLAX_YELLOW_DEEP; pix[20, 16] = PARALLAX_YELLOW_DEEP
-
+    pix[16, 15] = PARALLAX_YELLOW_GLOW; pix[17, 15] = PARALLAX_YELLOW_GLOW
     return img
 
 def render_tainted_head_back(base_head, is_shooting=False):
     img = render_hal_head_back(base_head, is_shooting)
     pix = img.load()
 
-    for y in range(1, 22):
-        for x in range(2, 30):
-            if pix[x, y] in (HAIR_BASE, HAIR_MID):
-                pix[x, y] = THAL_HAIR_BASE
-            elif pix[x, y] == HAIR_LIGHT:
-                pix[x, y] = HAIR_MID
-
-    for y in range(8, 14):
-        for x in (5, 6):
-            if pix[x, y] in (THAL_HAIR_BASE, HAIR_MID, HAIR_DARK):
-                pix[x, y] = SILVER_LIGHT if y in (9, 10) else SILVER_BASE
-        for x in (25, 26):
-            if pix[x, y] in (THAL_HAIR_BASE, HAIR_MID, HAIR_DARK):
-                pix[x, y] = SILVER_LIGHT if y in (9, 10) else SILVER_BASE
-
+    for y in range(7, 14):
+        for x in range(4, 8):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID, HAIR_LIGHT):
+                pix[x, y] = SILVER_LIGHT if y in (8, 9) else SILVER_BASE
+        for x in range(24, 28):
+            if pix[x, y] in (HAIR_BASE, HAIR_MID, HAIR_LIGHT):
+                pix[x, y] = SILVER_LIGHT if y in (8, 9) else SILVER_BASE
     return img
 
-# ==================== BODY & SUIT GENERATION ====================
+# ==================== BODY GENERATION ====================
 
 def render_hal_body_front(base_body):
     """
@@ -535,38 +459,31 @@ def render_hal_body_front(base_body):
     - Gauntlets / Gloves (y >= 17 on outer arms): Vibrant light green
     - Central chest plate (x=13..18, y=13..18): Vibrant light emerald green with Emblem
     - Pants (y=20..21): Dark forest green
-    - Boots (y=22..25): Vibrant light emerald green
+    - Boots (y=22..24): Vibrant light emerald green
     - Right fist: Glowing emerald Power Ring
     """
     img = base_body.copy().convert("RGBA")
     pix = img.load()
 
-    for y in range(12, 26):
+    for y in range(12, 25):
         for x in range(5, 27):
             p = pix[x, y]
             if p[3] > 30 and p != OUTLINE:
-                # Outer arms / sleeves / gauntlets
                 if x <= 10 or x >= 21:
                     if y <= 16:
                         pix[x, y] = SUIT_DARK_BASE
                     else:
-                        pix[x, y] = GLOVE_LIGHT if (y == 17 and x in (8, 23)) else GLOVE_BASE
+                        pix[x, y] = SUIT_LIGHT_BRIGHT if (y == 17 and x in (8, 23)) else SUIT_LIGHT_BASE
 
-                # Center Torso
                 elif 11 <= x <= 20 and 12 <= y <= 19:
                     if (x in (11, 12) or x in (19, 20)) and y in (14, 15, 16, 17):
                         pix[x, y] = SUIT_DARK_BASE
                     elif y == 19:
                         pix[x, y] = SUIT_DARK_LIGHT if 13 <= x <= 18 else SUIT_DARK_BASE
                     else:
-                        # Green Lantern Emblem on chest plate
-                        if y == 14 and 13 <= x <= 18:
+                        if y == 15 and 14 <= x <= 17:
                             pix[x, y] = EMBLEM_LINE
-                        elif y == 18 and 13 <= x <= 18:
-                            pix[x, y] = EMBLEM_LINE
-                        elif y in (15, 17) and 14 <= x <= 17:
-                            pix[x, y] = EMBLEM_LINE
-                        elif y == 16 and (x in (13, 18)):
+                        elif y == 17 and 14 <= x <= 17:
                             pix[x, y] = EMBLEM_LINE
                         elif y == 16 and (x in (14, 17)):
                             pix[x, y] = EMBLEM_LINE
@@ -575,14 +492,12 @@ def render_hal_body_front(base_body):
                         else:
                             pix[x, y] = SUIT_LIGHT_BRIGHT if y == 13 else SUIT_LIGHT_BASE
 
-                # Lower body: pants & boots
-                elif 20 <= y <= 25:
+                elif 20 <= y <= 24:
                     if y in (20, 21):
                         pix[x, y] = SUIT_DARK_BASE
                     else:
-                        pix[x, y] = BOOT_LIGHT if y == 22 else BOOT_BASE
+                        pix[x, y] = SUIT_LIGHT_BRIGHT if y == 22 else SUIT_LIGHT_BASE
 
-    # Power Ring on right fist
     if pix[24, 18][3] > 30: pix[24, 18] = RING_GEM
     if pix[23, 18][3] > 30 and pix[23, 18] != OUTLINE: pix[23, 18] = RING_AURA
 
@@ -624,33 +539,12 @@ def render_tainted_body_front(base_body, base_tainted_body):
                     else:
                         pix[x, y] = PARALLAX_CAPE_BASE
 
-    # Yellow fear ring on left fist, green power ring on right fist
     if pix[7, 17][3] > 30: pix[7, 17] = THAL_RING_YELLOW
     if pix[8, 17][3] > 30 and pix[8, 17] != OUTLINE: pix[8, 17] = (255, 255, 180, 255)
     if pix[24, 18][3] > 30: pix[24, 18] = RING_GEM
     if pix[23, 18][3] > 30 and pix[23, 18] != OUTLINE: pix[23, 18] = RING_AURA
 
     return img
-
-def recolor_hal_walk_frames(target_sheet):
-    """
-    Recolors all walking animations (Row 1 cols 1..15, Row 2 cols 0..15)
-    to match the new suit (light green gloves, light green boots).
-    Replaces old white glove/boot colors with vibrant emerald greens.
-    """
-    pix = target_sheet.load()
-    old_white_base = (222, 232, 226, 255)
-    old_white_bright = (252, 255, 252, 255)
-
-    for y in range(32, 96): # Rows 1 and 2
-        for x in range(0, 512):
-            if y < 64 and x < 32:
-                continue # Row 1 Col 0 handled separately by custom front body
-            p = pix[x, y]
-            if p == old_white_base:
-                pix[x, y] = GLOVE_BASE
-            elif p == old_white_bright:
-                pix[x, y] = GLOVE_LIGHT
 
 def assemble_full(head, body):
     canvas = Image.new("RGBA", (32, 38), (0, 0, 0, 0))
@@ -687,64 +581,33 @@ def generate_all():
 
     # Proposed Redesigns
     new_hal_hd = render_hal_head_front(v_hd, is_shooting=False)
-    new_hal_hd_shoot = render_hal_head_front(v_hd, is_shooting=True)
     new_hal_hr = render_hal_head_side(v_hr, is_shooting=False)
-    new_hal_hr_shoot = render_hal_head_side(v_hr, is_shooting=True)
     new_hal_hu = render_hal_head_back(v_hu, is_shooting=False)
-    new_hal_hu_shoot = render_hal_head_back(v_hu, is_shooting=True)
-    new_hal_hl = new_hal_hr.transpose(Image.FLIP_LEFT_RIGHT)
-    new_hal_hl_shoot = new_hal_hr_shoot.transpose(Image.FLIP_LEFT_RIGHT)
-    new_hal_sad_front = render_hal_head_sad(v_hd, is_side=False)
-    new_hal_sad_right = render_hal_head_sad(v_hr, is_side=True)
-    new_hal_sad_left = new_hal_sad_right.transpose(Image.FLIP_LEFT_RIGHT)
     new_hal_bd = render_hal_body_front(c_bd)
 
     new_thal_hd = render_tainted_head_front(v_hd, is_shooting=False)
-    new_thal_hd_shoot = render_tainted_head_front(v_hd, is_shooting=True)
     new_thal_hr = render_tainted_head_side(v_hr, is_shooting=False)
-    new_thal_hr_shoot = render_tainted_head_side(v_hr, is_shooting=True)
     new_thal_hu = render_tainted_head_back(v_hu, is_shooting=False)
-    new_thal_hu_shoot = render_tainted_head_back(v_hu, is_shooting=True)
-    new_thal_hl = new_thal_hr.transpose(Image.FLIP_LEFT_RIGHT)
-    new_thal_hl_shoot = new_thal_hr_shoot.transpose(Image.FLIP_LEFT_RIGHT)
-    new_thal_sad_front = render_tainted_head_front(v_hd, is_shooting=False)
-    new_thal_sad_right = render_tainted_head_side(v_hr, is_shooting=False)
-    new_thal_sad_left = new_thal_sad_right.transpose(Image.FLIP_LEFT_RIGHT)
     new_thal_bd = render_tainted_body_front(v_bd, ct_bd)
 
-    # 1. Generate Full 512x512 Proposed Sprite Sheets with COMPLETE animation coverage
+    # 1. Generate Full 512x512 Proposed Sprite Sheets
+    # Based on current full animation sheet, replacing the canonical head & body cells
     prop_hal = current_hal.copy()
-    # Row 0 heads
     prop_hal.paste(new_hal_hd, (0, 0), new_hal_hd)
-    prop_hal.paste(new_hal_hd_shoot, (32, 0), new_hal_hd_shoot)
+    prop_hal.paste(render_hal_head_front(v_hd, is_shooting=True), (32, 0))
     prop_hal.paste(new_hal_hr, (64, 0), new_hal_hr)
-    prop_hal.paste(new_hal_hr_shoot, (96, 0), new_hal_hr_shoot)
+    prop_hal.paste(render_hal_head_side(v_hr, is_shooting=True), (96, 0))
     prop_hal.paste(new_hal_hu, (128, 0), new_hal_hu)
-    prop_hal.paste(new_hal_hu_shoot, (160, 0), new_hal_hu_shoot)
-    prop_hal.paste(new_hal_hl, (192, 0), new_hal_hl)
-    prop_hal.paste(new_hal_hl_shoot, (224, 0), new_hal_hl_shoot)
-    prop_hal.paste(new_hal_sad_front, (256, 0), new_hal_sad_front)
-    prop_hal.paste(new_hal_sad_right, (14 * 32, 0), new_hal_sad_right)
-    prop_hal.paste(new_hal_sad_left, (15 * 32, 0), new_hal_sad_left)
-    # Row 1 body idle
+    prop_hal.paste(render_hal_head_back(v_hu, is_shooting=True), (160, 0))
     prop_hal.paste(new_hal_bd, (0, 32), new_hal_bd)
-    # Recolor all walk frames across Rows 1 & 2
-    recolor_hal_walk_frames(prop_hal)
 
     prop_thal = current_tainted.copy()
-    # Row 0 heads
     prop_thal.paste(new_thal_hd, (0, 0), new_thal_hd)
-    prop_thal.paste(new_thal_hd_shoot, (32, 0), new_thal_hd_shoot)
+    prop_thal.paste(render_tainted_head_front(v_hd, is_shooting=True), (32, 0))
     prop_thal.paste(new_thal_hr, (64, 0), new_thal_hr)
-    prop_thal.paste(new_thal_hr_shoot, (96, 0), new_thal_hr_shoot)
+    prop_thal.paste(render_tainted_head_side(v_hr, is_shooting=True), (96, 0))
     prop_thal.paste(new_thal_hu, (128, 0), new_thal_hu)
-    prop_thal.paste(new_thal_hu_shoot, (160, 0), new_thal_hu_shoot)
-    prop_thal.paste(new_thal_hl, (192, 0), new_thal_hl)
-    prop_thal.paste(new_thal_hl_shoot, (224, 0), new_thal_hl_shoot)
-    prop_thal.paste(new_thal_sad_front, (256, 0), new_thal_sad_front)
-    prop_thal.paste(new_thal_sad_right, (14 * 32, 0), new_thal_sad_right)
-    prop_thal.paste(new_thal_sad_left, (15 * 32, 0), new_thal_sad_left)
-    # Row 1 body idle (preserving cape!)
+    prop_thal.paste(render_tainted_head_back(v_hu, is_shooting=True), (160, 0))
     prop_thal.paste(new_thal_bd, (0, 32), new_thal_bd)
 
     # Save proposed sheets (strictly protecting active sheets per Rule 4!)
@@ -799,12 +662,11 @@ def generate_all():
 
     showcase_path = os.path.join(PROJECT_DIR, "character_redesign_preview.png")
     showcase.save(showcase_path)
+    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    art_showcase = os.path.join(ARTIFACT_DIR, "character_redesign_preview.png")
+    showcase.save(art_showcase)
     print(f"  [SAVED] {showcase_path}")
-    for adir in ARTIFACT_DIRS:
-        os.makedirs(adir, exist_ok=True)
-        ashowcase = os.path.join(adir, "character_redesign_preview.png")
-        showcase.save(ashowcase)
-        print(f"  [SAVED] {ashowcase}")
+    print(f"  [SAVED] {art_showcase}")
 
     # 3. High-Res Zoom 8x Pixel Comparison (character_redesign_zoom8x.png)
     zoom_w = 32 * 8 * 5 + 40
@@ -817,13 +679,9 @@ def generate_all():
         full_8x = full_c.resize((32 * 8, 38 * 8), Image.NEAREST)
         zoom_sheet.paste(full_8x, (zx, 24), full_8x)
 
-    zoom_path = os.path.join(PROJECT_DIR, "character_redesign_zoom8x.png")
+    zoom_path = os.path.join(ARTIFACT_DIR, "character_redesign_zoom8x.png")
     zoom_sheet.save(zoom_path)
     print(f"  [SAVED] {zoom_path}")
-    for adir in ARTIFACT_DIRS:
-        azoom = os.path.join(adir, "character_redesign_zoom8x.png")
-        zoom_sheet.save(azoom)
-        print(f"  [SAVED] {azoom}")
 
     # 4. Item Costume Merge Verification
     from tools.verify_costume_merging import run_verification
