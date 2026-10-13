@@ -100,8 +100,8 @@ return function(Core)
       local p = Isaac.GetPlayer(i)
       if p and (Core.IsHalJordan(p) or Core.IsTaintedHal(p)) then
         local d = Core.GetPlayerData(p)
-        local shootIn = p:GetShootingInput()
-        local holdingNow = (shootIn and shootIn:Length() > 0.1) or false
+        local shootIn = (p.GetShootingInput and p:GetShootingInput()) or nil
+        local holdingNow = (shootIn and shootIn.Length and shootIn:Length() > 0.1) or false
         if holdingNow then
           local rawDir = shootIn:Normalized()
           if Core.HasTractorBeam and Core.HasTractorBeam(p) then
@@ -125,13 +125,30 @@ return function(Core)
     if Core.HUD_GL_DISPLAY == false then return end
     if Game():GetHUD() and not Game():GetHUD():IsVisible() then return end
     local hudOffset = (Options and Options.HUDOffset) or 0
-    local baseX = 48 + math.floor(hudOffset * 20)
-    local baseY = 40 + math.floor(hudOffset * 12)
+    local function GetCoopHUDOrigin(pIdx)
+      local offX = math.floor(hudOffset * 20)
+      local offY = math.floor(hudOffset * 12)
+      if pIdx == 0 then
+        return 48 + offX, 40 + offY
+      elseif pIdx == 1 then
+        local sW = (Isaac.GetScreenWidth and Isaac.GetScreenWidth()) or 480
+        return sW - (80 + offX), 40 + offY
+      elseif pIdx == 2 then
+        local sH = (Isaac.GetScreenHeight and Isaac.GetScreenHeight()) or 270
+        return 48 + offX, sH - (38 + offY)
+      elseif pIdx == 3 then
+        local sW = (Isaac.GetScreenWidth and Isaac.GetScreenWidth()) or 480
+        local sH = (Isaac.GetScreenHeight and Isaac.GetScreenHeight()) or 270
+        return sW - (80 + offX), sH - (38 + offY)
+      else
+        return 48 + offX, 40 + offY + (pIdx * 14)
+      end
+    end
+
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
       if player then
-        local hudX = baseX
-        local hudY = baseY + (i * 14)
+        local hudX, hudY = GetCoopHUDOrigin(i)
         local data = Core.GetPlayerData(player)
         if Core.IsHalJordan(player) then
           local maxWill = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX

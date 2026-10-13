@@ -64,6 +64,7 @@ ModCallbacks = {
     MC_POST_NEW_LEVEL = 18,
     MC_POST_PLAYER_UPDATE = 19,
     MC_POST_NEW_ROOM = 20,
+    MC_POST_RENDER = 21,
 }
 DamageFlag = { DAMAGE_NO_MODIFIERS = 0 }
 Vector = {
@@ -630,6 +631,74 @@ Isaac.Spawn = origSpawn
 
 check(lightPlayer._data.glLightEntity ~= nil, "Lighting: light entity created on continuous beam")
 check(lightPlayer._data.glLightEntity:GetData().isGLLight == true, "Lighting: marked as isGLLight")
+
+-- ===================== TEST 13: MULTIPLAYER CO-OP HUD CORNER POSITIONING =====================
+local renderedTexts = {}
+local origRenderScaled = Isaac.RenderScaledText
+Isaac.RenderScaledText = function(txt, x, y, sx, sy, r, g, b, a)
+    table.insert(renderedTexts, { x = x, y = y, txt = txt })
+end
+Isaac.GetScreenWidth = function() return 480 end
+Isaac.GetScreenHeight = function() return 270 end
+
+local p1Hal = { _data = { willpower = 80 }, Index = 0 }
+local p2Hal = { _data = { willpower = 90 }, Index = 1 }
+
+local hudCore = {
+    GL = {
+        _cbs = {},
+        AddCallback = function(self, id, fn)
+            table.insert(self._cbs, { id = id, fn = fn })
+        end,
+    },
+    HUD_GL_DISPLAY = true,
+    GetPlayerData = function(p) return p._data end,
+    IsHalJordan = function() return true end,
+    IsTaintedHal = function() return false end,
+    GetMaxWillpower = function() return 100 end,
+    WILLPOWER_MAX = 100,
+    DrawHudText = function() end,
+}
+local fHud = assert(io.open("modules/hud_render.lua", "r"))
+local srcHud = fHud:read("*a"); fHud:close()
+srcHud = srcHud:gsub("|", "+")
+local chunkHud = assert(loadstring(srcHud, "modules/hud_render.lua"))
+chunkHud()(hudCore)
+
+local hudRenderCb = nil
+for _, c in ipairs(hudCore.GL._cbs) do
+    if c.id == ModCallbacks.MC_POST_RENDER then hudRenderCb = c.fn end
+end
+check(hudRenderCb ~= nil, "Co-op HUD: MC_POST_RENDER callback found")
+
+-- Simulate two Hal players in co-op
+Game = function()
+    return {
+        GetHUD = function() return { IsVisible = function() return true end } end,
+        GetNumPlayers = function() return 2 end,
+        IsPaused = function() return false end,
+        GetFrameCount = function() return 100 end,
+    }
+end
+hudCore.EnsureEIDRegistered = function() end
+hudCore.RegisterStageAPIGraphics = function() end
+
+Isaac.GetPlayer = function(i)
+    if i == 0 then return p1Hal
+    elseif i == 1 then return p2Hal end
+    return nil
+end
+
+hudRenderCb()
+Isaac.RenderScaledText = origRenderScaled
+
+-- P1 must be in top-left (x around 48, y around 36)
+-- P2 must be in top-right (x around 400, y around 36)
+check(#renderedTexts >= 2, "Co-op HUD: both players rendered HUD elements")
+local p1X = renderedTexts[1].x
+local p2X = renderedTexts[3] and renderedTexts[3].x or renderedTexts[2].x
+check(p1X == 48, "Co-op HUD: Player 1 rendered in top-left (X=48)")
+check(p2X == (480 - 80), "Co-op HUD: Player 2 rendered in top-right (X=400)")
 
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))
