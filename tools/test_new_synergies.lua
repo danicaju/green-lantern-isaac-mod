@@ -61,6 +61,9 @@ ModCallbacks = {
     MC_POST_BOMB_UPDATE = 15,
     MC_POST_ENTITY_REMOVE = 16,
     MC_POST_TEAR_UPDATE = 17,
+    MC_POST_NEW_LEVEL = 18,
+    MC_POST_PLAYER_UPDATE = 19,
+    MC_POST_NEW_ROOM = 20,
 }
 DamageFlag = { DAMAGE_NO_MODIFIERS = 0 }
 Vector = {
@@ -577,6 +580,56 @@ chalStartCb(nil, false)
 check(testP._pType == chalCore.PLAYER_TAINTED_HAL, "Challenges: Blackest Night sets player to Tainted Hal")
 check(testP:HasCollectible(chalCore.ITEM_COAST_CITY), "Challenges: Blackest Night grants Coast City")
 check(testP:HasTrinket(chalCore.TRINKET_YELLOW_IMPURITY), "Challenges: Blackest Night grants Yellow Impurity")
+
+-- ===================== TEST 12: DYNAMIC HARD-LIGHT LIGHTING =====================
+local lightCore = {
+    GL = {
+        _cbs = {},
+        AddCallback = function(self, id, fn)
+            table.insert(self._cbs, { id = id, fn = fn })
+        end,
+    },
+    DYNAMIC_LIGHTING_ENABLED = true,
+    IsRingActive = function() return true end,
+    GetPlayerData = function(p) return p._data or {} end,
+}
+dofile("modules/fx_lighting.lua")(lightCore)
+
+local lightUpdateCb = nil
+local lightRoomCb = nil
+for _, c in ipairs(lightCore.GL._cbs) do
+    if c.id == ModCallbacks.MC_POST_PLAYER_UPDATE then lightUpdateCb = c.fn end
+    if c.id == ModCallbacks.MC_POST_NEW_ROOM then lightRoomCb = c.fn end
+end
+check(lightUpdateCb ~= nil, "Lighting: MC_POST_PLAYER_UPDATE registered")
+check(lightRoomCb ~= nil, "Lighting: MC_POST_NEW_ROOM registered")
+
+local spawnedLight = nil
+local origSpawn = Isaac.Spawn
+Isaac.Spawn = function(eType, var, sub, pos, vel, spawner)
+    spawnedLight = {
+        Type = eType,
+        Variant = var,
+        Position = pos,
+        DepthOffset = 0,
+        _data = {},
+        GetData = function(self) return self._data end,
+        Exists = function() return true end,
+        IsDead = function() return false end,
+        GetSprite = function() return { Color = {} } end,
+    }
+    return spawnedLight
+end
+
+local lightPlayer = {
+    Position = Vector(100, 150),
+    _data = { isFiringContinuousBeam = true },
+}
+lightUpdateCb(nil, lightPlayer)
+Isaac.Spawn = origSpawn
+
+check(lightPlayer._data.glLightEntity ~= nil, "Lighting: light entity created on continuous beam")
+check(lightPlayer._data.glLightEntity:GetData().isGLLight == true, "Lighting: marked as isGLLight")
 
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))

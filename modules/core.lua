@@ -56,6 +56,7 @@ Core.CONTINUOUS_BEAM_GROWTH_FRAMES = 10
 Core.CONTINUOUS_BEAM_MIN_RENDER_LEN = 4.0
 -- Bajo esta longitud el haz corto se dibuja fino (clamp <=1.0).
 Core.CONTINUOUS_BEAM_SHORT_THIN_LEN = 44.0
+Core.DYNAMIC_LIGHTING_ENABLED       = true
 
 -- Escudo orbital: probabilidad de reflejar disparos del enemigo. Alineado con
 -- el calculo de modules/shield.lua (base 0.25, +0.05/Luck, cap 0.75). Las dos
