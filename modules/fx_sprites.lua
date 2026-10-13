@@ -48,21 +48,21 @@ return function(Core)
             -- English (en_us, en_us_detailed)
             for _, lang in ipairs({"en_us", "en_us_detailed"}) do
                 EID:addCollectible(Core.ITEM_POWER_BATTERY,
-                    "Active (4 charges)#Refills Willpower to 100% and emits a close-range emerald pulse#At >=50% Willpower: Overcharge (+15% DMG, Piercing & Spectral for the room)#Below 50%: Restores Willpower & reboots Ring from offline state#{{Collectible356}} Car Battery: Triggers instant Overcharge Tier 2 (+25% DMG) with 2.6x pulse radius",
+                    "Active (4 charges)#Refills Willpower to 100% and emits a close-range emerald pulse#At >=50% Willpower: Overcharge (+15% DMG, Piercing & Spectral for the room)#Below 50%: Restores Willpower & reboots Ring from offline state#{{Collectible356}} Car Battery: Instant Overcharge Tier 2 (+25% DMG) with 2.6x pulse radius#{{Collectible584}} Book of Virtues: Spawns an Emerald Battery Wisp that deflects bullets and can drop batteries",
                     "Power Battery", lang)
                 EID:addCollectible(Core.ITEM_GIANT_FIST,
-                    "Active (4 charges)#Fires a massive spectral piercing emerald construct fist#Deals 10x Player Damage and smashes rocks, poop & obstacles in its path#{{Collectible356}} Car Battery: Fires dual parallel giant fists to punch a wide path",
+                    "Active (4 charges)#Fires a massive spectral piercing emerald construct fist#Deals 10x Player Damage and smashes rocks, poop & obstacles in its path#{{Collectible356}} Car Battery: Fires dual parallel giant fists to punch a wide path#{{Collectible584}} Book of Virtues: Spawns an Emerald Fist Wisp with 8 HP that deals 2.5x contact damage",
                     "Giant Fist", lang)
                 EID:addCollectible(Core.ITEM_COAST_CITY,
-                    "Active (4 charges)#Inflicts Fear (3s) and spawns a 5s Emerald Vortex pulling enemies to the center#Collecting Green Lantern Emblems recharges 25% and extends vortex duration#{{Collectible356}} Car Battery: +2s vortex duration and 1.5x gravitational suction pull",
+                    "Active (4 charges)#Inflicts Fear (3s) and spawns a 5s Emerald Vortex pulling enemies to the center#Collecting Green Lantern Emblems recharges 25% and extends vortex duration#{{Collectible356}} Car Battery: +2s vortex duration and 1.5x gravitational suction pull#{{Collectible584}} Book of Virtues: Spawns a Parallax Fear Wisp that pulses Fear and shoots fear tears",
                     "The Tragedy of Coast City", lang)
                 if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
                     EID:addCollectible(Core.ITEM_GATLING,
-                        "Active (4 charges)#Activates a 10s emerald construct machine gun#Hal Jordan: Rapid-fire discrete emerald beams with 0 Willpower cost#Other Characters: Maximum fire rate (delay 2) firing piercing & spectral emerald construct bullets#{{Collectible356}} Car Battery: Extends machine gun duration from 10s to 15s",
+                        "Active (4 charges)#Activates a 10s emerald construct machine gun#Hal Jordan: Rapid-fire discrete emerald beams with 0 Willpower cost#Other Characters: Maximum fire rate (delay 2) firing piercing & spectral emerald construct bullets#{{Collectible356}} Car Battery: Extends machine gun duration from 10s to 15s#{{Collectible584}} Book of Virtues: Spawns a Construct Gatling Wisp that rapidly fires emerald construct lasers",
                         "Gatling", lang)
                 end
                 EID:addCollectible(Core.ITEM_SOLID_LIGHT_SHIELD,
-                    "Passive#+2 Soul Hearts#Grants an orbital light shield that blocks enemy projectiles#25% to 75% chance (scales with Luck) to reflect blocked shots as spectral emerald energy beams",
+                    "Passive#+2 Soul Hearts#Grants an orbital light shield that blocks enemy projectiles#25% to 75% chance (scales with Luck) to reflect blocked shots as spectral emerald energy beams#{{Collectible247}} BFFS!: +35% shield size and deflection radius, 2x contact & reflected damage",
                     "Solid Light Shield", lang)
                 if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 then
                     EID:addCollectible(Core.ITEM_POWER_RING,
@@ -71,28 +71,28 @@ return function(Core)
                 end
                 if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 then
                     EID:addTrinket(Core.TRINKET_YELLOW_IMPURITY,
-                        "Trinket#1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage inflicts 2s Fear (inverted movement controls)",
+                        "Trinket#1.5x Damage multiplier (+50% DMG)#Taking contact or explosion damage inflicts 2s Fear (inverted movement controls)#{{Collectible439}} Mom's Box / Golden Trinket: Increases damage multiplier to +75% (+100% with both)",
                         "Yellow Impurity", lang)
                 end
             end
 
             -- Spanish (es)
             EID:addCollectible(Core.ITEM_POWER_BATTERY,
-                "Activo (4 cargas)#Recarga la Voluntad al 100% y emite un pulso esmeralda a corto alcance#Con >=50% Voluntad: Sobrecarga (+15% Daño, Disparos Perforantes y Espectrales en la sala)#Bajo 50%: Reinicia el anillo si estaba agotado#{{Collectible356}} Pila de coche: Activa Sobrecarga Nivel 2 (+25% Daño) al instante con onda expansiva 2.6x",
+                "Activo (4 cargas)#Recarga la Voluntad al 100% y emite un pulso esmeralda a corto alcance#Con >=50% Voluntad: Sobrecarga (+15% Daño, Disparos Perforantes y Espectrales en la sala)#Bajo 50%: Reinicia el anillo si estaba agotado#{{Collectible356}} Pila de coche: Activa Sobrecarga Nivel 2 (+25% Daño) al instante con onda expansiva 2.6x#{{Collectible584}} Libro de Virtudes: Invoca un Fuego Fatuo de Batería que desvía balas y puede soltar pilas",
                 "Batería de Poder", "es")
             EID:addCollectible(Core.ITEM_GIANT_FIST,
-                "Activo (4 cargas)#Lanza un puño gigante de constructo perforante y espectral#Inflige x10 del Daño del jugador y destruye rocas, cacas y obstáculos#{{Collectible356}} Pila de coche: Lanza dos puños paralelos que barren un camino ancho",
+                "Activo (4 cargas)#Lanza un puño gigante de constructo perforante y espectral#Inflige x10 del Daño del jugador y destruye rocas, cacas y obstáculos#{{Collectible356}} Pila de coche: Lanza dos puños paralelos que barren un camino ancho#{{Collectible584}} Libro de Virtudes: Invoca un Fuego Fatuo de Puño con 8 PS y x2.5 de daño por contacto",
                 "Puño Gigante", "es")
             EID:addCollectible(Core.ITEM_COAST_CITY,
-                "Activo (4 cargas)#Aplica Miedo (3s) a todos los enemigos de la sala#Invoca un Vórtice Esmeralda de 5s que absorbe enemigos al centro#Recoger emblemas de linterna alarga el vórtice y recarga un 25% del objeto#{{Collectible356}} Pila de coche: +2s de duración del vórtice y fuerza de succión x1.5",
+                "Activo (4 cargas)#Aplica Miedo (3s) a todos los enemigos de la sala#Invoca un Vórtice Esmeralda de 5s que absorbe enemigos al centro#Recoger emblemas de linterna alarga el vórtice y recarga un 25% del objeto#{{Collectible356}} Pila de coche: +2s de duración del vórtice y fuerza de succión x1.5#{{Collectible584}} Libro de Virtudes: Invoca un Fuego Fatuo de Parallax que emite ondas de miedo",
                 "La Tragedia de Coast City", "es")
             if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
                 EID:addCollectible(Core.ITEM_GATLING,
-                    "Activo (4 cargas)#Invoca una ametralladora de constructo durante 10 segundos#Hal Jordan: Disparos de energía rápidos sin coste de Voluntad#Otros Personajes: Cadencia máxima (delay 2) con balas esmeralda perforantes y espectrales#{{Collectible356}} Pila de coche: Extiende la duración de la ametralladora de 10s a 15s",
+                    "Activo (4 cargas)#Invoca una ametralladora de constructo durante 10 segundos#Hal Jordan: Disparos de energía rápidos sin coste de Voluntad#Otros Personajes: Cadencia máxima (delay 2) con balas esmeralda perforantes y espectrales#{{Collectible356}} Pila de coche: Extiende la duración de la ametralladora de 10s a 15s#{{Collectible584}} Libro de Virtudes: Invoca un Fuego Fatuo Gatling que dispara ráfagas de láseres",
                     "Ametralladora Gatling", "es")
             end
             EID:addCollectible(Core.ITEM_SOLID_LIGHT_SHIELD,
-                "Pasivo#+2 Corazones de Alma#Otorga un escudo orbital de constructo que bloquea proyectiles enemigos#25% a 75% de probabilidad (escala con Suerte) de reflejar disparos como rayos esmeralda espectrales",
+                "Pasivo#+2 Corazones de Alma#Otorga un escudo orbital de constructo que bloquea proyectiles enemigos#25% a 75% de probabilidad (escala con Suerte) de reflejar disparos como rayos esmeralda espectrales#{{Collectible247}} ¡Mejores Amigos!: +35% tamaño del escudo, mayor radio de bloqueo y doble daño",
                 "Escudo de Luz Sólida", "es")
             if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 then
                 EID:addCollectible(Core.ITEM_POWER_RING,
@@ -101,7 +101,7 @@ return function(Core)
             end
             if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 then
                 EID:addTrinket(Core.TRINKET_YELLOW_IMPURITY,
-                    "Trinket#Multiplicador de daño x1.5 (+50% Daño)#Recibir daño por contacto o explosión causa Miedo temporal (invierte los controles durante 2s)",
+                    "Trinket#Multiplicador de daño x1.5 (+50% Daño)#Recibir daño por contacto o explosión causa Miedo temporal (invierte los controles durante 2s)#{{Collectible439}} Caja de Mamá / Trinket Dorado: Aumenta el multiplicador al +75% (+100% con ambos)",
                     "Impureza Amarilla", "es")
             end
 
@@ -113,6 +113,19 @@ return function(Core)
                     EID:addSynergy(Core.ITEM_COAST_CITY, 356, "+2s vortex duration and 1.5x suction pull", "Car Battery")
                     if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
                         EID:addSynergy(Core.ITEM_GATLING, 356, "Extends machine gun duration from 10s to 15s", "Car Battery")
+                    end
+                    -- Book of Virtues
+                    EID:addSynergy(Core.ITEM_POWER_BATTERY, 584, "Spawns an Emerald Battery Wisp that deflects bullets and can drop batteries", "Book of Virtues")
+                    EID:addSynergy(Core.ITEM_GIANT_FIST, 584, "Spawns an Emerald Fist Wisp with 8 HP that deals 2.5x contact damage", "Book of Virtues")
+                    EID:addSynergy(Core.ITEM_COAST_CITY, 584, "Spawns a Parallax Fear Wisp that pulses Fear and shoots fear tears", "Book of Virtues")
+                    if Core.ITEM_GATLING and Core.ITEM_GATLING > 0 then
+                        EID:addSynergy(Core.ITEM_GATLING, 584, "Spawns a Construct Gatling Wisp that rapidly fires emerald construct lasers", "Book of Virtues")
+                    end
+                    -- BFFS!
+                    EID:addSynergy(Core.ITEM_SOLID_LIGHT_SHIELD, 247, "+35% shield size and deflection radius, 2x contact & reflected damage", "BFFS!")
+                    -- Mom's Box
+                    if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 then
+                        EID:addSynergy(Core.TRINKET_YELLOW_IMPURITY, 439, "Increases damage multiplier to +75% (or +100% with Golden Trinket)", "Mom's Box")
                     end
                 end)
             end

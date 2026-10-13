@@ -46,7 +46,7 @@ return function(Core)
     end
 
     function Core.RenderGLPlayerAura(player)
-        if not (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then return end
+        if not (Core.IsHalJordan(player) or Core.IsTaintedHal(player) or Core.HasGreenLanternRing(player)) then return end
         local data = Core.GetPlayerData(player)
         if Core.IsHalJordan(player) and data.ringDepleted then return end
 
@@ -60,6 +60,7 @@ return function(Core)
 
         local isMaxPower = (Core.IsHalJordan(player) and ((data.willpower or 0) >= 99.5 or data.overcharge or data.surgeBuff))
             or (Core.IsTaintedHal(player) and ((data.emeraldSparks or 0) >= 99.5 or data.coastCityActive))
+            or (Core.HasGreenLanternRing(player) and (data.overcharge or (data.gatlingTimer or 0) > 0))
 
         local auraScale = isMaxPower and 1.05 or 0.92
         local auraAlpha = isMaxPower and 0.92 or 0.72

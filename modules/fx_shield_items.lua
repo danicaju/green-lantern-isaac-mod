@@ -57,8 +57,10 @@ return function(Core)
             EnsureOrbitalAnim(orbitalSpr, data, "Orbit")
             orbitalSpr:SetFrame("Orbit", math.floor(frame / 2) % 4)
         end
+        local hasBFFS = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_BFFS) or 247)
+        local sScale = hasBFFS and 1.35 or 1.0
         orbitalSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0, 0, 0)
-        orbitalSpr.Scale = Vector(1.0, 1.0)
+        orbitalSpr.Scale = Vector(sScale, sScale)
         orbitalSpr:Render(sScreen, Vector.Zero, Vector.Zero)
     end
 

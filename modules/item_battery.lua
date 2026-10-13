@@ -68,8 +68,10 @@ return function(Core)
       data.oathTextTimer = 90
     else
       data.overcharge = true
-      data.overchargeTier = 1
+      data.overchargeTier = hasCarBattery and 2 or 1
       data.surgeBuff = false
+      data.oathText = hasCarBattery and "CAR BATTERY OVERCHARGE! (+25% DMG)" or "OVERCHARGE! (+15% DMG)"
+      data.oathTextTimer = 60
       player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
       player:EvaluateItems()
     end

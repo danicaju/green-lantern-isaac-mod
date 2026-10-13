@@ -29,6 +29,10 @@ return function(Core)
     return chance
   end
 
+  local function HasBFFS(player)
+    return player and player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_BFFS) or 247)
+  end
+
   -- Active orbital construct shield: rotation, enemy projectile deflection, and contact construct damage
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     EnsureShieldId()
@@ -51,13 +55,15 @@ return function(Core)
         -- MC_ENTITY_TAKE_DMG knows it has already been "passed through"
         -- and skips its own redundant reflect roll.
         local reflectChance = ReflectChance(player)
+        local hasBFFS = HasBFFS(player)
+        local blockRadius = hasBFFS and 30 or 22
         for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PROJECTILE, -1, -1, false)) do
           local proj = ent:ToProjectile()
           if proj and proj:IsVulnerableEnemy() == false and not proj:IsDead() then
             local dist = (proj.Position - shieldPos):Length()
-            if dist <= 22 then
+            if dist <= 22 or (hasBFFS and dist <= 30) then
               -- Skip proyectiles ya marcados: roll único por proyectil, evita que
-              -- lentos dentro del radio 22px se re-evaluen frame tras frame e
+              -- lentos dentro del radio se re-evaluen frame tras frame e
               -- inflen el bloqueo real por encima del 25-75% declarado.
               local ok, pData = pcall(function() return proj:GetData() end)
               local bypassBy = ok and pData and pData.glShieldBypassBy
@@ -113,21 +119,28 @@ return function(Core)
                   end
 
                   local reflectSpeed = math.max(11.0, proj.Velocity:Length() * 1.25)
-                  local tearVar = (TearVariant and TearVariant.BLUE) or 0
+                  local tearVar = (TearVariant and TearVariant.DEFAULT) or 0
                   local refTear = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, shieldPos, targetDir * reflectSpeed, player)
                   local t = refTear and refTear:ToTear()
                   if t then
-                    t.CollisionDamage = math.max(player.Damage * 1.5, 6.0)
+                    local dmgMult = hasBFFS and 3.0 or 1.5
+                    local minDmg = hasBFFS and 12.0 or 6.0
+                    t.CollisionDamage = math.max((player.Damage * 1.5) * (hasBFFS and 2.0 or 1.0), minDmg)
                     t.TearFlags = t.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-                    t:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
-                    t.Scale = 1.25
+                    t.Visible = false
+                    pcall(function()
+                      if t:GetSprite() then t:GetSprite().Color = Color(0, 0, 0, 0) end
+                    end)
+                    if Core.ApplyRingBeamSprite then
+                      Core.ApplyRingBeamSprite(t, hasBFFS and 1.15 or 0.85)
+                    end
                   end
 
                   pcall(function()
                     local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, shieldPos, Vector.Zero, player)
                     if splash then
                       splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
-                      splash.Scale = 0.8
+                      splash.Scale = hasBFFS and 1.1 or 0.8
                     end
                   end)
                 end
@@ -137,16 +150,18 @@ return function(Core)
         end
 
         -- 2. Contact construct damage on enemies colliding with orbital shield
+        local contactDmg = hasBFFS and (player.Damage * 1.5 + 5.0) or (player.Damage * 0.75 + 2.5)
+        local pushForce = hasBFFS and 6.5 or 4.5
         for _, ent in ipairs(Isaac.GetRoomEntities()) do
           if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
             local dist = (ent.Position - shieldPos):Length()
             local enemyRadius = ent.Size or 16
-            if dist <= (enemyRadius + 16) then
+            if dist <= (hasBFFS and (enemyRadius + 22) or (enemyRadius + 16)) then
               if Game():GetFrameCount() % 6 == 0 then
-                ent:TakeDamage(player.Damage * 0.75 + 2.5, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+                ent:TakeDamage(contactDmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
                 local push = (ent.Position - shieldPos)
                 if push:Length() > 0.1 then
-                  ent.Velocity = ent.Velocity + push:Normalized() * 4.5
+                  ent.Velocity = ent.Velocity + push:Normalized() * pushForce
                 end
                 pcall(function()
                   SFXManager():Play(SoundEffect.SOUND_ROCK_CRUMBLE, 0.45, 0, false, 1.5)
@@ -198,20 +213,28 @@ return function(Core)
             SFXManager():Play(sfxClink, 0.90 * vol, 0, false, 1.20)
           end
           SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.80 * vol, 0, false, 1.35)
+          local hasBFFS = HasBFFS(player)
+          local dmgMult = hasBFFS and 3.0 or 1.5
+          local minDmg = hasBFFS and 12.0 or 6.0
           local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length() * 1.2)
-          local tearVar    = (TearVariant and TearVariant.BLUE) or 0
+          local tearVar    = (TearVariant and TearVariant.DEFAULT) or 0
           local ent        = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, srcEnt.Position, reflectVel, player)
           local reflected  = ent and ent:ToTear()
           if reflected then
-            reflected.CollisionDamage = player.Damage * 1.5
+            reflected.CollisionDamage = math.max((player.Damage * 1.5) * (hasBFFS and 2.0 or 1.0), minDmg)
             reflected.TearFlags       = reflected.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-            reflected:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.05, 0.60, 0.12)
-            reflected.Scale = 1.25
+            reflected.Visible         = false
+            pcall(function()
+              if reflected:GetSprite() then reflected:GetSprite().Color = Color(0, 0, 0, 0) end
+            end)
+            if Core.ApplyRingBeamSprite then
+              Core.ApplyRingBeamSprite(reflected, hasBFFS and 1.15 or 0.85)
+            end
           end
           local splash = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, player.Position, Vector.Zero, player)
           if splash then
             splash:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.9, 0.15, 0.7, 0.15)
-            splash.Scale = 0.9
+            splash.Scale = hasBFFS and 1.2 or 0.9
           end
         end)
 

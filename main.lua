@@ -26,6 +26,7 @@ include("modules.item_battery")(Core)
 include("modules.item_fist")(Core)
 include("modules.item_gatling")(Core)
 include("modules.item_coastcity")(Core)
+include("modules.synergies_virtues")(Core)
 
 include("modules.shield")(Core)
 include("modules.trinket_fear")(Core)
@@ -44,6 +45,7 @@ include("modules.fx_beam")(Core)
 include("modules.fx_shield_items")(Core)
 include("modules.hud_render")(Core)
 include("modules.fx_mcm")(Core)
+include("modules.compat_encyclopedia")(Core)
 
 include("modules.debug")(Core)
 
