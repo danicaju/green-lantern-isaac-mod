@@ -5,7 +5,6 @@ return function(Core)
   -- NOTA: sin alias locales de constantes: MCM puede cambiarlas en runtime.
 
   function Core.CanUseContinuousBeam(player)
-    if not (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then return false end
     if not Core.IsRingActive(player) then return false end
     if CollectibleType then
       local overrideItems = {

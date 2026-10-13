@@ -6,19 +6,55 @@ return function(Core)
 
   GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
     local room = Game():GetRoom()
-    if room:GetType() ~= RoomType.ROOM_ANGEL then return end
-
-    local hasTaintedHal = false
-    for i = 0, Game():GetNumPlayers() - 1 do
-      if Core.IsTaintedHal(Isaac.GetPlayer(i)) then
-        hasTaintedHal = true
-        break
+    if room and room:GetType() == RoomType.ROOM_ANGEL then
+      local hasTaintedHal = false
+      for i = 0, Game():GetNumPlayers() - 1 do
+        if Core.IsTaintedHal(Isaac.GetPlayer(i)) then
+          hasTaintedHal = true
+          break
+        end
+      end
+      if hasTaintedHal then
+        for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, -1, false)) do
+          ent:GetData().canBeConsumedByHal = true
+        end
       end
     end
-    if not hasTaintedHal then return end
 
-    for _, ent in ipairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, -1, false)) do
-      ent:GetData().canBeConsumedByHal = true
+    -- Ensure missing Stolen Ring familiars are respawned on room transition / Save & Continue
+    for i = 0, Game():GetNumPlayers() - 1 do
+      local player = Isaac.GetPlayer(i)
+      if player and Core.IsTaintedHal(player) then
+        local data = Core.GetPlayerData(player)
+        local targetCount = data.stolenRings or 0
+        if targetCount > 0 then
+          local currentRings = {}
+          for _, familiar in ipairs(Isaac.FindByType(EntityType.ENTITY_FAMILIAR, -1, -1, false)) do
+            local fd = familiar:GetData()
+            if fd and fd.isStolenRing and familiar.SpawnerEntity and familiar.SpawnerEntity.Index == player.Index then
+              table.insert(currentRings, familiar)
+            end
+          end
+          if #currentRings < targetCount then
+            for rIdx = #currentRings + 1, targetCount do
+              local flyVar = (FamiliarVariant and FamiliarVariant.BLUE_FLY) or 43
+              local newRing = Isaac.Spawn(EntityType.ENTITY_FAMILIAR, flyVar, 0, player.Position, Vector.Zero, player)
+              if newRing then
+                local rd = newRing:GetData()
+                rd.isStolenRing = true
+                rd.ringIndex    = rIdx
+                pcall(function()
+                  if EntityCollisionClass and EntityCollisionClass.ENTCOLL_NONE then
+                    newRing.EntityCollisionClass = EntityCollisionClass.ENTCOLL_NONE
+                  end
+                  newRing:AddEntityFlags(EntityFlag.FLAG_NO_TARGET)
+                  newRing:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.95, 0.1, 0.8, 0.2)
+                end)
+              end
+            end
+          end
+        end
+      end
     end
   end)
 
@@ -56,13 +92,19 @@ return function(Core)
                 player.Position,
                 Vector.Zero,
                 player
-              ):ToFamiliar()
+              )
 
               if ring then
                 local rd = ring:GetData()
                 rd.isStolenRing = true
                 rd.ringIndex    = data.stolenRings
-                ring:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+                pcall(function()
+                  if EntityCollisionClass and EntityCollisionClass.ENTCOLL_NONE then
+                    ring.EntityCollisionClass = EntityCollisionClass.ENTCOLL_NONE
+                  end
+                  ring:AddEntityFlags(EntityFlag.FLAG_NO_TARGET)
+                  ring:GetSprite().Color = Color(0.1, 1.0, 0.4, 0.95, 0.1, 0.8, 0.2)
+                end)
               end
 
               ent:Remove()
@@ -85,6 +127,11 @@ return function(Core)
         local player = owner and owner:ToPlayer()
         -- F4: solo el Tainted real mueve y dispara sus anillos; huerfanos quedan inertes.
         if player and Core.IsTaintedHal(player) then
+          pcall(function()
+            if EntityCollisionClass and EntityCollisionClass.ENTCOLL_NONE then
+              familiar.EntityCollisionClass = EntityCollisionClass.ENTCOLL_NONE
+            end
+          end)
           local ringIdx   = fd.ringIndex or 1
           local orbitRad  = 40 + (ringIdx - 1) * 20
           local speed     = 0.12
@@ -114,7 +161,7 @@ return function(Core)
             if targetEnemy then
               local dir      = (targetEnemy.Position - familiar.Position):Normalized()
               local laserVel = dir * 18
-              local tearVar  = (TearVariant and TearVariant.BLUE) or 0
+              local tearVar  = (TearVariant and TearVariant.DEFAULT) or 0
               local ent      = Isaac.Spawn(
                 EntityType.ENTITY_TEAR,
                 tearVar,
@@ -128,7 +175,13 @@ return function(Core)
               if laser then
                 laser.CollisionDamage = player.Damage * 1.5
                 laser.TearFlags       = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
-                laser:GetSprite().Color = Color(0, 1, 0.3, 1, 0, 0.6, 0)
+                laser.Visible         = false
+                pcall(function()
+                  if laser:GetSprite() then laser:GetSprite().Color = Color(0, 0, 0, 0) end
+                end)
+                if Core.ApplyRingBeamSprite then
+                  Core.ApplyRingBeamSprite(laser, 0.85)
+                end
               end
             end
           end

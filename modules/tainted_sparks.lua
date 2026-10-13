@@ -92,11 +92,21 @@ return function(Core)
           -- If Emblem meter reaches 100% and Tainted Hal's active item needs charge, grant +1 charge bar!
           if data.emeraldSparks >= Core.SPARK_MAX then
             pcall(function()
-              if Core.ITEM_COAST_CITY and pickedUpBy:GetActiveItem(ActiveSlot.SLOT_PRIMARY) == Core.ITEM_COAST_CITY then
-                local curCharge = pickedUpBy:GetActiveCharge(ActiveSlot.SLOT_PRIMARY)
-                if curCharge < 4 then
-                  pickedUpBy:SetActiveCharge(curCharge + 1, ActiveSlot.SLOT_PRIMARY)
-                  data.emeraldSparks = 0.0
+              if Core.ITEM_COAST_CITY then
+                local slots = {
+                  (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0,
+                  (ActiveSlot and ActiveSlot.SLOT_SECONDARY) or 1,
+                  (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2,
+                }
+                for _, slot in ipairs(slots) do
+                  if pickedUpBy:GetActiveItem(slot) == Core.ITEM_COAST_CITY then
+                    local curCharge = pickedUpBy:GetActiveCharge(slot)
+                    if curCharge < 4 then
+                      pickedUpBy:SetActiveCharge(curCharge + 1, slot)
+                      data.emeraldSparks = 0.0
+                      break
+                    end
+                  end
                 end
               end
             end)

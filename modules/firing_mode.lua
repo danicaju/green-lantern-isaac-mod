@@ -4,7 +4,7 @@ return function(Core)
 
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
     local data = Core.GetPlayerData(player)
-    if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
+    if Core.IsHalJordan(player) or Core.IsTaintedHal(player) or Core.IsRingActive(player) then
       local frame = Game():GetFrameCount()
       if data.lastSmallBeamFrame and frame < data.lastSmallBeamFrame then
         data.lastSmallBeamFrame = -999

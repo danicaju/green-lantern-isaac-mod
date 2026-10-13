@@ -160,9 +160,14 @@ return function(Core)
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
             if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
-            if data.oathText then
-              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48))
-              Core.DrawHudText(data.oathText, math.floor(hp.X - 38), math.floor(hp.Y), r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
+            if data.oathText and data.oathText ~= "" then
+              local textWidth = (Core.GetTextWidth and Core.GetTextWidth(data.oathText)) or (#data.oathText * 5.5)
+              local timerRatio = math.max(0, math.min(1, (data.oathTextTimer or 0) / 95.0))
+              local floatUp = (1.0 - timerRatio) * 12.0
+              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48 - floatUp))
+              local drawX = math.floor(hp.X - (textWidth * 0.5))
+              local drawY = math.floor(hp.Y)
+              Core.DrawHudText(data.oathText, drawX, drawY, r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
             end
           end
         end
@@ -182,9 +187,14 @@ return function(Core)
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
             if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
-            if data.oathText then
-              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48))
-              Core.DrawHudText(data.oathText, math.floor(hp.X - 38), math.floor(hp.Y), r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
+            if data.oathText and data.oathText ~= "" then
+              local textWidth = (Core.GetTextWidth and Core.GetTextWidth(data.oathText)) or (#data.oathText * 5.5)
+              local timerRatio = math.max(0, math.min(1, (data.oathTextTimer or 0) / 95.0))
+              local floatUp = (1.0 - timerRatio) * 12.0
+              local hp = Isaac.WorldToScreen(player.Position + Vector(0, -48 - floatUp))
+              local drawX = math.floor(hp.X - (textWidth * 0.5))
+              local drawY = math.floor(hp.Y)
+              Core.DrawHudText(data.oathText, drawX, drawY, r, g, b, math.min(0.95, data.oathTextTimer / 20.0))
             end
           end
         end

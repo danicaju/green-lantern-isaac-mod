@@ -111,6 +111,7 @@ return function(Core)
       refillAmount = 25.0
     end
     local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+    local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
     if Core.RestoreHalRingPower then
       Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
     else

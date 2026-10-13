@@ -89,9 +89,9 @@ return function(Core)
       end
     end
 
-    -- POWER BATTERY OVERCHARGE (applies to Hal Jordan when activating Power Battery at >=50% Willpower)
+    -- POWER BATTERY OVERCHARGE (applies to all characters when activating Power Battery)
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
-      if Core.IsHalJordan(player) and not data.ringDepleted and data.overcharge and data.overchargeRoomIdx == roomIdx then
+      if not (Core.IsHalJordan(player) and data.ringDepleted) and data.overcharge and data.overchargeRoomIdx == roomIdx then
         local mult = (data.overchargeTier or 1) >= 2 and Core.OVERCHARGE_T2_MULT or Core.OVERCHARGE_T1_MULT
         player.Damage = player.Damage * mult
       end
@@ -101,12 +101,14 @@ return function(Core)
       end
     end
 
-    -- GREEN LANTERN RING (when picked up by non-Hal characters, grants +1.0 DMG, +0.20 ShotSpeed, Piercing & Spectral)
+    -- GREEN LANTERN RING (when picked up by non-Hal characters, grants +1.0 DMG, +0.20 ShotSpeed, Flight, Piercing & Spectral)
     if not Core.IsHalJordan(player) and not Core.IsTaintedHal(player) and Core.HasGreenLanternRing(player) then
       if cacheFlag == CacheFlag.CACHE_DAMAGE then
         player.Damage = player.Damage + 1.0
       elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
         player.ShotSpeed = player.ShotSpeed + 0.20
+      elseif cacheFlag == CacheFlag.CACHE_FLYING then
+        player.CanFly = true
       elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
         player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
       end

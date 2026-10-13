@@ -12,6 +12,16 @@ return function(Core)
         return hudFont
     end
 
+    function Core.GetTextWidth(text)
+        if not text then return 0 end
+        local f = Core.GetHudFont()
+        if f and f.GetStringWidth then
+            local ok, w = pcall(function() return f:GetStringWidth(text) end)
+            if ok and type(w) == "number" and w > 0 then return w end
+        end
+        return #text * 5.5
+    end
+
     function Core.DrawHudText(text, x, y, r, g, b, a)
         local f = Core.GetHudFont()
         if f and KColor then

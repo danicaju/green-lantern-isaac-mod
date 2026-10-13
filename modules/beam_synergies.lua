@@ -105,10 +105,21 @@ return function(Core)
         effect:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.9, 0.25)
         if isRocket and Game():GetFrameCount() % 2 == 0 then
             pcall(function()
-                local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SMOKE_CLOUD, 0, effect.Position, Vector.Zero, nil)
+                local spawner = effect.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0))
+                local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
+                local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, effect.Position, Vector.Zero, spawner)
                 if smoke then
-                    smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
-                    smoke.Scale = 0.55
+                    local sd = smoke:GetData()
+                    if sd then
+                        sd.isGLFistPoison = true
+                        sd.glPoisonLife = 40
+                        sd.glPoisonOwner = spawner
+                    end
+                    pcall(function() smoke.CollisionDamage = 0 end)
+                    pcall(function()
+                        smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
+                        smoke.Scale = 0.55
+                    end)
                 end
             end)
         end

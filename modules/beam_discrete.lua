@@ -312,7 +312,7 @@ return function(Core)
           local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
           if sp and Core.IsHalJordan(sp) then
               local sd = Core.GetPlayerData(sp)
-              local max = Core.WILLPOWER_MAX
+              local max = (Core.GetMaxWillpower and Core.GetMaxWillpower(sp)) or Core.WILLPOWER_MAX
               if (sd.willpower or max) < max and not sd.ringDepleted then
                   sd.willpower = math.min(max, (sd.willpower or max) + Core.WILLPOWER_HIT_REFUND)
                   sp:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
