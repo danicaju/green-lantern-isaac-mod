@@ -69,106 +69,13 @@ return function(Core)
             data.ringFlareTimer = 5
         end
     end)
-
-    -- 3. EPIC FETUS SYNERGY: Hard-Light Emerald Energy Rocket
-    GL:AddCallback(ModCallbacks.MC_POST_EFFECT_INIT, function(_, effect)
-        local isRocket = (EffectVariant and EffectVariant.ROCKET and effect.Variant == EffectVariant.ROCKET) or (effect.Variant == 31)
-        local isTarget = (EffectVariant and EffectVariant.TARGET and effect.Variant == EffectVariant.TARGET) or (effect.Variant == 30)
-        if not (isRocket or isTarget) then return end
-        local spawner = effect.SpawnerEntity
-        local player = spawner and spawner:ToPlayer()
-        if not player then
-            for i = 0, Game():GetNumPlayers() - 1 do
-                local p = Isaac.GetPlayer(i)
-                if Core.IsRingActive(p) and CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and p:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS) then
-                    player = p
-                    break
-                end
-            end
-        end
-        if not player or not Core.IsRingActive(player) then return end
-
-        local ed = effect:GetData()
-        ed.isGLRocket = true
-        effect:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.9, 0.25)
-        local data = Core.GetPlayerData(player)
-        data.ringFlareTimer = 10
-    end)
-
-    GL:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, function(_, effect)
-        local isRocket = (EffectVariant and EffectVariant.ROCKET and effect.Variant == EffectVariant.ROCKET) or (effect.Variant == 31)
-        local isTarget = (EffectVariant and EffectVariant.TARGET and effect.Variant == EffectVariant.TARGET) or (effect.Variant == 30)
-        if not (isRocket or isTarget) then return end
-        local ed = effect:GetData()
-        if not (ed and ed.isGLRocket) then return end
-
-        effect:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.9, 0.25)
-        if isRocket and Game():GetFrameCount() % 2 == 0 then
-            pcall(function()
-                local spawner = effect.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0))
-                local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-                local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, effect.Position, Vector.Zero, spawner)
-                if smoke then
-                    local sd = smoke:GetData()
-                    if sd then
-                        sd.isGLFistPoison = true
-                        sd.glPoisonLife = 40
-                        sd.glPoisonOwner = spawner
-                    end
-                    pcall(function() smoke.CollisionDamage = 0 end)
-                    pcall(function()
-                        smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
-                        smoke.Scale = 0.55
-                    end)
-                end
-            end)
-        end
-    end)
-
-    -- 4. DR. FETUS SYNERGY: Hard-Light Emerald Construct Bombs
-    GL:AddCallback(ModCallbacks.MC_POST_BOMB_INIT, function(_, bomb)
-        local spawner = bomb.SpawnerEntity
-        local player = spawner and spawner:ToPlayer()
-        if not player or not Core.IsRingActive(player) then return end
-
-        local bd = bomb:GetData()
-        bd.isGLBomb = true
-        bomb.DepthOffset = 30
+    -- 3. DR. FETUS & EPIC FETUS SYNERGIES: Hard-Light Emerald Construct Bombs & Orbital Strikes
+    if include then
         pcall(function()
-            local spr = bomb:GetSprite()
-            if spr then
-                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
-            end
+            local fetusMod = include("modules.synergies_fetus")
+            if fetusMod then fetusMod(Core) end
         end)
-        local data = Core.GetPlayerData(player)
-        data.ringFlareTimer = 8
-    end)
-
-    GL:AddCallback(ModCallbacks.MC_POST_BOMB_UPDATE, function(_, bomb)
-        local bd = bomb:GetData()
-        if not (bd and bd.isGLBomb) then return end
-
-        pcall(function()
-            local spr = bomb:GetSprite()
-            if spr then
-                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
-            end
-        end)
-    end)
-
-    GL:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE, function(_, entity)
-        if entity.Type ~= EntityType.ENTITY_BOMB then return end
-        local bd = entity:GetData()
-        if not (bd and bd.isGLBomb) then return end
-
-        pcall(function()
-            local effectVar = (EffectVariant and EffectVariant.WATER_SPLASH) or 10
-            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, effectVar, 0, entity.Position, Vector.Zero, entity.SpawnerEntity)
-            if fx then
-                Core.SetEntityScaleAndColor(fx, 1.25, Color(0.1, 1.0, 0.35, 0.95, 0.20, 0.90, 0.30))
-            end
-        end)
-    end)
+    end
 
     -- 5. LUDOVICO TECHNIQUE SYNERGY: Hard-Light Floating Construct Orb
     GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)

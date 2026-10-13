@@ -18,6 +18,12 @@ CollectibleType = {
     COLLECTIBLE_MOMS_BOX = 439,
     COLLECTIBLE_LUDOVICO_TECHNIQUE = 316,
     COLLECTIBLE_EPIC_FETUS = 168,
+    COLLECTIBLE_DR_FETUS = 52,
+}
+BombVariant = {
+    BOMB_NORMAL = 0,
+    BOMB_ROCKET = 19,
+    BOMB_GIGA_ROCKET = 20,
 }
 EntityType = {
     ENTITY_PLAYER = 1,
@@ -296,6 +302,12 @@ srcBeam = srcBeam:gsub("|", "+")
 local chunkBeam = assert(loadstring(srcBeam, "modules/beam_synergies.lua"))
 chunkBeam()(beamCore)
 
+local fFetus = assert(io.open("modules/synergies_fetus.lua", "r"))
+local srcFetus = fFetus:read("*a"); fFetus:close()
+srcFetus = srcFetus:gsub("|", "+")
+local chunkFetus = assert(loadstring(srcFetus, "modules/synergies_fetus.lua"))
+chunkFetus()(beamCore)
+
 local function findBeamCb(id)
     for _, c in ipairs(beamCore.GL._cbs) do
         if c.id == id then return c.fn end
@@ -349,6 +361,102 @@ entityRemoveCb(nil, bombEnt)
 Isaac.Spawn = origSpawn
 check(spawnedFx ~= nil and spawnedFx.Type == EntityType.ENTITY_EFFECT, "Dr Fetus: explosion spawns construct burst effect")
 check(spawnedFx._scale == 1.25, "Dr Fetus: construct effect scale set to 1.25")
+
+-- TEST 5B: DR. FETUS NIL SPAWNER & EPIC FETUS ROCKET VARIANT
+local origGetPlayer = Isaac.GetPlayer
+playerStub.HasCollectible = function(self, id)
+    return id == CollectibleType.COLLECTIBLE_DR_FETUS or id == CollectibleType.COLLECTIBLE_EPIC_FETUS
+end
+Isaac.GetPlayer = function(i) return playerStub end
+local origGame = Game
+Game = function() return {
+    GetLevel = function() return { GetCurrentRoomIndex = function() return 0 end } end,
+    GetFrameCount = function() return 90 end,
+    GetRoomEntities = function() return {} end,
+    GetNumPlayers = function() return 1 end,
+    GetRoom = function() return { GetClampedPosition = function(self, p) return p end } end,
+} end
+
+-- Nil spawner Dr Fetus bomb detection
+local nilBombSpr = { Color = nil }
+local nilBombEnt = {
+    Type = EntityType.ENTITY_BOMB,
+    Variant = 0,
+    SpawnerEntity = nil,
+    IsFetus = true,
+    DepthOffset = 0,
+    _data = {},
+    GetData = function(self) return self._data end,
+    GetSprite = function() return nilBombSpr end,
+}
+bombInitCb(nil, nilBombEnt)
+check(nilBombEnt:GetData().isGLBomb == true, "Dr Fetus (nil spawner): bomb marked isGLBomb")
+check(nilBombSpr.Color ~= nil and nilBombSpr.Color.G == 1.0, "Dr Fetus (nil spawner): bomb tinted emerald")
+
+-- Rocket bomb variant (Variant 19)
+local rocketSpr = { Color = nil }
+local rocketEnt = {
+    Type = EntityType.ENTITY_BOMB,
+    Variant = 19,
+    SpawnerEntity = nil,
+    DepthOffset = 0,
+    _data = {},
+    GetData = function(self) return self._data end,
+    GetSprite = function() return rocketSpr end,
+}
+bombInitCb(nil, rocketEnt)
+check(rocketEnt:GetData().isGLBomb == true, "Epic Fetus Rocket: bomb marked isGLBomb")
+check(rocketEnt:GetData().isGLRocket == true, "Epic Fetus Rocket: bomb marked isGLRocket")
+
+-- Target reticle effect
+local effectInitCb = findBeamCb(ModCallbacks.MC_POST_EFFECT_INIT)
+local targetSpr = { Color = nil }
+local targetEnt = {
+    Type = EntityType.ENTITY_EFFECT,
+    Variant = 30,
+    SpawnerEntity = nil,
+    _data = {},
+    GetData = function(self) return self._data end,
+    GetSprite = function() return targetSpr end,
+}
+effectInitCb(nil, targetEnt)
+check(targetEnt:GetData().isGLRocket == true, "Epic Fetus Target: marked isGLRocket")
+check(targetSpr.Color ~= nil and targetSpr.Color.G == 1.0, "Epic Fetus Target: tinted emerald")
+
+-- Core.FireFetusTapConstruct test
+local spawnedEnts = {}
+Isaac.Spawn = function(eType, var, sub, pos, vel, spawner)
+    local e = {
+        Type = eType,
+        Variant = var,
+        Position = pos,
+        Velocity = vel,
+        SpawnerEntity = spawner,
+        _data = {},
+        GetData = function(self) return self._data end,
+        GetSprite = function() return { Color = nil } end,
+        ToBomb = function(self) return self end,
+    }
+    table.insert(spawnedEnts, e)
+    return e
+end
+playerStub.Position = Vector(100, 100)
+playerStub.Damage = 5.0
+playerStub.GetTearMovementInheritance = function() return Vector(0, 0) end
+
+-- Tap construct for Epic Fetus
+local tapData = {}
+local handled = beamCore.FireFetusTapConstruct(playerStub, tapData, Vector(1, 0), 10.0, Vector(10, 0))
+check(handled == true, "FireFetusTapConstruct: handles Epic Fetus tap")
+check(#spawnedEnts >= 2, "FireFetusTapConstruct: spawns target reticle and falling rocket")
+
+-- Beam continuous synergy for Epic Fetus (orbital strike at frame 45)
+spawnedEnts = {}
+beamCore.TickFetusContinuousSynergy(playerStub, tapData, Vector(100, 100), Vector(1, 0), Vector(300, 100), 45)
+check(#spawnedEnts >= 2, "TickFetusContinuousSynergy: summons orbital strike at endWorld")
+
+Isaac.GetPlayer = origGetPlayer
+Game = origGame
 
 -- ===================== TEST 6: LUDOVICO TECHNIQUE HARD-LIGHT CONSTRUCT ORB =====================
 local tearUpdateCb = findBeamCb(ModCallbacks.MC_POST_TEAR_UPDATE)

@@ -124,6 +124,9 @@ return function(Core)
               local endWorld = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir, rangeOverride)
               local dmgStart = Core.IsAimingUp(player, rayDir) and (player.Position + Vector(0, -8)) or startWorld
               Core.TickContinuousBeamDamage(player, data, dmgStart, endWorld)
+              if Core.TickFetusContinuousSynergy then
+                Core.TickFetusContinuousSynergy(player, data, startWorld, rayDir, endWorld, frame)
+              end
             end
           end
           if Core.IsHalJordan(player) then
@@ -227,6 +230,9 @@ return function(Core)
             data.tapBurstCount = shotCount
             data.tapBurstBaseDir = dir
             pcall(function()
+              if Core.FireFetusTapConstruct and Core.FireFetusTapConstruct(player, data, dir, shotSpeed, spawnOffset) then
+                return
+              end
               for sIdx = 1, shotCount do
                 data.tapBurstIndex = sIdx
                 local shotDir = dir
@@ -245,9 +251,7 @@ return function(Core)
             end)
             data.allowingTapTear = false
             data.firingBufferedClick = false
-            data.tapBurstCount = nil
-            data.tapBurstIndex = nil
-            data.tapBurstBaseDir = nil
+            data.tapBurstCount, data.tapBurstIndex, data.tapBurstBaseDir = nil, nil, nil
             player.FireDelay = math.max(player.MaxFireDelay or 10, 2)
           end
         end
