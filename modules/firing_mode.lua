@@ -60,6 +60,7 @@ return function(Core)
       end
       if isHoldingShoot and canUseBeam then
         local rawDir = shootInput:Normalized()
+        local shootDir = Vector(rawDir.X, rawDir.Y)
         local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
         if hasTB then
           shootDir = Core.GetTractorBeamDirection(player, shootDir)

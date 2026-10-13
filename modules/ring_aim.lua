@@ -20,7 +20,7 @@ return function(Core)
 
   -- Compute the visual/screen-space offset of the character's outstretched Power Ring hand (for lasers & flares)
   function Core.GetRingHandOffset(player, fireVel)
-    local headDir = player:GetHeadDirection()
+    local headDir = player and player.GetHeadDirection and player:GetHeadDirection()
     local dx, dy = 0, 1
     if fireVel and fireVel:Length() > 0.1 then
       local n = fireVel:Normalized()
@@ -30,6 +30,15 @@ return function(Core)
       elseif headDir == Direction.LEFT then dx, dy = -1, 0
       elseif headDir == Direction.UP then dx, dy = 0, -1
       else dx, dy = 0, 1 end
+    end
+
+    -- Diagonal upward aiming: hand outstretched up and outward (away from head/face)
+    if dy < -0.2 and math.abs(dx) > 0.2 then
+      if dx > 0 then
+        return Vector(16, -24) -- Outstretched right ring hand aiming up-right
+      else
+        return Vector(-16, -24) -- Outstretched left ring hand aiming up-left
+      end
     end
 
     if math.abs(dx) >= math.abs(dy) then
@@ -67,6 +76,11 @@ return function(Core)
       dir = dir:Normalized()
     else
       dir = Vector(0, 1)
+    end
+
+    if dy < -0.2 and math.abs(dx) > 0.2 then
+      local sideX = (dx > 0) and 16 or -16
+      return Vector(sideX, -16) + dir * 4
     end
 
     if math.abs(dx) >= math.abs(dy) then

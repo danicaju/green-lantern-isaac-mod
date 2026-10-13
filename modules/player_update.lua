@@ -41,9 +41,9 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
                     if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
-                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
+                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, primarySlot)
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
@@ -56,9 +56,9 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
                     if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and not player:HasCollectible(Core.ITEM_COAST_CITY) then
-                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, pocketSlot)
+                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, primarySlot)
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)

@@ -300,7 +300,7 @@ return function(Core)
                 if math.abs(tbDir.X) < 0.01 then
                     handOffset = Vector(0, tbDir.Y < 0 and -38 or -6)
                 end
-            elseif aimingUp then
+            elseif aimingUp and math.abs(handOffset.X) <= 2 then
                 handOffset = Vector(0, -38)
             end
             local handScreenPos = Isaac.WorldToScreen(player.Position + handOffset)

@@ -204,7 +204,7 @@ return function(Core)
               if not (ed and ed.lastGLContBeamTickFrame == frame) then
                 if ed then ed.lastGLContBeamTickFrame = frame end
                 local fearMult = 1.0
-                if Core.FEAR_VULN_ENABLED ~= false and ent:HasEntityFlags(EntityFlag.FLAG_FEAR) then
+                if Core.FEAR_VULN_ENABLED ~= false and EntityFlag and EntityFlag.FLAG_FEAR and ent.HasEntityFlags and ent:HasEntityFlags(EntityFlag.FLAG_FEAR) then
                   fearMult = (hasBR and Core.IsTaintedHal(player)) and 1.50 or 1.25
                 end
                 local tookDmg = ent:TakeDamage(tickDmg * fearMult, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
@@ -215,9 +215,11 @@ return function(Core)
                       ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
                     end)
                   end
-                  local splashPos = closestPt * 0.4 + ent.Position * 0.6
-                  local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
-                  Core.SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                  if EntityType and EffectVariant and Isaac and Isaac.Spawn then
+                    local splashPos = closestPt * 0.4 + ent.Position * 0.6
+                    local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
+                    Core.SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                  end
                 end
               end
             elseif isFire then
