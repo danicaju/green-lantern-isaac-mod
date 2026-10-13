@@ -124,4 +124,83 @@ return function(Core)
             end)
         end
     end)
+
+    -- 4. DR. FETUS SYNERGY: Hard-Light Emerald Construct Bombs
+    GL:AddCallback(ModCallbacks.MC_POST_BOMB_INIT, function(_, bomb)
+        local spawner = bomb.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+
+        local bd = bomb:GetData()
+        bd.isGLBomb = true
+        bomb.DepthOffset = 30
+        pcall(function()
+            local spr = bomb:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+            end
+        end)
+        local data = Core.GetPlayerData(player)
+        data.ringFlareTimer = 8
+    end)
+
+    GL:AddCallback(ModCallbacks.MC_POST_BOMB_UPDATE, function(_, bomb)
+        local bd = bomb:GetData()
+        if not (bd and bd.isGLBomb) then return end
+
+        pcall(function()
+            local spr = bomb:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+            end
+        end)
+    end)
+
+    GL:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE, function(_, entity)
+        if entity.Type ~= EntityType.ENTITY_BOMB then return end
+        local bd = entity:GetData()
+        if not (bd and bd.isGLBomb) then return end
+
+        pcall(function()
+            local effectVar = (EffectVariant and EffectVariant.WATER_SPLASH) or 10
+            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, effectVar, 0, entity.Position, Vector.Zero, entity.SpawnerEntity)
+            if fx then
+                Core.SetEntityScaleAndColor(fx, 1.25, Color(0.1, 1.0, 0.35, 0.95, 0.20, 0.90, 0.30))
+            end
+        end)
+    end)
+
+    -- 5. LUDOVICO TECHNIQUE SYNERGY: Hard-Light Floating Construct Orb
+    GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+        if not (CollectibleType and CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE and player:HasCollectible(CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE)) then return end
+
+        local td = tear:GetData()
+        if not td.isGLLudovicoOrb then
+            td.isGLLudovicoOrb = true
+            if TearFlags then
+                tear.TearFlags = tear.TearFlags | (TearFlags.TEAR_SPECTRAL or 1) | (TearFlags.TEAR_PIERCING or 2)
+            end
+        end
+
+        pcall(function()
+            local spr = tear:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.90, 0.30)
+            end
+        end)
+
+        local frame = Game():GetFrameCount()
+        if frame % 15 == 0 then
+            pcall(function()
+                local fxVar = (EffectVariant and EffectVariant.HALO) or 10
+                local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, tear.Position, Vector.Zero, player)
+                if fx then
+                    Core.SetEntityScaleAndColor(fx, 0.65, Color(0.1, 1.0, 0.35, 0.70, 0.15, 0.80, 0.20))
+                end
+            end)
+        end
+    end)
 end

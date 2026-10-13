@@ -1,0 +1,10 @@
+<recipes>
+    <!-- Deterministic Bag of Crafting recipes for Green Lantern Mod items (Tainted Cain) -->
+    <!-- Ingredients: 2=Soul Heart, 3=Black Heart, 4=Eternal Heart, 5=Battery, 6=Key, 8=Bomb, 14=Nickel -->
+    <recipe result="Power Battery" ingredients="5 5 5 5 5 5 5 5"/>
+    <recipe result="Giant Fist" ingredients="8 8 8 8 8 8 8 8"/>
+    <recipe result="The Tragedy of Coast City" ingredients="3 3 3 3 2 2 2 2"/>
+    <recipe result="Gatling" ingredients="14 14 14 14 14 14 14 14"/>
+    <recipe result="Solid Light Shield" ingredients="2 2 2 2 6 6 6 6"/>
+    <recipe result="Green Lantern Ring" ingredients="4 4 4 4 4 4 4 4"/>
+</recipes>

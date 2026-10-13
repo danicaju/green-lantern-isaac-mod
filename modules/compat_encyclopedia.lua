@@ -99,6 +99,16 @@ return function(Core)
         })
       end
 
+      -- 4. COMMUNITY MOD INTEGRATIONS: Specialist Dance & Pog for Good Items
+      if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 then
+        if SpecialistDance and SpecialistDance.RegisterItem then
+          SpecialistDance:RegisterItem(Core.ITEM_POWER_RING, true)
+        end
+        if PogLite and PogLite.AddPogCostume then
+          PogLite:AddPogCostume("GreenLanternRing", Core.ITEM_POWER_RING)
+        end
+      end
+
       registered = true
     end)
   end
