@@ -96,6 +96,17 @@ return function(Core)
           player.FireDelay = math.max(player.FireDelay, 2)
           data.ringFlareTimer = math.max(data.ringFlareTimer or 0, 3)
         else
+          if data.shootHoldFrames == holdThreshold then
+            local sfxIgnite = (SoundEffect and (SoundEffect.SOUND_LASERRING_WEAK or SoundEffect.SOUND_SUPERHOLY)) or 0
+            if Core.PlayRingSound and sfxIgnite > 0 then
+              Core.PlayRingSound(sfxIgnite, 0.80, 1.25)
+            end
+          elseif frame % 16 == 0 then
+            local sfxHum = (SoundEffect and (SoundEffect.SOUND_TECH2_LOOP or SoundEffect.SOUND_SCAMPER)) or 0
+            if Core.PlayRingSound and sfxHum > 0 then
+              Core.PlayRingSound(sfxHum, 0.35, 1.20)
+            end
+          end
           data.isFiringContinuousBeam = true
           data.continuousBeamGraceTimer = 4
           data.lastContinuousBeamDir = Vector(shootDir.X, shootDir.Y)

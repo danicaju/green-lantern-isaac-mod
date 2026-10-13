@@ -90,4 +90,16 @@ return function(Core)
         end
         return Vector(0, -1)
     end
+
+    -- Plays a sound scaled by the user's SFX_VOLUME_MULT configuration
+    function Core.PlayRingSound(soundId, baseVol, pitch)
+        if not soundId or soundId <= 0 then return end
+        if not SFXManager then return end
+        local mult = Core.SFX_VOLUME_MULT or 1.0
+        local vol = (baseVol or 1.0) * mult
+        if vol <= 0.001 then return end
+        pcall(function()
+            SFXManager():Play(soundId, vol, 0, false, pitch or 1.0)
+        end)
+    end
 end

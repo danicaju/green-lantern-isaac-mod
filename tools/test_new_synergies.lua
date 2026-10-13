@@ -700,6 +700,37 @@ local p2X = renderedTexts[3] and renderedTexts[3].x or renderedTexts[2].x
 check(p1X == 48, "Co-op HUD: Player 1 rendered in top-left (X=48)")
 check(p2X == (480 - 80), "Co-op HUD: Player 2 rendered in top-right (X=400)")
 
+-- ===================== TEST 14: SCI-FI SOUND EFFECTS & PLAYRINGSOUND =====================
+local playedSounds = {}
+SFXManager = function()
+    return {
+        Play = function(self, id, vol, frame, loop, pitch)
+            table.insert(playedSounds, { id = id, vol = vol, pitch = pitch })
+        end,
+    }
+end
+
+local utilsCore = {
+    SFX_VOLUME_MULT = 1.0,
+}
+local fUtils = assert(io.open("modules/utils.lua", "r"))
+local srcUtils = fUtils:read("*a"); fUtils:close()
+srcUtils = srcUtils:gsub("|", "+")
+local chunkUtils = assert(loadstring(srcUtils, "modules/utils.lua"))
+chunkUtils()(utilsCore)
+
+utilsCore.PlayRingSound(145, 0.80, 1.25)
+check(#playedSounds == 1, "SFX: sound was played via PlayRingSound")
+check(playedSounds[1].id == 145, "SFX: correct sound id 145")
+check(math.abs(playedSounds[1].vol - 0.80) < 0.01, "SFX: volume matches base 0.80")
+check(math.abs(playedSounds[1].pitch - 1.25) < 0.01, "SFX: pitch matches 1.25")
+
+-- Test volume multiplier scaling
+utilsCore.SFX_VOLUME_MULT = 0.50
+utilsCore.PlayRingSound(145, 0.80, 1.25)
+check(#playedSounds == 2, "SFX: second sound played")
+check(math.abs(playedSounds[2].vol - 0.40) < 0.01, "SFX: volume scaled by 0.50x multiplier (0.40)")
+
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end
