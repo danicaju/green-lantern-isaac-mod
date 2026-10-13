@@ -203,4 +203,47 @@ return function(Core)
             end)
         end
     end)
+
+    -- 6. HAEMOLACRIA SYNERGY: Hard-Light Emerald Mortar & Burst Shards
+    GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+        local haemoId = (CollectibleType and CollectibleType.COLLECTIBLE_HAEMOLACRIA) or 531
+        if not (player.HasCollectible and player:HasCollectible(haemoId)) then return end
+
+        local td = tear:GetData()
+        if not td.isGLHaemoTear then
+            td.isGLHaemoTear = true
+            tear.DepthOffset = 25
+        end
+
+        pcall(function()
+            local spr = tear:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.85, 0.25)
+            end
+        end)
+    end)
+
+    -- 7. POP! SYNERGY: Hard-Light Bouncing Construct Orbs
+    GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+        local popId = (CollectibleType and CollectibleType.COLLECTIBLE_POP) or 529
+        if not (player.HasCollectible and player:HasCollectible(popId)) then return end
+
+        local td = tear:GetData()
+        if not td.isGLPopOrb then
+            td.isGLPopOrb = true
+        end
+
+        pcall(function()
+            local spr = tear:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.90, 0.30)
+            end
+        end)
+    end)
 end

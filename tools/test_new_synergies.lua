@@ -449,6 +449,50 @@ local tpEndWorld = mathCore.ComputeContinuousBeamEndWorld(Vector(100, 100), Vect
 local tpDist = (tpEndWorld.X - 100)
 check(math.abs(tpDist - 180.0) < 1.0, "Tiny Planet: beam range clamped to 180 units")
 
+-- ===================== TEST 10: HAEMOLACRIA & POP! CONSTRUCT SYNERGIES =====================
+local haemoPlayer = {
+    _ringActive = true,
+    ToPlayer = function(self) return self end,
+    HasCollectible = function(_, id) return id == 531 end, -- Haemolacria
+}
+local haemoSpr = { Color = nil }
+local haemoTear = {
+    Type = EntityType.ENTITY_TEAR,
+    SpawnerEntity = haemoPlayer,
+    _data = {},
+    GetData = function(self) return self._data end,
+    GetSprite = function() return haemoSpr end,
+}
+-- Find the Haemolacria callback (6th callback in beamCore)
+for _, c in ipairs(beamCore.GL._cbs) do
+    if c.id == ModCallbacks.MC_POST_TEAR_UPDATE then
+        c.fn(nil, haemoTear)
+    end
+end
+check(haemoTear:GetData().isGLHaemoTear == true, "Haemolacria: marked as isGLHaemoTear")
+check(haemoSpr.Color ~= nil and haemoSpr.Color.G == 1.0, "Haemolacria: mortar tinted emerald")
+
+local popPlayer = {
+    _ringActive = true,
+    ToPlayer = function(self) return self end,
+    HasCollectible = function(_, id) return id == 529 end, -- Pop!
+}
+local popSpr = { Color = nil }
+local popTear = {
+    Type = EntityType.ENTITY_TEAR,
+    SpawnerEntity = popPlayer,
+    _data = {},
+    GetData = function(self) return self._data end,
+    GetSprite = function() return popSpr end,
+}
+for _, c in ipairs(beamCore.GL._cbs) do
+    if c.id == ModCallbacks.MC_POST_TEAR_UPDATE then
+        c.fn(nil, popTear)
+    end
+end
+check(popTear:GetData().isGLPopOrb == true, "Pop!: marked as isGLPopOrb")
+check(popSpr.Color ~= nil and popSpr.Color.G == 1.0, "Pop!: bouncing orb tinted emerald")
+
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end
