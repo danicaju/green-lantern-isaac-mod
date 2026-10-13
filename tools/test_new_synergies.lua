@@ -493,6 +493,91 @@ end
 check(popTear:GetData().isGLPopOrb == true, "Pop!: marked as isGLPopOrb")
 check(popSpr.Color ~= nil and popSpr.Color.G == 1.0, "Pop!: bouncing orb tinted emerald")
 
+-- ===================== TEST 11: CUSTOM CHALLENGES =====================
+local cf = io.open("content/challenges.xml", "r")
+check(cf ~= nil, "Challenges: content/challenges.xml exists")
+if cf then
+    local content = cf:read("*a")
+    cf:close()
+    check(content:find('name="In Brightest Day"') ~= nil, "Challenges: 'In Brightest Day' challenge defined")
+    check(content:find('name="Blackest Night"') ~= nil, "Challenges: 'Blackest Night' challenge defined")
+end
+
+local chalCore = {
+    GL = {
+        _cbs = {},
+        AddCallback = function(self, id, fn)
+            table.insert(self._cbs, { id = id, fn = fn })
+        end,
+    },
+    PLAYER_HAL = 1,
+    PLAYER_TAINTED_HAL = 2,
+    ITEM_SOLID_LIGHT_SHIELD = 14,
+    ITEM_GIANT_FIST = 11,
+    ITEM_POWER_BATTERY = 10,
+    ITEM_COAST_CITY = 12,
+    TRINKET_YELLOW_IMPURITY = 20,
+}
+ModCallbacks.MC_POST_NEW_LEVEL = 18
+dofile("modules/challenges.lua")(chalCore)
+
+local chalStartCb = nil
+local chalLevelCb = nil
+for _, c in ipairs(chalCore.GL._cbs) do
+    if c.id == ModCallbacks.MC_POST_GAME_STARTED then chalStartCb = c.fn end
+    if c.id == ModCallbacks.MC_POST_NEW_LEVEL then chalLevelCb = c.fn end
+end
+check(chalStartCb ~= nil, "Challenges: MC_POST_GAME_STARTED registered")
+check(chalLevelCb ~= nil, "Challenges: MC_POST_NEW_LEVEL registered")
+
+-- Test In Brightest Day setup
+local testP = {
+    _pType = 0,
+    _items = {},
+    _trinkets = {},
+    CanShoot = true,
+    GetPlayerType = function(self) return self._pType end,
+    ChangePlayerType = function(self, t) self._pType = t end,
+    HasCollectible = function(self, id) return self._items[id] == true end,
+    AddCollectible = function(self, id) self._items[id] = true end,
+    HasTrinket = function(self, id) return self._trinkets[id] == true end,
+    AddTrinket = function(self, id) self._trinkets[id] = true end,
+}
+Isaac.GetPlayer = function() return testP end
+Game = function()
+    return {
+        GetNumPlayers = function() return 1 end,
+        GetLevel = function()
+            return {
+                _curses = 0,
+                AddCurse = function(self, c) self._curses = self._curses + c end,
+            }
+        end,
+    }
+end
+
+Isaac.GetChallenge = function() return 1 end
+Isaac.GetChallengeIdByName = function(name)
+    if name == "In Brightest Day" then return 1 end
+    if name == "Blackest Night" then return 2 end
+    return -1
+end
+
+chalStartCb(nil, false)
+check(testP._pType == chalCore.PLAYER_HAL, "Challenges: In Brightest Day sets player to Hal")
+check(testP.CanShoot == false, "Challenges: In Brightest Day sets blindfold (CanShoot=false)")
+check(testP:HasCollectible(chalCore.ITEM_SOLID_LIGHT_SHIELD), "Challenges: In Brightest Day grants Solid Light Shield")
+check(testP:HasCollectible(chalCore.ITEM_GIANT_FIST), "Challenges: In Brightest Day grants Giant Fist")
+
+-- Test Blackest Night setup
+testP._pType = 0
+testP.CanShoot = true
+Isaac.GetChallenge = function() return 2 end
+chalStartCb(nil, false)
+check(testP._pType == chalCore.PLAYER_TAINTED_HAL, "Challenges: Blackest Night sets player to Tainted Hal")
+check(testP:HasCollectible(chalCore.ITEM_COAST_CITY), "Challenges: Blackest Night grants Coast City")
+check(testP:HasTrinket(chalCore.TRINKET_YELLOW_IMPURITY), "Challenges: Blackest Night grants Yellow Impurity")
+
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end

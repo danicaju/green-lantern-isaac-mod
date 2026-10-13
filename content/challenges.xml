@@ -1,0 +1,7 @@
+<challenges version="1">
+    <!-- Challenge 1: In Brightest Day - Blindfold Construct Master -->
+    <challenge name="In Brightest Day" id="1" endstage="8" canshoot="false" roomfilter="4" />
+
+    <!-- Challenge 2: Blackest Night - Darkness Fear Gauntlet to Sheol -->
+    <challenge name="Blackest Night" id="2" endstage="10" getcurse="1" altpath="true" />
+</challenges>
