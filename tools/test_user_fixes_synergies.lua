@@ -105,13 +105,142 @@ local pCostume = {
 Core.RefreshCharacterCostume(pCostume)
 check(#removedCostumes == 0, "RefreshCharacterCostume must preserve item costumes so appearance changes naturally")
 
--- ===================== TEST 4: GIANT FIST POISON DISSIPATION =====================
+-- ===================== TEST 4: GIANT FIST POISON DISSIPATION & ENEMY DAMAGE =====================
 local fFist = assert(io.open("modules/item_fist.lua", "r"))
 local srcFist = fFist:read("*a"); fFist:close()
 check(srcFist:find("isGLFistPoison") ~= nil, "Giant Fist must tag poison smoke with isGLFistPoison")
 check(srcFist:find("MC_POST_EFFECT_UPDATE") ~= nil, "Giant Fist must listen to MC_POST_EFFECT_UPDATE for poison dissipation")
 check(srcFist:find("glPoisonLife") ~= nil, "Giant Fist must track glPoisonLife for smooth fade and removal")
--- ===================== TEST 5: STICKY TEARS HANDLING =====================
+check(srcFist:find("SetTimeout") == nil, "Giant Fist must NOT index eff.SetTimeout (throws luabind error on EntityEffect)")
+
+-- Behavioral test of item_fist.lua with strict luabind-style EntityEffect
+do
+  local srcFist51 = srcFist:gsub("|", "+")
+  local chunkFist = assert(loadstring(srcFist51, "modules/item_fist.lua"))
+  ModCallbacks.MC_USE_ITEM = 3
+  ModCallbacks.MC_POST_EFFECT_UPDATE = 55
+  ModCallbacks.MC_ENTITY_TAKE_DMG = 11
+  EntityType = { ENTITY_TEAR = 2, ENTITY_EFFECT = 1000, ENTITY_PLAYER = 1 }
+  EffectVariant = { SMOKE_CLOUD = 141, POOF01 = 15, WATER_SPLASH = 41 }
+  GridEntityType = { GRID_ROCK = 2, GRID_ROCKB = 3, GRID_ROCKT = 4, GRID_ROCK_BOMB = 5, GRID_ROCK_ALT = 6, GRID_POOP = 14 }
+  DamageFlag = { DAMAGE_POISON_BURN = 32 }
+  EntityRef = function(e) return { Entity = e } end
+
+  local simFrame = 0
+  Game = function()
+    return {
+      GetFrameCount = function() return simFrame end,
+      GetRoom = function() return { GetGridIndex = function() return -1 end } end,
+    }
+  end
+
+  local vmt
+  local function vec(x, y) return setmetatable({ X = x or 0, Y = y or 0 }, vmt) end
+  vmt = {
+    __sub = function(a, b) return vec(a.X - b.X, a.Y - b.Y) end,
+    __mul = function(a, b) return vec(a.X * b, a.Y * b) end,
+    __index = {
+      Length = function(v) return math.sqrt(v.X * v.X + v.Y * v.Y) end,
+      Normalized = function(v) return vec(1, 0) end,
+    }
+  }
+  Vector.Zero = vec(0, 0)
+
+  local spawnedClouds = {}
+  local enemyDmgCount, enemyPoisonCount = 0, 0
+  local mockEnemy = {
+    Position = vec(92, 100),
+    IsActiveEnemy = function() return true end,
+    IsVulnerableEnemy = function() return true end,
+    AddPoison = function() enemyPoisonCount = enemyPoisonCount + 1 end,
+    TakeDamage = function() enemyDmgCount = enemyDmgCount + 1 end,
+  }
+  local mockPlayer = { Position = vec(92, 100), Damage = 4.0 }
+  local mockFistTear = {
+    Position = vec(100, 100),
+    Velocity = vec(10, 0),
+    SpawnerEntity = mockPlayer,
+    GetData = function(self)
+      self._d = self._d or { isGiantFist = true }
+      return self._d
+    end,
+  }
+
+  Isaac = {
+    GetPlayer = function() return mockPlayer end,
+    GetRoomEntities = function() return { mockEnemy } end,
+    FindByType = function(t, v)
+      if t == EntityType.ENTITY_TEAR then return { mockFistTear } end
+      if t == EntityType.ENTITY_EFFECT and v == EffectVariant.SMOKE_CLOUD then
+        local active = {}
+        for _, c in ipairs(spawnedClouds) do
+          if not c._removed then table.insert(active, c) end
+        end
+        return active
+      end
+      return {}
+    end,
+    Spawn = function(t, v, st, pos, vel, spawner)
+      local data = {}
+      local spr = { Color = Color(1, 1, 1, 1) }
+      -- Strict luabind-like effect: indexing unknown key like SetTimeout throws error!
+      local effObj = setmetatable({ Timeout = 0, LifeSpan = 0 }, {
+        __index = function(_, k)
+          error("luabind: class EntityEffect has no member named " .. tostring(k))
+        end
+      })
+      local cloud = {
+        Type = t,
+        Variant = v,
+        Position = pos,
+        SpawnerEntity = spawner,
+        CollisionDamage = 3.5,
+        Scale = 1.0,
+        FrameCount = 0,
+        _removed = false,
+        GetData = function() return data end,
+        GetSprite = function() return spr end,
+        ToEffect = function() return effObj end,
+        Remove = function(self) self._removed = true end,
+      }
+      table.insert(spawnedClouds, cloud)
+      return cloud
+    end,
+  }
+
+  local fistCore = { GL = RegisterMod("gl_fist_test", 1) }
+  chunkFist()(fistCore)
+
+  local postUpdateFn, takeDmgFn
+  for _, cb in ipairs(fistCore.GL._cbs) do
+    if cb.id == ModCallbacks.MC_POST_UPDATE then postUpdateFn = cb.fn end
+    if cb.id == ModCallbacks.MC_ENTITY_TAKE_DMG then takeDmgFn = cb.fn end
+  end
+  check(type(postUpdateFn) == "function", "item_fist must register MC_POST_UPDATE")
+  check(type(takeDmgFn) == "function", "item_fist must register MC_ENTITY_TAKE_DMG for player immunity")
+
+  -- Frame 0: spawn cloud
+  simFrame = 0
+  postUpdateFn()
+  check(#spawnedClouds == 1, "Giant Fist must spawn smoke cloud on even frame")
+  local cloud = spawnedClouds[1]
+  check(cloud:GetData().isGLFistPoison == true, "Smoke cloud must have isGLFistPoison == true even with strict luabind ToEffect()")
+  check(cloud.CollisionDamage == 0, "Smoke cloud CollisionDamage must be zeroed")
+
+  -- Player immunity check
+  local dmgRes = takeDmgFn(nil, mockPlayer, 1, 0, { Type = EntityType.ENTITY_EFFECT, Variant = 141, Entity = cloud }, 0)
+  check(dmgRes == false, "MC_ENTITY_TAKE_DMG must return false when player touches Giant Fist poison cloud")
+
+  -- Stop spawning more clouds and tick 60 frames to verify enemy damage + removal
+  mockFistTear:GetData().isGiantFist = false
+  for f = 1, 60 do
+    simFrame = f
+    cloud.FrameCount = f
+    postUpdateFn()
+  end
+  check(enemyDmgCount > 0 and enemyPoisonCount > 0, "Giant Fist poison cloud must damage and poison nearby enemies")
+  check(cloud._removed == true, "Giant Fist poison cloud must be removed after its lifetime expires")
+end
 local fHud = assert(io.open("modules/hud_render.lua", "r"))
 local srcHud = fHud:read("*a"); fHud:close()
 check(srcHud:find("StickTarget") ~= nil, "hud_render.lua must check StickTarget for sticky tears")
