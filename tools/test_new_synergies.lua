@@ -321,11 +321,13 @@ local playerStub = {
     _ringActive = true,
     _data = { ringFlareTimer = 0 },
     ToPlayer = function(self) return self end,
+    HasCollectible = function(self, id) return id == CollectibleType.COLLECTIBLE_DR_FETUS end,
 }
 local bombSpr = { Color = nil }
 local bombEnt = {
     Type = EntityType.ENTITY_BOMB,
     SpawnerEntity = playerStub,
+    IsFetus = true,
     DepthOffset = 0,
     _data = {},
     GetData = function(self) return self._data end,

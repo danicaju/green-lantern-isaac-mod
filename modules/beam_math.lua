@@ -8,9 +8,15 @@ return function(Core)
     if not Core.IsRingActive(player) then return false end
     if CollectibleType then
       local overrideItems = {
-        CollectibleType.COLLECTIBLE_MOMS_KNIFE,
-        CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE,
-        CollectibleType.COLLECTIBLE_SPIRIT_SWORD,
+        (CollectibleType.COLLECTIBLE_MOMS_KNIFE or 114),
+        (CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE or 316),
+        (CollectibleType.COLLECTIBLE_SPIRIT_SWORD or 579),
+        (CollectibleType.COLLECTIBLE_TECH_X or 395),
+        (CollectibleType.COLLECTIBLE_TECHNOLOGY or 68),
+        (CollectibleType.COLLECTIBLE_BRIMSTONE or 118),
+        (CollectibleType.COLLECTIBLE_CHOCOLATE_MILK or 69),
+        (CollectibleType.COLLECTIBLE_CURSED_EYE or 315),
+        (CollectibleType.COLLECTIBLE_MONSTROS_LUNG or 229),
       }
       for _, itemId in ipairs(overrideItems) do
         if itemId and player:HasCollectible(itemId) then
@@ -228,6 +234,9 @@ return function(Core)
                     local splashPos = closestPt * 0.4 + ent.Position * 0.6
                     local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, splashPos, Vector.Zero, player)
                     Core.SetEntityScaleAndColor(fx, 0.45, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                  end
+                  if Core.OnContinuousBeamHitEnemy then
+                    Core.OnContinuousBeamHitEnemy(player, ent, closestPt, tickDmg, segDir)
                   end
                 end
               end

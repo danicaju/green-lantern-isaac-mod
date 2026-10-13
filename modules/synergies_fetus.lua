@@ -8,19 +8,38 @@ return function(Core)
     local function FindRingFetusPlayer(entity, isEpic)
         local spawner = entity.SpawnerEntity
         local player = spawner and spawner:ToPlayer()
-        if player and Core.IsRingActive(player) then return player end
+        local ed = entity.GetData and entity:GetData()
+        if player and Core.IsRingActive(player) then
+            local hasEpic = CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS)
+            local hasDr = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
+            if isEpic and (hasEpic or (ed and ed.isGLRocket)) then return player end
+            if (not isEpic) and (hasDr or entity.IsFetus or (ed and ed.isGLBomb)) then return player end
+            return nil
+        end
         local nPlayers = (Game().GetNumPlayers and Game():GetNumPlayers()) or 1
         for i = 0, nPlayers - 1 do
             local p = Isaac.GetPlayer(i)
             if p and Core.IsRingActive(p) then
                 local hasEpic = CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and p:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS)
                 local hasDr = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and p:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
-                if isEpic and hasEpic then return p end
-                if (not isEpic) and (hasDr or hasEpic) then return p end
-                if Core.IsHalJordan(p) or Core.IsTaintedHal(p) then return p end
+                if isEpic and (hasEpic or (ed and ed.isGLRocket)) then return p end
+                if (not isEpic) and (hasDr or entity.IsFetus or (ed and ed.isGLBomb)) then return p end
             end
         end
         return nil
+    end
+
+    local function NormalizeVector(v, fallback)
+        if not v then return fallback or Vector(1, 0) end
+        if v.Length and v.Normalized then
+            if v:Length() > 0.001 then return v:Normalized() end
+        elseif v.X and v.Y then
+            local len = math.sqrt(v.X * v.X + v.Y * v.Y)
+            if len > 0.001 then
+                return Vector(v.X / len, v.Y / len)
+            end
+        end
+        return fallback or Vector(1, 0)
     end
 
     -- 1. EPIC FETUS TARGET & ROCKET EFFECT STYLING
@@ -77,10 +96,14 @@ return function(Core)
         local rocketVar = (BombVariant and BombVariant.BOMB_ROCKET) or 19
         local gigaVar = (BombVariant and BombVariant.BOMB_GIGA_ROCKET) or 20
         local isRocket = (bomb.Variant == rocketVar) or (bomb.Variant == gigaVar)
+        local bd = bomb:GetData()
+        local isFetusBomb = (bomb.IsFetus == true) or (bd and bd.isGLBomb == true)
+        -- STRICT: only actual Dr. Fetus shots or Epic Fetus rockets are styled. Normal inventory bombs remain 100% vanilla.
+        if not (isRocket or isFetusBomb) then return end
+
         local player = FindRingFetusPlayer(bomb, isRocket)
         if not player then return end
 
-        local bd = bomb:GetData()
         bd.isGLBomb = true
         if isRocket then bd.isGLRocket = true end
         bomb.DepthOffset = 30
@@ -154,7 +177,8 @@ return function(Core)
         if not (hasEpic or hasDr) then return false end
 
         if hasEpic then
-            local targetPos = Vector(player.Position.X + dir.X * 180, player.Position.Y + dir.Y * 180)
+            local aimDir = NormalizeVector(dir, data.lastShootDir or Vector(1, 0))
+            local targetPos = Vector(player.Position.X + aimDir.X * 180, player.Position.Y + aimDir.Y * 180)
             local room = Game():GetRoom()
             if room and room.GetClampedPosition then targetPos = room:GetClampedPosition(targetPos, 20) end
             local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
@@ -212,14 +236,31 @@ return function(Core)
         if not (hasEpic or hasDr) then return end
 
         if hasEpic and (frame % 45 == 0) then
+            local aimDir = NormalizeVector(shootDir, Vector(1, 0))
+            local strikePos = nil
+            local room = Game():GetRoom()
+            local ents = Isaac.FindInRadius and Isaac.FindInRadius(player.Position + aimDir * 150, 180, EntityPartition and EntityPartition.ENEMY or 0)
+            if ents then
+                for _, e in ipairs(ents) do
+                    if e and e.IsVulnerableEnemy and e:IsVulnerableEnemy() then
+                        strikePos = e.Position
+                        break
+                    end
+                end
+            end
+            if not strikePos then
+                strikePos = Vector(player.Position.X + aimDir.X * 200, player.Position.Y + aimDir.Y * 200)
+                if room and room.GetClampedPosition then strikePos = room:GetClampedPosition(strikePos, 24) end
+            end
+
             local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
-            local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, endWorld, Vector.Zero, player)
+            local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, strikePos, Vector.Zero, player)
             if target then
                 target:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
                 target:GetData().isGLRocket = true
             end
             local rocketVar = (BombVariant and BombVariant.BOMB_ROCKET) or 19
-            local rocket = Isaac.Spawn(EntityType.ENTITY_BOMB, rocketVar, 0, endWorld, Vector.Zero, player)
+            local rocket = Isaac.Spawn(EntityType.ENTITY_BOMB, rocketVar, 0, strikePos, Vector.Zero, player)
             if rocket then
                 local rd = rocket:GetData()
                 rd.isGLBomb = true

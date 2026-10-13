@@ -19,10 +19,16 @@ return function(Core)
 
         data.ringFlareTimer = 8
 
+        local isTech1 = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECHNOLOGY or 68)
+        local isTechX = (laser.IsCircle and laser:IsCircle()) or (player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECH_X or 395))
+        if isTech1 then ld.isGLTechLaser = true end
+        if isTechX then ld.isGLTechX = true end
+
         -- Tint all player lasers into blazing Hard-Light Emerald Construct Beams!
         laser.DepthOffset     = 35
-        laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
-        laser.CollisionDamage = laser.CollisionDamage * 1.25
+        laser:GetSprite().Color = isTech1 and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+        local dmgMult = isTech1 and 1.30 or 1.25
+        laser.CollisionDamage = laser.CollisionDamage * dmgMult
         laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         if Core.IsTaintedHal(player) and math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25) then
             laser.TearFlags = laser.TearFlags | TearFlags.TEAR_FEAR
@@ -54,7 +60,30 @@ return function(Core)
         local data = Core.GetPlayerData(player)
         data.ringFlareTimer = 4
         laser.DepthOffset   = 35
-        laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+        local ld = laser:GetData()
+        laser:GetSprite().Color = ld.isGLTechLaser and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+
+        local frame = Game():GetFrameCount()
+        if ld.isGLTechLaser and (frame % 12 == 0) and Isaac and Isaac.Spawn then
+            local fxVar = (EffectVariant and EffectVariant.HALO) or 10
+            local sparkPos = laser.Position
+            if laser.GetEndPoint then
+                local endPt = laser:GetEndPoint()
+                local t = (frame % 3) * 0.4
+                sparkPos = laser.Position * (1 - t) + endPt * t
+            end
+            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, sparkPos, Vector.Zero, player)
+            if fx and Core.SetEntityScaleAndColor then
+                Core.SetEntityScaleAndColor(fx, 0.35, Color(0.1, 1.0, 0.38, 0.8, 0.2, 0.9, 0.3))
+            end
+        elseif ld.isGLTechX and (frame % 8 == 0) and Isaac and Isaac.Spawn then
+            local fxVar = (EffectVariant and EffectVariant.HALO) or 10
+            local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, laser.Position, Vector.Zero, player)
+            if fx and Core.SetEntityScaleAndColor then
+                local rad = (laser.Radius or 24)
+                Core.SetEntityScaleAndColor(fx, rad / 32.0, Color(0.1, 1.0, 0.38, 0.6, 0.15, 0.85, 0.25))
+            end
+        end
     end)
 
     -- 2. MOM'S KNIFE SYNERGY: Hard-Light Emerald Energy Blade
@@ -69,13 +98,6 @@ return function(Core)
             data.ringFlareTimer = 5
         end
     end)
-    -- 3. DR. FETUS & EPIC FETUS SYNERGIES: Hard-Light Emerald Construct Bombs & Orbital Strikes
-    if include then
-        pcall(function()
-            local fetusMod = include("modules.synergies_fetus")
-            if fetusMod then fetusMod(Core) end
-        end)
-    end
 
     -- 5. LUDOVICO TECHNIQUE SYNERGY: Hard-Light Floating Construct Orb
     GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
@@ -153,4 +175,125 @@ return function(Core)
             end
         end)
     end)
+
+    -- 8. THE PARASITE & CRICKET'S BODY SYNERGIES: Hard-Light Refraction Shards
+    local function SpawnSplitTear(player, pos, vel, damage, scale, flag)
+        local tear = nil
+        if player and player.FireTear then
+            tear = player:FireTear(pos, vel, false, true, false)
+        elseif Isaac and Isaac.Spawn then
+            local tVar = (TearVariant and TearVariant.DEFAULT) or 0
+            tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
+            if tear and tear.ToTear then tear = tear:ToTear() end
+        end
+        if tear then
+            tear.CollisionDamage = damage
+            local sd = tear:GetData()
+            sd.isGLRingBeam = true
+            if flag then sd[flag] = true end
+            if Core.ApplyRingBeamSprite then
+                Core.ApplyRingBeamSprite(tear, scale or 0.60)
+            end
+        end
+        return tear
+    end
+
+    GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+        if not (collider and collider.IsActiveEnemy and collider:IsActiveEnemy(false) and collider.IsVulnerableEnemy and collider:IsVulnerableEnemy()) then return end
+
+        local td = tear:GetData()
+        if not td or td.isParasiteShard or td.isCricketShard then return end
+
+        local hasParasite = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_PARASITE or 104)
+        local hasCricket = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_CRICKETS_BODY or 224)
+        if not (hasParasite or hasCricket) then return end
+
+        td.glRefractHit = td.glRefractHit or {}
+        local colIdx = collider.Index or collider.InitSeed or 0
+        if td.glRefractHit[colIdx] then return end
+        td.glRefractHit[colIdx] = true
+
+        local vel = tear.Velocity
+        local spd = 8.0
+        local dirX, dirY = 1, 0
+        if vel and (vel.X ~= 0 or vel.Y ~= 0) then
+            local len = math.sqrt(vel.X * vel.X + vel.Y * vel.Y)
+            if len > 0.01 then
+                dirX, dirY = vel.X / len, vel.Y / len
+                spd = math.max(7.0, math.min(13.0, len))
+            end
+        end
+
+        local baseDmg = tear.CollisionDamage or player.Damage or 3.5
+        local sfx = (SoundEffect and SoundEffect.SOUND_TEARIMPACTS) or 0
+        if sfx > 0 and SFXManager and SFXManager() and SFXManager().Play then
+            SFXManager():Play(sfx, 0.6, 0, false, 1.25)
+        end
+
+        if hasParasite then
+            local leftVel = Vector(-dirY * spd, dirX * spd)
+            local rightVel = Vector(dirY * spd, -dirX * spd)
+            SpawnSplitTear(player, tear.Position, leftVel, baseDmg * 0.50, 0.65, "isParasiteShard")
+            SpawnSplitTear(player, tear.Position, rightVel, baseDmg * 0.50, 0.65, "isParasiteShard")
+        end
+
+        if hasCricket then
+            local diagSpd = spd * 0.85
+            local diags = {
+                Vector( (dirX - dirY) * 0.707 * diagSpd, (dirX + dirY) * 0.707 * diagSpd ),
+                Vector( (dirX + dirY) * 0.707 * diagSpd, (-dirX + dirY) * 0.707 * diagSpd ),
+                Vector( (-dirX - dirY) * 0.707 * diagSpd, (dirX - dirY) * 0.707 * diagSpd ),
+                Vector( (-dirX + dirY) * 0.707 * diagSpd, (-dirX - dirY) * 0.707 * diagSpd ),
+            }
+            for _, dVel in ipairs(diags) do
+                SpawnSplitTear(player, tear.Position, dVel, baseDmg * 0.50, 0.55, "isCricketShard")
+            end
+        end
+    end)
+
+    -- 9. CONTINUOUS BEAM REFRACTION SYNERGY: The Parasite & Cricket's Body
+    function Core.OnContinuousBeamHitEnemy(player, ent, hitPos, tickDmg, segDir)
+        if not player or not Core.IsRingActive(player) then return end
+        local hasParasite = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_PARASITE or 104)
+        local hasCricket = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_CRICKETS_BODY or 224)
+        if not (hasParasite or hasCricket) then return end
+
+        local frame = Game():GetFrameCount()
+        local ed = ent.GetData and ent:GetData()
+        if ed then
+            if ed.lastGLRefractFrame and (frame - ed.lastGLRefractFrame) < 12 then return end
+            ed.lastGLRefractFrame = frame
+        end
+
+        local dirX, dirY = 1, 0
+        if segDir and (segDir.X ~= 0 or segDir.Y ~= 0) then
+            local len = math.sqrt(segDir.X * segDir.X + segDir.Y * segDir.Y)
+            if len > 0.01 then dirX, dirY = segDir.X / len, segDir.Y / len end
+        end
+
+        local splitDmg = (player.Damage or 3.5) * 0.50
+        local spawnPos = hitPos or ent.Position
+
+        if hasParasite then
+            local leftVel = Vector(-dirY * 8.0, dirX * 8.0)
+            local rightVel = Vector(dirY * 8.0, -dirX * 8.0)
+            SpawnSplitTear(player, spawnPos, leftVel, splitDmg, 0.60, "isParasiteShard")
+            SpawnSplitTear(player, spawnPos, rightVel, splitDmg, 0.60, "isParasiteShard")
+        end
+
+        if hasCricket then
+            local diags = {
+                Vector( (dirX - dirY) * 0.707 * 7.0, (dirX + dirY) * 0.707 * 7.0 ),
+                Vector( (dirX + dirY) * 0.707 * 7.0, (-dirX + dirY) * 0.707 * 7.0 ),
+                Vector( (-dirX - dirY) * 0.707 * 7.0, (dirX - dirY) * 0.707 * 7.0 ),
+                Vector( (-dirX + dirY) * 0.707 * 7.0, (-dirX - dirY) * 0.707 * 7.0 ),
+            }
+            for _, dVel in ipairs(diags) do
+                SpawnSplitTear(player, spawnPos, dVel, splitDmg * 0.8, 0.50, "isCricketShard")
+            end
+        end
+    end
 end
