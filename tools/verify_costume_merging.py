@@ -25,7 +25,10 @@ from tools.generate_all_redesigns import (
 
 EXTRACTED_RES = r"C:\Program Files (x86)\Steam\steamapps\common\The Binding of Isaac Rebirth\extracted_resources\resources\gfx"
 VANILLA_PATH = os.path.join(EXTRACTED_RES, r"characters\costumes\character_001_isaac.png")
-ARTIFACT_DIR = r"C:\Users\danic\.gemini\antigravity\brain\c85d05f1-0104-407a-a3c0-1180d226af49"
+ARTIFACT_DIRS = [
+    r"C:\Users\danic\.gemini\antigravity\brain\9da71cf0-d896-4c4f-9028-8fd34b5177fe",
+    r"C:\Users\danic\.gemini\antigravity\brain\c85d05f1-0104-407a-a3c0-1180d226af49"
+]
 
 PATH_2020 = os.path.join(EXTRACTED_RES, r"characters\costumes\costume_245_2020.png")
 PATH_HALO = os.path.join(EXTRACTED_RES, r"characters\costumes\costume_119_halo.png")
@@ -159,12 +162,14 @@ def run_verification():
                 cell_x = group_x + o_idx * (CELL_SCALED + GAP)
                 sheet.paste(comp_scaled, (cell_x, ry), comp_scaled)
 
-    out_path = "item_costumes_merge_showcase.png"
+    out_path = os.path.join(PROJECT_DIR, "item_costumes_merge_showcase.png")
     sheet.save(out_path)
-    os.makedirs(ARTIFACT_DIR, exist_ok=True)
-    art_path = os.path.join(ARTIFACT_DIR, "item_costumes_merge_showcase.png")
-    sheet.save(art_path)
-    print(f"Costume merge showcase saved to {out_path} and {art_path}")
+    print(f"Costume merge showcase saved to {out_path}")
+    for adir in ARTIFACT_DIRS:
+        os.makedirs(adir, exist_ok=True)
+        art_path = os.path.join(adir, "item_costumes_merge_showcase.png")
+        sheet.save(art_path)
+        print(f"  [SAVED] {art_path}")
 
 if __name__ == '__main__':
     run_verification()
