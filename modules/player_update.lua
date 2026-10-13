@@ -41,9 +41,9 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
                     if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
-                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, primarySlot)
+                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
@@ -56,9 +56,9 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
                     if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and not player:HasCollectible(Core.ITEM_COAST_CITY) then
-                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, primarySlot)
+                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, pocketSlot)
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
@@ -74,13 +74,21 @@ return function(Core)
             end
         end
 
-        if Core.IsHalJordan(player) and (data.ringDepleted or (data.willpower or 0) <= 0) then
+        if Core.IsHalJordan(player) then
             local frame = Game():GetFrameCount()
-            if data.lastDepletedRegenFrame ~= frame then
-                data.lastDepletedRegenFrame = frame
-                data.willpower = math.min(Core.WILLPOWER_MAX, (data.willpower or 0) + Core.WILLPOWER_PASSIVE_REBOOT_RATE)
-                if data.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
-                    Core.RestoreHalRingPower(player, data.willpower, "RING REBOOTED!")
+            local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+            if data.ringDepleted or (data.willpower or 0) <= 0 then
+                if data.lastDepletedRegenFrame ~= frame then
+                    data.lastDepletedRegenFrame = frame
+                    data.willpower = math.min(maxW, (data.willpower or 0) + Core.WILLPOWER_PASSIVE_REBOOT_RATE)
+                    if data.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
+                        Core.RestoreHalRingPower(player, data.willpower, "RING REBOOTED!")
+                    end
+                end
+            elseif not data.isFiringContinuousBeam and (frame - (data.lastSmallBeamFrame or -999)) > 60 then
+                -- Natural out-of-combat focus: slowly recovers willpower when resting / not shooting
+                if (data.willpower or 0) < maxW then
+                    data.willpower = math.min(maxW, (data.willpower or 0) + 0.12)
                 end
             end
         end

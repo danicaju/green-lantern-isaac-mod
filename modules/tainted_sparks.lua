@@ -18,11 +18,14 @@ return function(Core)
         Core.GetPlayerData(p).lastSparkKillFrame = Game():GetFrameCount()
       elseif Core.IsHalJordan(p) then
         local d = Core.GetPlayerData(p)
+        local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(p)) or Core.WILLPOWER_MAX
         if d.ringDepleted then
-          d.willpower = math.min(Core.WILLPOWER_MAX, (d.willpower or 0) + Core.WILLPOWER_KILL_REBOOT_BONUS)
+          d.willpower = math.min(maxW, (d.willpower or 0) + Core.WILLPOWER_KILL_REBOOT_BONUS)
           if d.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
             Core.RestoreHalRingPower(p, d.willpower, "RING REBOOTED!")
           end
+        else
+          d.willpower = math.min(maxW, (d.willpower or maxW) + 1.0)
         end
       end
     end
@@ -34,23 +37,50 @@ return function(Core)
     end
   end)
 
-  -- Clearing a room while Hal's ring is depleted surges his willpower (+15%) to immediately help reboot the Power Ring!
+  -- Clearing a room restores Willpower (+20% normally, +25% when depleted to reboot)
   if ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD then
     GL:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, function(_)
       for i = 0, Game():GetNumPlayers() - 1 do
         local p = Isaac.GetPlayer(i)
         if Core.IsHalJordan(p) then
           local d = Core.GetPlayerData(p)
+          local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(p)) or Core.WILLPOWER_MAX
           if d.ringDepleted then
-            d.willpower = math.min(Core.WILLPOWER_MAX, (d.willpower or 0) + Core.WILLPOWER_ROOM_REBOOT_BONUS)
+            d.willpower = math.min(maxW, (d.willpower or 0) + Core.WILLPOWER_ROOM_REBOOT_BONUS)
             if d.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
               Core.RestoreHalRingPower(p, d.willpower, "RING REBOOTED!")
             end
+          else
+            d.willpower = math.min(maxW, (d.willpower or maxW) + 20.0)
           end
         end
       end
     end)
   end
+
+  -- Tainted Hal active item synergy: using any active item with stored sparks unleashes a Parallax fear burst
+  GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
+    if player and Core.IsTaintedHal(player) and itemID ~= Core.ITEM_COAST_CITY then
+      local d = Core.GetPlayerData(player)
+      if (d.emeraldSparks or 0) >= 10.0 then
+        d.emeraldSparks = math.max(0.0, d.emeraldSparks - 15.0)
+        pcall(function()
+          for _, ent in ipairs(Isaac.GetRoomEntities()) do
+            if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+              ent:AddFear(EntityRef(player), 75)
+              ent:AddEntityFlags(EntityFlag.FLAG_FEAR)
+              ent:TakeDamage(player.Damage * 0.40, DamageFlag.DAMAGE_NO_MODIFIERS or 0, EntityRef(player), 0)
+            end
+          end
+          local splashVar = (EffectVariant and EffectVariant.WATER_SPLASH) or 10
+          local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, splashVar, 0, player.Position, Vector.Zero, player)
+          if fx then Core.SetEntityScaleAndColor(fx, 1.2, Color(0.95, 0.85, 0.15, 0.9, 0.4, 0.35, 0.05)) end
+          local sfxPortal = (SoundEffect and SoundEffect.SOUND_HELL_PORTAL2) or 0
+          if sfxPortal > 0 then SFXManager():Play(sfxPortal, 0.65, 0, false, 1.25) end
+        end)
+      end
+    end
+  end)
 
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     if #Core.activeEmeraldSparks == 0 then return end

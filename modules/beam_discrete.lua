@@ -29,8 +29,19 @@ return function(Core)
           return
       end
 
+      local frame = Game():GetFrameCount()
+      if data.lastTearSpawnFrame == frame then
+          data.tearsSpawnedThisFrame = (data.tearsSpawnedThisFrame or 0) + 1
+      else
+          data.lastTearSpawnFrame = frame
+          data.tearsSpawnedThisFrame = 1
+      end
+
+      local isItemBurst = (data.itemTearBurstFrame and math.abs(frame - data.itemTearBurstFrame) <= 2)
+                         or ((data.tearsSpawnedThisFrame or 1) > 1)
+
       -- Suppress unbuffered C++ tears when CanUseContinuousBeam(player) is active (so holding shoot never fires a Frame-1 discrete bolt!)
-      if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
+      if (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) and not isItemBurst then
           if data.isFiringContinuousBeam or (Core.CanUseContinuousBeam(player) and not data.allowingTapTear) then
               tear.Visible = false
               pcall(function()
@@ -52,7 +63,6 @@ return function(Core)
           end
       end
 
-      local frame = Game():GetFrameCount()
       if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
           data.lastSmallBeamFrame = frame
           if not data.firingBufferedClick then
@@ -96,7 +106,12 @@ return function(Core)
           end
       end
 
-      tear.Position     = player.Position + spawnOffset + perpOffset
+      if isItemBurst then
+          local bDir = (tear.Velocity and tear.Velocity:Length() > 0.1) and tear.Velocity:Normalized() or Vector(1, 0)
+          tear.Position     = player.Position + bDir * 14.0
+      else
+          tear.Position     = player.Position + spawnOffset + perpOffset
+      end
       tear.DepthOffset  = Core.IsAimingUp(player, baseDir) and -20 or 25
       if baseDir and baseDir:Length() > 0.01 then
           local normDir = baseDir:Normalized()
@@ -113,10 +128,11 @@ return function(Core)
           if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
       end)
       -- Balance click-vs-hold: el beam discreto pega una fraccion del dano de ficha
-      -- (el Puño Gigante queda excluido: lleva su propio 10x)
+      -- (el Puño Gigante y ráfagas de items activos quedan excluidos)
       local btd = tear:GetData()
       if not (btd and btd.isGiantFist)
-        and (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) then
+        and (Core.IsHalJordan(player) or Core.IsTaintedHal(player))
+        and not isItemBurst then
           tear.CollisionDamage = tear.CollisionDamage * Core.DISCRETE_BEAM_DMG_MULT
       end
 
@@ -130,8 +146,10 @@ return function(Core)
 
           -- Scale willpower drain for multi-shot / lung / soy milk so rapid/volley synergies feel great
           -- Gatling: cero coste mientras dura el buff
-          local drain = (data.gatlingTimer or 0) > 0 and 0 or Core.WILLPOWER_PER_TEAR
-          if data.multiShotIndex > 0 then
+          local drain = (data.gatlingTimer or 0) > 0 and 0 or (Core.WILLPOWER_PER_TEAR or 0.6)
+          if isItemBurst then
+              drain = 0
+          elseif data.multiShotIndex > 0 then
               drain = drain * 0.25 -- Multi-shot / Monstro's Lung extra beams cost 75% less willpower
           end
           if CollectibleType.COLLECTIBLE_SOY_MILK and player:HasCollectible(CollectibleType.COLLECTIBLE_SOY_MILK) then
@@ -361,6 +379,21 @@ return function(Core)
                   collider:AddEntityFlags(EntityFlag.FLAG_FEAR)
               end)
           end
+      end
+  end)
+
+  GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
+      if player then
+          local data = Core.GetPlayerData(player)
+          data.itemTearBurstFrame = Game():GetFrameCount()
+      end
+  end)
+
+  GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, damageFlags, source, countdown)
+      local player = entity and entity:ToPlayer()
+      if player and Core.IsRingActive(player) then
+          local data = Core.GetPlayerData(player)
+          data.itemTearBurstFrame = Game():GetFrameCount()
       end
   end)
 end

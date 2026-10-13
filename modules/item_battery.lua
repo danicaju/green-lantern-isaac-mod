@@ -6,7 +6,19 @@ return function(Core)
   -- Active: Power Battery (refill 100% + overcharge condicional + pulso)
   GL:AddCallback(ModCallbacks.MC_USE_ITEM, function(_, itemID, rng, player, useFlags, activeSlot, varData)
     if not Core.ITEM_POWER_BATTERY or Core.ITEM_POWER_BATTERY < 0 then Core.LoadItemIDs() end
-    if itemID ~= Core.ITEM_POWER_BATTERY then return end
+    if itemID ~= Core.ITEM_POWER_BATTERY then
+      if player and Core.IsHalJordan(player) then
+        local data = Core.GetPlayerData(player)
+        local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+        local newWill = math.min(maxW, (data.willpower or 0) + 20.0)
+        if data.ringDepleted and newWill >= Core.WILLPOWER_REBOOT_THRESHOLD then
+          Core.RestoreHalRingPower(player, newWill, "WILLPOWER SURGE!")
+        else
+          data.willpower = newWill
+        end
+      end
+      return
+    end
 
     local data = Core.GetPlayerData(player)
     local prevWill = data.willpower or Core.WILLPOWER_MAX
