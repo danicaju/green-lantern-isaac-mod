@@ -396,6 +396,59 @@ if rf then
     end
 end
 
+-- ===================== TEST 8: HOMING CONTINUOUS BEAM SYNERGY =====================
+local aimCore = {
+    ITEM_POWER_RING = 15,
+}
+local fAim = assert(io.open("modules/ring_aim.lua", "r"))
+local srcAim = fAim:read("*a"); fAim:close()
+srcAim = srcAim:gsub("|", "+")
+local chunkAim = assert(loadstring(srcAim, "modules/ring_aim.lua"))
+chunkAim()(aimCore)
+
+local homingPlayer = {
+    HasCollectible = function(_, id) return id == 3 end, -- Spoon Bender (3)
+    HasHomingTypeTears = function() return false end,
+}
+check(aimCore.HasHomingSynergy(homingPlayer) == true, "Homing: Spoon Bender detected as homing synergy")
+
+-- Simulate an enemy in front-right (+X, +Y)
+local enemyStub = {
+    Position = Vector(200, 80),
+    Exists = function() return true end,
+    IsDead = function() return false end,
+    IsActiveEnemy = function() return true end,
+    IsVulnerableEnemy = function() return true end,
+}
+local origGetEntities = Isaac.GetRoomEntities
+Isaac.GetRoomEntities = function() return { enemyStub } end
+local curvedDir = aimCore.GetHomingBeamDirection(homingPlayer, Vector(0, 0), Vector(1, 0))
+Isaac.GetRoomEntities = origGetEntities
+
+check(curvedDir.Y > 0.1, "Homing: continuous beam deflected towards enemy (+Y)")
+check(curvedDir.X > 0.8, "Homing: continuous beam maintains forward momentum (+X)")
+
+-- ===================== TEST 9: TINY PLANET CONTINUOUS BEAM SYNERGY =====================
+local mathCore = {
+    GetTapTearCount = function() return 1 end,
+}
+local fMath = assert(io.open("modules/beam_math.lua", "r"))
+local srcMath = fMath:read("*a"); fMath:close()
+srcMath = srcMath:gsub("|", "+")
+local chunkMath = assert(loadstring(srcMath, "modules/beam_math.lua"))
+chunkMath()(mathCore)
+
+local tpPlayer = {
+    HasCollectible = function(_, id) return id == 233 end, -- Tiny Planet (233)
+}
+local tpAngles = mathCore.GetContinuousBeamAngles(tpPlayer)
+check(#tpAngles == 4, "Tiny Planet: 4 orbital construct beam angles generated")
+check(math.abs((tpAngles[2] - tpAngles[1]) % 360 - 90) < 0.01, "Tiny Planet: 90-degree spacing between beams")
+
+local tpEndWorld = mathCore.ComputeContinuousBeamEndWorld(Vector(100, 100), Vector(1, 0), 180.0)
+local tpDist = (tpEndWorld.X - 100)
+check(math.abs(tpDist - 180.0) < 1.0, "Tiny Planet: beam range clamped to 180 units")
+
 -- ===================== RESULTS =====================
 io.stderr:write(string.format("\n[test_new_synergies] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end

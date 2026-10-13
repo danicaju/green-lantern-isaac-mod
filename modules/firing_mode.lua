@@ -64,6 +64,9 @@ return function(Core)
         local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
         if hasTB then
           shootDir = Core.GetTractorBeamDirection(player, shootDir)
+        elseif Core.GetHomingBeamDirection then
+          local tempHand = Core.GetRingHandOffset(player, shootDir)
+          shootDir = Core.GetHomingBeamDirection(player, player.Position + tempHand, shootDir)
         end
         local handOffset = Core.GetRingHandOffset(player, shootDir)
         if hasTB and math.abs(shootDir.X) < 0.01 then
@@ -102,9 +105,12 @@ return function(Core)
           if frame % Core.HAL_CONTINUOUS_TICK_FRAMES == 0 then
             local angles = (Core.GetContinuousBeamAngles and Core.GetContinuousBeamAngles(player)) or { 0 }
             local startWorld = player.Position + handOffset
+            local tpId = (CollectibleType and CollectibleType.COLLECTIBLE_TINY_PLANET) or 233
+            local hasTP = player.HasCollectible and player:HasCollectible(tpId)
+            local rangeOverride = hasTP and 180.0 or nil
             for _, ang in ipairs(angles) do
               local rayDir = (ang == 0) and shootDir or (shootDir.Rotated and shootDir:Rotated(ang) or shootDir)
-              local endWorld = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir)
+              local endWorld = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir, rangeOverride)
               local dmgStart = Core.IsAimingUp(player, rayDir) and (player.Position + Vector(0, -8)) or startWorld
               Core.TickContinuousBeamDamage(player, data, dmgStart, endWorld)
             end

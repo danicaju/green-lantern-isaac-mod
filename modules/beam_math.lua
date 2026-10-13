@@ -66,6 +66,13 @@ return function(Core)
     if hasWiz then
       return { -45, 45 }
     end
+    local tpId = (CollectibleType and CollectibleType.COLLECTIBLE_TINY_PLANET) or 233
+    local hasTinyPlanet = player.HasCollectible and player:HasCollectible(tpId)
+    if hasTinyPlanet then
+      local frame = (Game and Game():GetFrameCount()) or 0
+      local spin = (frame * 5) % 360
+      return { spin, (spin + 90) % 360, (spin + 180) % 360, (spin + 270) % 360 }
+    end
     if count <= 1 then
       return { 0 }
     elseif count == 2 then
@@ -85,12 +92,14 @@ return function(Core)
   end
 
   -- Raycast from startWorld along dir across the current Room until hitting a wall (passing spectrally over rocks/pits)
-  function Core.ComputeContinuousBeamEndWorld(startWorld, dir)
+  function Core.ComputeContinuousBeamEndWorld(startWorld, dir, maxRangeOverride)
     if not startWorld then return Vector.Zero end
-    local d = (dir and dir:Length() > 0.001) and dir:Normalized() or Vector(1, 0)
-    local room = Game():GetRoom()
+    local dLen = dir and ((dir.Length and dir:Length()) or math.sqrt((dir.X or 0)^2 + (dir.Y or 0)^2)) or 0
+    local d = (dLen > 0.001) and ((dir.Normalized and dir:Normalized()) or Vector((dir.X or 1) / dLen, (dir.Y or 0) / dLen)) or Vector(1, 0)
+    local room = (Game and Game().GetRoom and Game():GetRoom()) or nil
     if not room then
-      return startWorld + d * 400.0
+      local range = maxRangeOverride or 400.0
+      return Vector((startWorld.X or 0) + (d.X or 0) * range, (startWorld.Y or 0) + (d.Y or 0) * range)
     end
 
     -- Minimum beam world-distance (used for degenerate cases: started in wall, never entered room, bisect floor).
@@ -117,7 +126,7 @@ return function(Core)
       return false
     end
 
-    local maxDist = 1600.0
+    local maxDist = maxRangeOverride or 1600.0
     local step = 8.0
     local hasEnteredRoom = not IsWallAt(startWorld)
     local lastValid = 0.0
@@ -158,7 +167,7 @@ return function(Core)
     end
 
     local finalDist = math.max(MIN_BEAM_DIST, (lo + hi) * 0.5)
-    return startWorld + d * finalDist
+    return Vector((startWorld.X or 0) + (d.X or 0) * finalDist, (startWorld.Y or 0) + (d.Y or 0) * finalDist)
   end
 
   -- Perform continuous emerald laser beam hit/damage logic directly in Lua on tick frames (every 4 frames)

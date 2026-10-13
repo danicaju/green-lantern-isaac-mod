@@ -145,4 +145,67 @@ return function(Core)
 
     return player.Position + orbit * 0.6 + facing * 24
   end
+
+  -- Check if player has active homing tear modifiers or items
+  function Core.HasHomingSynergy(player)
+    if not player then return false end
+    if player.HasHomingTypeTears and player:HasHomingTypeTears() then return true end
+    if player.HasCollectible then
+      local spoon = (CollectibleType and CollectibleType.COLLECTIBLE_SPOON_BENDER) or 3
+      local heart = (CollectibleType and CollectibleType.COLLECTIBLE_SACRED_HEART) or 182
+      local godhead = (CollectibleType and CollectibleType.COLLECTIBLE_GODHEAD) or 331
+      if player:HasCollectible(spoon) or player:HasCollectible(heart) or player:HasCollectible(godhead) then
+        return true
+      end
+    end
+    local telepathy = (CollectibleType and CollectibleType.COLLECTIBLE_TELEPATHY_FOR_FOOLS) or 44
+    if player.GetEffects and player:GetEffects() and player:GetEffects().HasCollectibleEffect and player:GetEffects():HasCollectibleEffect(telepathy) then
+      return true
+    end
+    return false
+  end
+
+  -- Dynamically curves the continuous laser beam towards nearby active enemies within a forward cone
+  function Core.GetHomingBeamDirection(player, startWorld, shootDir)
+    if not shootDir then return Vector(1, 0) end
+    local shootLen = math.sqrt(shootDir.X * shootDir.X + shootDir.Y * shootDir.Y)
+    if shootLen < 0.01 then return Vector(1, 0) end
+    local normSx, normSy = shootDir.X / shootLen, shootDir.Y / shootLen
+    if not Core.HasHomingSynergy(player) then return Vector(normSx, normSy) end
+
+    local bestDirX, bestDirY = nil, nil
+    local bestScore = 0.65 -- ~49 degree frontal cone
+    local maxDist = 450.0
+    local sx, sy = (startWorld and startWorld.X) or 0, (startWorld and startWorld.Y) or 0
+
+    if Isaac and Isaac.GetRoomEntities then
+      for _, ent in ipairs(Isaac.GetRoomEntities()) do
+        if ent and ent.Position and ent:Exists() and not ent:IsDead() and ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+          local dx = ent.Position.X - sx
+          local dy = ent.Position.Y - sy
+          local dist = math.sqrt(dx * dx + dy * dy)
+          if dist > 8.0 and dist <= maxDist then
+            local toX, toY = dx / dist, dy / dist
+            local dot = normSx * toX + normSy * toY
+            if dot > bestScore then
+              bestScore = dot
+              bestDirX, bestDirY = toX, toY
+            end
+          end
+        end
+      end
+    end
+
+    if bestDirX and bestDirY then
+      local blend = 0.40
+      local curvedX = normSx * (1.0 - blend) + bestDirX * blend
+      local curvedY = normSy * (1.0 - blend) + bestDirY * blend
+      local curLen = math.sqrt(curvedX * curvedX + curvedY * curvedY)
+      if curLen > 0.01 then
+        return Vector(curvedX / curLen, curvedY / curLen)
+      end
+    end
+
+    return Vector(normSx, normSy)
+  end
 end

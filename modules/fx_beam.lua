@@ -199,6 +199,9 @@ return function(Core)
         local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
         if hasTB then
             dir = Core.GetTractorBeamDirection(player, dir)
+        elseif Core.GetHomingBeamDirection then
+            local tempHand = data.lastRingHandOffset or Core.GetRingHandOffset(player, dir)
+            dir = Core.GetHomingBeamDirection(player, player.Position + tempHand, dir)
         end
 
         local handOffset  = data.lastRingHandOffset or Core.GetRingHandOffset(player, dir)
@@ -211,10 +214,16 @@ return function(Core)
         if hasTB then
             angles = { 0 }
         end
+        local hasHoming = Core.HasHomingSynergy and Core.HasHomingSynergy(player)
+        local beamColor = hasHoming and Color(0.92, 0.70, 1.0, 1.0, 0.15, 0.05, 0.25) or Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
+
+        local tpId = (CollectibleType and CollectibleType.COLLECTIBLE_TINY_PLANET) or 233
+        local hasTP = player.HasCollectible and player:HasCollectible(tpId)
+        local rangeOverride = hasTP and 180.0 or nil
 
         for _, ang in ipairs(angles) do
             local rayDir = (ang == 0) and dir or (dir.Rotated and dir:Rotated(ang) or dir)
-            local endWorld    = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir)
+            local endWorld    = Core.ComputeContinuousBeamEndWorld(startWorld, rayDir, rangeOverride)
             local endScreen   = Isaac.WorldToScreen(endWorld)
 
             local screenDelta = endScreen - startScreen
@@ -248,7 +257,7 @@ return function(Core)
                         beamSpr:SetFrame("ContinuousBeam", animFrame)
                         beamSpr.Rotation = screenAngle
                         beamSpr.Scale = Vector(xScale, thickness)
-                        beamSpr.Color = Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0)
+                        beamSpr.Color = beamColor
                         beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
                         if rem <= segWidth then
                             break
