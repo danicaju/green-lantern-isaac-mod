@@ -272,14 +272,14 @@ halData.initializedStartingItems = false
 Core.GetPlayerData = function() return halData end
 
 postPlayerUpdateCb(nil, mockPlayer)
-local hasPocketBattery = false
+local hasPrimaryBattery = false
 for _, item in ipairs(addedItems) do
-    if item.id == Core.ITEM_POWER_BATTERY and item.slot == ActiveSlot.SLOT_POCKET then
-        hasPocketBattery = true
+    if item.id == Core.ITEM_POWER_BATTERY and item.slot == ActiveSlot.SLOT_PRIMARY then
+        hasPrimaryBattery = true
         break
     end
 end
-check(hasPocketBattery == true, "Hal Jordan receives Power Battery in ActiveSlot.SLOT_POCKET (Pocket slot)")
+check(hasPrimaryBattery == true, "Hal Jordan receives Power Battery in ActiveSlot.SLOT_PRIMARY (Primary HUD slot)")
 
 print(string.format("\n[test_active_items_and_bursts] passes=%d failures=%d", passes, failures))
 if failures > 0 then os.exit(1) end

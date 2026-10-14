@@ -116,15 +116,15 @@ Core.GetPlayerData = function() return halData end
 -- Run initialization
 if not halData.initializedStartingItems then
     halData.initializedStartingItems = true
-    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
     if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and not mockHal:HasCollectible(Core.ITEM_POWER_BATTERY) then
-        mockHal:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
+        mockHal:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, primarySlot)
     end
 end
 
 check(#addedItems == 1, "Hal Jordan received 1 starting active item")
 check(addedItems[1].id == Core.ITEM_POWER_BATTERY, "Active item is Power Battery")
-check(addedItems[1].slot == ActiveSlot.SLOT_POCKET, "Power Battery added to ActiveSlot.SLOT_POCKET (Pocket slot)")
+check(addedItems[1].slot == ActiveSlot.SLOT_PRIMARY, "Power Battery added to ActiveSlot.SLOT_PRIMARY (Primary HUD slot)")
 
 -- ===================== TEST 4: CONTINUOUS BEAM DAMAGE VERIFICATION =====================
 DamageFlag = { DAMAGE_LASER = 2 }

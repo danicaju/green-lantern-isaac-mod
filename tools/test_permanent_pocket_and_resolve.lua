@@ -14,8 +14,8 @@ end
 -- ===================== TEST 1: PLAYERS.XML POCKETACTIVE =====================
 local fXml = assert(io.open("content/players.xml", "r"))
 local srcXml = fXml:read("*a"); fXml:close()
-check(srcXml:find('pocketActive="Power Battery"') ~= nil, "players.xml: Hal Jordan has pocketActive='Power Battery'")
-check(srcXml:find('pocketActive="The Tragedy of Coast City"') ~= nil, "players.xml: Tainted Hal has pocketActive='The Tragedy of Coast City'")
+check(srcXml:find('pocketActive=""') ~= nil, "players.xml: pocketActive is empty for custom HUD compatibility")
+check(srcXml:find('pocketActive="Power Battery"') == nil, "players.xml: Hal Jordan does not use pocketActive attribute")
 
 -- ===================== STUBS =====================
 CollectibleType = {
@@ -159,13 +159,12 @@ local pHal = {
 }
 
 playerUpdateCb(nil, pHal)
-check(activeSlots[ActiveSlot.SLOT_POCKET] == Core.ITEM_POWER_BATTERY, "Hal Jordan starting pocket slot contains Power Battery")
+check(activeSlots[ActiveSlot.SLOT_PRIMARY] == Core.ITEM_POWER_BATTERY, "Hal Jordan starting active slot contains Power Battery in SLOT_PRIMARY")
 
 -- Now simulate Hal picking up The D6 in SLOT_PRIMARY
 activeSlots[ActiveSlot.SLOT_PRIMARY] = CollectibleType.COLLECTIBLE_D6
 playerUpdateCb(nil, pHal)
 check(activeSlots[ActiveSlot.SLOT_PRIMARY] == CollectibleType.COLLECTIBLE_D6, "Hal Jordan holds The D6 in primary active slot")
-check(activeSlots[ActiveSlot.SLOT_POCKET] == Core.ITEM_POWER_BATTERY, "Hal Jordan still retains Power Battery permanently in pocket slot")
 
 -- ===================== TEST 3: ACTIVE COMBAT RESOLVE (+2% WILLPOWER PER HIT) =====================
 pHal._data.ringDepleted = true
