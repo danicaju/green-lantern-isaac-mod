@@ -41,9 +41,18 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
-                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
-                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, primarySlot)
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                                player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                                if player.FullCharge then
+                                    player:FullCharge(pocketSlot, true)
+                                end
+                            end
+                        else
+                            player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
+                        end
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
@@ -56,15 +65,49 @@ return function(Core)
                     if Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and not player:HasCollectible(Core.ITEM_POWER_RING) then
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
-                    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
-                    if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and not player:HasCollectible(Core.ITEM_COAST_CITY) then
-                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, primarySlot)
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY then
+                                player:SetPocketActiveItem(Core.ITEM_COAST_CITY, pocketSlot, true)
+                                if player.FullCharge then
+                                    player:FullCharge(pocketSlot, true)
+                                end
+                            end
+                        else
+                            player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, pocketSlot)
+                        end
                     end
                     Core.RefreshCharacterCostume(player)
                     player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
                     player:EvaluateItems()
                 end
             end)
+        end
+
+        -- Free primary slot if holding signature item, ensuring it resides in pocket slot
+        local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+        local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
+        if Core.IsHalJordan(player) and Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and player.GetActiveItem then
+            if player:GetActiveItem(primarySlot) == Core.ITEM_POWER_BATTERY then
+                if player.RemoveCollectible then
+                    player:RemoveCollectible(Core.ITEM_POWER_BATTERY, true, primarySlot)
+                end
+            end
+            if player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY and player.SetPocketActiveItem then
+                player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+            end
+        elseif Core.IsTaintedHal(player) and Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and player.GetActiveItem then
+            if player:GetActiveItem(primarySlot) == Core.ITEM_COAST_CITY then
+                if player.RemoveCollectible then
+                    player:RemoveCollectible(Core.ITEM_COAST_CITY, true, primarySlot)
+                end
+            end
+            if player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY and player.SetPocketActiveItem then
+                player:SetPocketActiveItem(Core.ITEM_COAST_CITY, pocketSlot, true)
+                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+            end
         end
 
         if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then

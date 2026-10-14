@@ -142,6 +142,17 @@ return function(Core)
       end
     end
 
+    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+    local pocketNeedsCharge = false
+    if player.GetActiveItem and player:GetActiveItem(pocketSlot) > 0 then
+      local curC = player:GetActiveCharge(pocketSlot) or 0
+      local maxC = (player.GetActiveMaxCharge and player:GetActiveMaxCharge(pocketSlot)) or 4
+      if curC < maxC then
+        pocketNeedsCharge = true
+        player:SetActiveCharge(math.min(maxC, curC + chargeUnits), pocketSlot)
+      end
+    end
+
     if willNeeded or data.ringDepleted then
       local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
       if Core.RestoreHalRingPower then
@@ -155,7 +166,7 @@ return function(Core)
         if sfx > 0 then SFXManager():Play(sfx, 0.85 * vol, 0, false, 1.1) end
       end)
 
-      if not primaryNeedsCharge then
+      if not primaryNeedsCharge and not pocketNeedsCharge then
         pcall(function()
           if pickup.PlayPickupSound then pickup:PlayPickupSound() end
           pickup:Remove()

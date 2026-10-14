@@ -36,10 +36,16 @@ return function(Core)
             data.humanTapExpireFrame          = 0
             data.isFiringContinuousBeam       = false
             data.spawningContinuousBeam       = false
-            data.continuousLaser              = nil
             data.continuousBeamGraceTimer     = 0
             data.allowingTapTear              = false
             pcall(function()
+                local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and player.SetPocketActiveItem then
+                    if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                        player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                        if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                    end
+                end
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_SPEED | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED | CacheFlag.CACHE_TEARFLAG)
             end)
         end
@@ -71,6 +77,13 @@ return function(Core)
             data.continuousBeamGraceTimer     = 0
             data.allowingTapTear              = false
             pcall(function()
+                local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and player.SetPocketActiveItem then
+                    if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY then
+                        player:SetPocketActiveItem(Core.ITEM_COAST_CITY, pocketSlot, true)
+                        if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                    end
+                end
                 player:AddCacheFlags(CacheFlag.CACHE_FLYING | CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_FIREDELAY | CacheFlag.CACHE_TEARFLAG)
             end)
         end

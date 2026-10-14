@@ -151,7 +151,13 @@ local pHal = {
     GetActiveCharge = function(_, slot) return 4 end,
     AddCollectible = function(self, id, charge, costume, slot)
         table.insert(addedCollectibles, { id = id, slot = slot })
-        activeSlots[slot or 0] = id
+    end,
+    SetPocketActiveItem = function(self, id, slot, keepInPools)
+        activeSlots[slot] = id
+    end,
+    FullCharge = function(self, slot, force) end,
+    RemoveCollectible = function(self, id, _, slot)
+        if activeSlots[slot] == id then activeSlots[slot] = 0 end
     end,
     AddCacheFlags = function() end,
     EvaluateItems = function() end,
@@ -159,12 +165,14 @@ local pHal = {
 }
 
 playerUpdateCb(nil, pHal)
-check(activeSlots[ActiveSlot.SLOT_PRIMARY] == Core.ITEM_POWER_BATTERY, "Hal Jordan starting active slot contains Power Battery in SLOT_PRIMARY")
+check(activeSlots[ActiveSlot.SLOT_POCKET] == Core.ITEM_POWER_BATTERY, "Hal Jordan starting pocket slot contains Power Battery")
+check(activeSlots[ActiveSlot.SLOT_PRIMARY] == nil or activeSlots[ActiveSlot.SLOT_PRIMARY] == 0, "Hal Jordan primary active slot is empty and ready for item pickups")
 
 -- Now simulate Hal picking up The D6 in SLOT_PRIMARY
 activeSlots[ActiveSlot.SLOT_PRIMARY] = CollectibleType.COLLECTIBLE_D6
 playerUpdateCb(nil, pHal)
 check(activeSlots[ActiveSlot.SLOT_PRIMARY] == CollectibleType.COLLECTIBLE_D6, "Hal Jordan holds The D6 in primary active slot")
+check(activeSlots[ActiveSlot.SLOT_POCKET] == Core.ITEM_POWER_BATTERY, "Hal Jordan still retains Power Battery permanently in pocket slot (can hold 2 active items)")
 
 -- ===================== TEST 3: ACTIVE COMBAT RESOLVE (+2% WILLPOWER PER HIT) =====================
 pHal._data.ringDepleted = true

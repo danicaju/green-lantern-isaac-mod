@@ -263,6 +263,10 @@ local mockPlayer = {
     AddCollectible = function(self, id, charge, firstTime, slot)
         table.insert(addedItems, { id = id, slot = slot })
     end,
+    SetPocketActiveItem = function(self, id, slot, keep)
+        table.insert(addedItems, { id = id, slot = slot })
+    end,
+    FullCharge = function() end,
     AddCacheFlags = function() end,
     EvaluateItems = function() end,
 }
@@ -272,14 +276,14 @@ halData.initializedStartingItems = false
 Core.GetPlayerData = function() return halData end
 
 postPlayerUpdateCb(nil, mockPlayer)
-local hasPrimaryBattery = false
+local hasPocketBattery = false
 for _, item in ipairs(addedItems) do
-    if item.id == Core.ITEM_POWER_BATTERY and item.slot == ActiveSlot.SLOT_PRIMARY then
-        hasPrimaryBattery = true
+    if item.id == Core.ITEM_POWER_BATTERY and item.slot == ActiveSlot.SLOT_POCKET then
+        hasPocketBattery = true
         break
     end
 end
-check(hasPrimaryBattery == true, "Hal Jordan receives Power Battery in ActiveSlot.SLOT_PRIMARY (Primary HUD slot)")
+check(hasPocketBattery == true, "Hal Jordan receives Power Battery in ActiveSlot.SLOT_POCKET (Pocket slot)")
 
 print(string.format("\n[test_active_items_and_bursts] passes=%d failures=%d", passes, failures))
 if failures > 0 then os.exit(1) end
