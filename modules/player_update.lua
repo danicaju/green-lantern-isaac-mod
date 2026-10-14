@@ -42,7 +42,7 @@ return function(Core)
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
                     local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
-                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
+                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and (not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY) then
                         player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
                     end
                     Core.RefreshCharacterCostume(player)
@@ -57,7 +57,7 @@ return function(Core)
                         player:AddCollectible(Core.ITEM_POWER_RING, 0, false)
                     end
                     local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
-                    if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and not player:HasCollectible(Core.ITEM_COAST_CITY) then
+                    if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and (not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY) then
                         player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, pocketSlot)
                     end
                     Core.RefreshCharacterCostume(player)
@@ -65,6 +65,18 @@ return function(Core)
                     player:EvaluateItems()
                 end
             end)
+        end
+
+        -- Enforce permanent pocket active item retention
+        local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+        if Core.IsHalJordan(player) and Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 and player.GetActiveItem then
+            if player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false, pocketSlot)
+            end
+        elseif Core.IsTaintedHal(player) and Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and player.GetActiveItem then
+            if player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY then
+                player:AddCollectible(Core.ITEM_COAST_CITY, 4, false, pocketSlot)
+            end
         end
 
         if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then

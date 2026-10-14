@@ -112,29 +112,56 @@ return function(Core)
     return true
   end)
 
-  -- Pickup suelo: Lil Battery recarga Willpower segun subtype (1=50, 2=25 micro, 3/4=100 mega/golden)
+  -- Pickup suelo: Lil Battery recarga Willpower segun subtype (1=50, 2=25 micro, 3/4=100 mega/golden) + Dual Charging
   GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collider, low)
     if pickup.Variant ~= PickupVariant.PICKUP_LIL_BATTERY then return end
     local player = collider:ToPlayer()
     if not player or not Core.IsHalJordan(player) then return end
     local data = Core.GetPlayerData(player)
     local refillAmount = 50.0
+    local chargeUnits = 2
     if pickup.SubType == 3 or pickup.SubType == 4 then
       refillAmount = 100.0
+      chargeUnits = 4
     elseif pickup.SubType == 2 then
       refillAmount = 25.0
+      chargeUnits = 1
     end
     local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
-    local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
-    if Core.RestoreHalRingPower then
-      Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
-    else
-      data.willpower = newWill
+    local willNeeded = (data.willpower or 0) < maxW
+
+    -- Dual Charging: charge primary active item if present
+    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
+    local primaryNeedsCharge = false
+    if player.GetActiveItem and player:GetActiveItem(primarySlot) > 0 then
+      local curC = player:GetActiveCharge(primarySlot) or 0
+      local maxC = (player.GetActiveMaxCharge and player:GetActiveMaxCharge(primarySlot)) or 4
+      if curC < maxC then
+        primaryNeedsCharge = true
+        player:SetActiveCharge(math.min(maxC, curC + chargeUnits), primarySlot)
+      end
     end
-    pcall(function()
-      local vol = (Core.SFX_VOLUME_MULT or 1.0)
-      local sfx = (SoundEffect and SoundEffect.SOUND_BATTERYCHARGE) or 0
-      if sfx > 0 then SFXManager():Play(sfx, 0.85 * vol, 0, false, 1.1) end
-    end)
+
+    if willNeeded or data.ringDepleted then
+      local newWill = math.min(maxW, (data.willpower or 0) + refillAmount)
+      if Core.RestoreHalRingPower then
+        Core.RestoreHalRingPower(player, newWill, "BATTERY RECHARGED!")
+      else
+        data.willpower = newWill
+      end
+      pcall(function()
+        local vol = (Core.SFX_VOLUME_MULT or 1.0)
+        local sfx = (SoundEffect and SoundEffect.SOUND_BATTERYCHARGE) or 0
+        if sfx > 0 then SFXManager():Play(sfx, 0.85 * vol, 0, false, 1.1) end
+      end)
+
+      if not primaryNeedsCharge then
+        pcall(function()
+          if pickup.PlayPickupSound then pickup:PlayPickupSound() end
+          pickup:Remove()
+        end)
+        return true
+      end
+    end
   end)
 end

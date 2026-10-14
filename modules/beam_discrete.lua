@@ -342,6 +342,25 @@ return function(Core)
           end
           return
       end
+
+      -- Active Combat Resolve: Landing hits with normal human tears actively recovers Willpower (+2% per hit)
+      local spHuman = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+      if spHuman and Core.IsHalJordan(spHuman) then
+          local sd = Core.GetPlayerData(spHuman)
+          if sd and sd.ringDepleted then
+              if collider and collider.IsActiveEnemy and collider:IsActiveEnemy(false) and collider.IsVulnerableEnemy and collider:IsVulnerableEnemy() then
+                  if not td.glDepletedHitRefund then
+                      td.glDepletedHitRefund = true
+                      local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(spHuman)) or Core.WILLPOWER_MAX
+                      sd.willpower = math.min(maxW, (sd.willpower or 0) + (Core.WILLPOWER_DEPLETED_HIT_REBOOT or 2.0))
+                      if sd.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
+                          Core.RestoreHalRingPower(spHuman, sd.willpower, "RING REBOOTED!")
+                      end
+                  end
+              end
+          end
+      end
+
       if not (td and td.isGLRingBeam) then return end
       if not (collider and collider:IsActiveEnemy(false) and collider:IsVulnerableEnemy()) then return end
 
