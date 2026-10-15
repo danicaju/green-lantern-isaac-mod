@@ -86,6 +86,8 @@ return function(Core)
     AddBool("Audio", "LOW_WILLPOWER_WARNING_ENABLED", "Aviso de voluntad baja",
       {"Aviso sonoro crepitante cuando la voluntad del anillo baja del 15% al disparar.",
        "Alerta al jugador antes de que el anillo se agote por completo."})
+    AddBool("Audio", "DEATH_EPITAPHS_ENABLED", "Epitafios de muerte comic",
+      {"Muestra citas y epitafios de comic al morir como Hal Jordan o Parallax."})
     AddBool("Audio", "CONSTRUCT_SFX_ENABLED", "Sonidos de constructos",
       {"Sonidos de punos, impactos, cristales rotos y chispas de luz solida."})
 

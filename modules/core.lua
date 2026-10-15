@@ -107,6 +107,9 @@ Core.AURA_GLOW_OPACITY             = 1.0
 Core.OVERCHARGE_CHIME_ENABLED      = true
 Core.LOW_WILLPOWER_WARNING_ENABLED = true
 Core.CONSTRUCT_SFX_ENABLED         = true
+Core.DEATH_EPITAPHS_ENABLED        = true
+
+Core.activeDeathEpitaph            = nil
 
 -- Estado compartido: un vortice Coast City por jugador (co-op seguro).
 Core.activeCoastCityByPlayer = {}

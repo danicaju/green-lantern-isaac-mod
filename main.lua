@@ -44,6 +44,7 @@ include("modules.room_reset")(Core)
 include("modules.progress")(Core)
 include("modules.save_run")(Core)
 include("modules.challenges")(Core)
+include("modules.death_epitaphs")(Core)
 
 include("modules.eid_synergies")(Core)
 include("modules.fx_sprites")(Core)
