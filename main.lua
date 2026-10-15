@@ -45,6 +45,7 @@ include("modules.progress")(Core)
 include("modules.save_run")(Core)
 include("modules.challenges")(Core)
 
+include("modules.eid_synergies")(Core)
 include("modules.fx_sprites")(Core)
 include("modules.fx_beam")(Core)
 include("modules.fx_shield_items")(Core)

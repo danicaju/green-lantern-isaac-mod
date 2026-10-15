@@ -154,6 +154,10 @@ return function(Core)
                 end
             end
 
+            if Core.EnsureEIDSynergiesRegistered then
+                pcall(function() Core.EnsureEIDSynergiesRegistered() end)
+            end
+
             eidRegistered = true
         end)
     end
