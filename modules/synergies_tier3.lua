@@ -1,5 +1,5 @@
--- modules/synergies_tier3.lua -- RSI: Sinergias Tier 3 (Exotic Status & Defense Synergies)
--- Responsabilidad unica: Tech Zero, Eye of Belial, Little Horn, Euthanasia, Sinus/Mucor, Gnawed Leaf, Trinity Shield, Blanket, Neptunus.
+-- modules/synergies_tier3.lua -- RSI: Sinergias Tier 3 (Exotic Status, Lasers & Defense Synergies)
+-- Responsabilidad unica: Tech Zero, Eye of Belial, Little Horn, Euthanasia, Sinus/Mucor, Gnawed Leaf, Blanket, Mega Blast, Revelation, Shoop/Krampus, Scatter Bombs, Neptunus.
 
 return function(Core)
     local GL = Core.GL
@@ -146,7 +146,6 @@ return function(Core)
     GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         if not Core.IsRingActive(player) then return end
 
-        -- Gnawed Leaf (210): Emerald Crystal Construct Statue
         local hasLeaf = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_GNAWED_LEAF or 210)
         if hasLeaf then
             local spr = player:GetSprite()
@@ -163,20 +162,85 @@ return function(Core)
         end
     end)
 
-    -- 5. LASER & TEAR STYLING: Tech Zero (502) & Trinity Shield (243)
+    -- 5. LASER SYNERGIES: Tech Zero (502), Mega Blast (441), Revelation (643), Shoop da Whoop (49), Krampus (293)
     GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
         local spawner = laser.SpawnerEntity
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasTechZero = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECH_ZERO or 502)
-        if hasTechZero then
-            laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.30, 1.0, 0.35)
-            laser.CollisionDamage = laser.CollisionDamage * 1.20
+        local hasZero = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECH_ZERO or 502)
+        local hasMega = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_MEGA_BLAST or 441)
+        local hasRev = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_REVELATION or 643)
+        local hasShoop = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SHOOP_DA_WHOOP or 49)
+        local hasKrampus = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_HEAD_OF_KRAMPUS or 293)
+
+        if not (hasZero or hasMega or hasRev or hasShoop or hasKrampus) then return end
+
+        local ld = laser:GetData()
+        if ld.glLaserTier3Init then return end
+        ld.glLaserTier3Init = true
+
+        pcall(function()
+            if hasMega then
+                laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.40, 1.0, 0.40)
+                laser.CollisionDamage = laser.CollisionDamage * 1.25
+            elseif hasRev then
+                laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+                laser.CollisionDamage = laser.CollisionDamage * 1.20
+            elseif hasShoop or hasKrampus then
+                laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.25)
+                laser.CollisionDamage = laser.CollisionDamage * 1.25
+            elseif hasZero then
+                laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.30, 1.0, 0.35)
+                laser.CollisionDamage = laser.CollisionDamage * 1.20
+            end
+            local data = Core.GetPlayerData(player)
+            data.ringFlareTimer = 8
+        end)
+    end)
+
+    -- 6. SCATTER BOMBS (366): Dr. Fetus Emerald Cluster Bombs
+    GL:AddCallback(ModCallbacks.MC_POST_ENTITY_REMOVE, function(_, entity)
+        if entity.Type ~= EntityType.ENTITY_BOMB then return end
+        local spawner = entity.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+
+        local hasScatter = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SCATTER_BOMBS or 366)
+        local ed = entity.GetData and entity:GetData()
+        local isFetusOrGL = entity.IsFetus or (ed and ed.isGLBomb)
+        if not (hasScatter and isFetusOrGL) then return end
+
+        local data = Core.GetPlayerData(player)
+        data.ringFlareTimer = 8
+        local dmg = (player.Damage or 3.5) * 0.70
+        for i = 0, 2 do
+            local angle = (i / 3) * math.pi * 2 + math.random() * 0.5
+            local vel = Vector(math.cos(angle) * 6.5, math.sin(angle) * 6.5)
+            SpawnConstructShard(player, entity.Position, vel, dmg, 0.60, "isScatterShard")
         end
     end)
 
-    -- 6. CONTINUOUS BEAM ENEMIES HIT: Tagged enemy proc
+    -- 7. NEPTUNUS (597): Rapid-Fire Emerald Construct Burst
+    GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
+        local spawner = tear.SpawnerEntity
+        local player = spawner and spawner:ToPlayer()
+        if not player or not Core.IsRingActive(player) then return end
+
+        local hasNep = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS or 597)
+        if not hasNep then return end
+
+        local td = tear:GetData()
+        if not td.isGLNeptunusStyled then
+            td.isGLNeptunusStyled = true
+            pcall(function()
+                local spr = tear:GetSprite()
+                if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) end
+            end)
+        end
+    end)
+
+    -- 8. CONTINUOUS BEAM ENEMIES HIT: Tagged enemy proc
     local prevContHook = Core.OnContinuousBeamHitEnemy
     Core.OnContinuousBeamHitEnemy = function(player, ent, hitPos, tickDmg, segDir)
         if prevContHook then prevContHook(player, ent, hitPos, tickDmg, segDir) end
