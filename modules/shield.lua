@@ -101,19 +101,20 @@ return function(Core)
                   end)
 
                   -- Target nearest enemy if possible, else reverse projectile velocity or reflect outward
-                  local targetDir = -proj.Velocity:Normalized()
+                  local targetDir = (proj.Velocity and proj.Velocity:Length() > 0.1) and -proj.Velocity:Normalized() or nil
                   local nearestDist = 320
                   for _, enemy in ipairs(Isaac.GetRoomEntities()) do
                     if enemy:IsActiveEnemy(false) and enemy:IsVulnerableEnemy() then
-                      local d = (enemy.Position - shieldPos):Length()
-                      if d < nearestDist then
+                      local diff = (enemy.Position - shieldPos)
+                      local d = diff:Length()
+                      if d < nearestDist and d > 0.01 then
                         nearestDist = d
-                        targetDir = (enemy.Position - shieldPos):Normalized()
+                        targetDir = diff:Normalized()
                       end
                     end
                   end
 
-                  if targetDir:Length() < 0.1 then
+                  if (not targetDir) or targetDir:Length() < 0.1 or targetDir.X ~= targetDir.X then
                     local fromPlayer = (shieldPos - player.Position)
                     targetDir = fromPlayer:Length() > 0.1 and fromPlayer:Normalized() or Vector(1, 0)
                   end
@@ -215,8 +216,10 @@ return function(Core)
           SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.80 * vol, 0, false, 1.35)
           local hasBFFS = HasBFFS(player)
           local dmgMult = hasBFFS and 3.0 or 1.5
-          local minDmg = hasBFFS and 12.0 or 6.0
-          local reflectVel = (player.Position - srcEnt.Position):Normalized() * (-srcEnt.Velocity:Length() * 1.2)
+          local diff = srcEnt.Position - player.Position
+          local dir = diff:Length() > 0.1 and diff:Normalized() or ((srcEnt.Velocity and srcEnt.Velocity:Length() > 0.1) and -srcEnt.Velocity:Normalized() or Vector(1, 0))
+          local speed = math.max((srcEnt.Velocity and srcEnt.Velocity:Length() or 8.0) * 1.2, 9.0)
+          local reflectVel = dir * speed
           local tearVar    = (TearVariant and TearVariant.DEFAULT) or 0
           local ent        = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, srcEnt.Position, reflectVel, player)
           local reflected  = ent and ent:ToTear()

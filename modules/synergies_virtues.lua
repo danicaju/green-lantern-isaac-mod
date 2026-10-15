@@ -84,11 +84,15 @@ return function(Core)
       if frame % 8 == 0 then
         for _, ent in ipairs(Isaac.GetRoomEntities()) do
           if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
-            if (ent.Position - familiar.Position):Length() <= (familiar.Size + (ent.Size or 16) + 6) then
+            local diff = ent.Position - familiar.Position
+            local d = diff:Length()
+            if d <= (familiar.Size + (ent.Size or 16) + 6) then
               local dmg = player and (player.Damage * 2.5) or 10.0
               ent:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(familiar), 0)
-              local push = (ent.Position - familiar.Position):Normalized() * 5.0
-              ent.Velocity = ent.Velocity + push
+              if d > 0.01 then
+                local push = diff:Normalized() * 5.0
+                ent.Velocity = ent.Velocity + push
+              end
             end
           end
         end
@@ -124,7 +128,8 @@ return function(Core)
           end
         end
         if nearestEnemy then
-          local dir = (nearestEnemy.Position - familiar.Position):Normalized()
+          local diff = nearestEnemy.Position - familiar.Position
+          local dir = diff:Length() > 0.01 and diff:Normalized() or Vector(1, 0)
           local tearVar = (TearVariant and TearVariant.DEFAULT) or 0
           local ent = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, familiar.Position, dir * 14.0, familiar)
           local tear = ent and ent:ToTear()

@@ -281,7 +281,12 @@ return function(Core)
         if not player or not Core.IsRingActive(player) then return end
         if not (player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SPIRIT_SWORD or 579)) then return end
 
-        knife:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.90, 0.25)
+        pcall(function()
+            local spr = knife:GetSprite()
+            if spr then
+                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.90, 0.25)
+            end
+        end)
         local data = Core.GetPlayerData(player)
         data.ringFlareTimer = 5
     end)

@@ -56,6 +56,7 @@
         description="Willpower made manifest — fires piercing emerald energy beams from your hand"
         gfx="collectible_power_ring.png"
         quality="4"
+        cache="damage shotspeed flying tearflag"
         />
 
     <!-- ===== TRINKETS ===== -->
@@ -64,5 +65,6 @@
         name="Yellow Impurity"
         description="+50% Damage up, but taking contact hits inflicts brief Fear"
         gfx="trinket_yellow_impurity.png"
+        cache="damage"
         />
 </items>

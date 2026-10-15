@@ -156,7 +156,8 @@ return function(Core)
         if frame % 2 == 0 then
           pcall(function()
             local owner = tear.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0)) or nil
-            local trail = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, tear.Position - tear.Velocity:Normalized() * 8, Vector.Zero, owner)
+            local offset = (tear.Velocity and tear.Velocity:Length() > 0.1) and (tear.Velocity:Normalized() * 8) or Vector.Zero
+            local trail = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, tear.Position - offset, Vector.Zero, owner)
             if trail then
               local ed = trail:GetData()
               if ed then

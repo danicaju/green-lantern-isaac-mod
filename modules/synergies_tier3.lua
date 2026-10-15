@@ -212,6 +212,7 @@ return function(Core)
         if not (hasScatter and isFetusOrGL) then return end
 
         local data = Core.GetPlayerData(player)
+        data.itemTearBurstFrame = Game():GetFrameCount()
         data.ringFlareTimer = 8
         local dmg = (player.Damage or 3.5) * 0.70
         for i = 0, 2 do
@@ -247,8 +248,10 @@ return function(Core)
         if not player or not Core.IsRingActive(player) then return end
 
         local ed = ent.GetData and ent:GetData()
-        if ed and ed.glConstructTagged then
-            ent:TakeDamage(tickDmg * 0.40, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+        if ed and ed.glConstructTagged and ent:Exists() and not ent:IsDead() then
+            pcall(function()
+                ent:TakeDamage(tickDmg * 0.40, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(player), 0)
+            end)
         end
     end
 end

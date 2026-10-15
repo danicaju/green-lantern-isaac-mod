@@ -150,7 +150,7 @@ return function(Core)
       elseif isHoldingShoot and Core.IsHalJordan(player) and data.ringDepleted then
         local rawDir = shootInput:Normalized()
         local shootDir = Vector(rawDir.X, rawDir.Y)
-        if Core.HasTractorBeam(player) then
+        if Core.HasTractorBeam and Core.HasTractorBeam(player) then
           shootDir = Core.GetTractorBeamDirection(player, shootDir)
         end
         data.lastShootDir = shootDir
@@ -173,7 +173,7 @@ return function(Core)
         then
           if canUseBeam then
             local bDir = Vector(releaseDir.X, releaseDir.Y)
-            if Core.HasTractorBeam(player) then
+            if Core.HasTractorBeam and Core.HasTractorBeam(player) then
               bDir = Core.GetTractorBeamDirection(player, bDir)
             end
             data.bufferedClickDir = bDir
@@ -181,7 +181,7 @@ return function(Core)
             data.lastDiscreteClickReleaseFrame = frame
           elseif Core.IsHalJordan(player) and data.ringDepleted then
             local hDir = Vector(releaseDir.X, releaseDir.Y)
-            if Core.HasTractorBeam(player) then
+            if Core.HasTractorBeam and Core.HasTractorBeam(player) then
               hDir = Core.GetTractorBeamDirection(player, hDir)
             end
             data.humanTapShootDir = hDir
@@ -216,8 +216,8 @@ return function(Core)
           local minClickInterval = math.max(6, math.min(10, math.floor((player.MaxFireDelay or 10) * 0.70)))
           if (data.gatlingTimer or 0) > 0 then minClickInterval = 2 end
           if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
-            local dir = Vector(data.bufferedClickDir.X, data.bufferedClickDir.Y)
-            if Core.HasTractorBeam(player) then
+            local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
+            if hasTB then
               dir = Core.GetTractorBeamDirection(player, dir)
             end
             data.bufferedClickDir = nil
@@ -236,12 +236,12 @@ return function(Core)
               for sIdx = 1, shotCount do
                 data.tapBurstIndex = sIdx
                 local shotDir = dir
-                if shotCount >= 3 and dir.Rotated and not Core.HasTractorBeam(player) then
+                if shotCount >= 3 and dir.Rotated and not hasTB then
                   local spreadDeg = (sIdx - (shotCount + 1) * 0.5) * 3.5
                   shotDir = dir:Rotated(spreadDeg)
                 end
                 local vel = shotDir * shotSpeed
-                if not Core.HasTractorBeam(player) then
+                if not hasTB then
                   pcall(function()
                     vel = vel + player:GetTearMovementInheritance(shotDir)
                   end)

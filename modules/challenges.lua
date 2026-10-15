@@ -193,7 +193,7 @@ return function(Core)
         if challengeId <= 0 then return end
 
         local chalBlackest = (Isaac.GetChallengeIdByName and Isaac.GetChallengeIdByName("Blackest Night")) or -1
-        if challengeId == chalBlackest and entity and entity.IsActiveEnemy and entity:IsActiveEnemy(false) and not entity:IsBoss() then
+        if challengeId == chalBlackest and entity and entity.IsActiveEnemy and entity:IsActiveEnemy(false) and not (entity.IsBoss and entity:IsBoss()) then
             if math.random() < 0.28 then
                 pcall(function()
                     local fxVar = (EffectVariant and EffectVariant.GHOST) or (EffectVariant and EffectVariant.SMOKE_CLOUD) or 10

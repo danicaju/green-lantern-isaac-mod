@@ -46,6 +46,8 @@ return function(Core)
                 if sfx > 0 and SFXManager and SFXManager().Play then
                     SFXManager():Play(sfx, 0.7, 0, false, 1.2)
                 end
+                local data = Core.GetPlayerData(player)
+                data.itemTearBurstFrame = Game():GetFrameCount()
                 for i = -1, 1 do
                     local angle = math.atan2(dir.Y, dir.X) + i * 0.40
                     local sVel = Vector(math.cos(angle) * 7.5, math.sin(angle) * 7.5)

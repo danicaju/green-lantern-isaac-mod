@@ -9,39 +9,41 @@ return function(Core)
 
         for i = 0, Game():GetNumPlayers() - 1 do
             local player = Isaac.GetPlayer(i)
-            if (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) and Core.RefreshCharacterCostume then
-                Core.RefreshCharacterCostume(player)
-            end
-            local data = Core.GetPlayerData(player)
-            if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
-                if Core.StopContinuousBeam then
-                    Core.StopContinuousBeam(data)
+            if player then
+                if (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) and Core.RefreshCharacterCostume then
+                    Core.RefreshCharacterCostume(player)
                 end
-                data.shootHoldFrames              = 0
-                data.firedSmallBeamThisPress      = false
-                data.sawShootReleaseBetweenFrames = false
-                data.sawShootPressBetweenFrames   = false
-                data.wasHoldingShootOnRender      = false
-                data.bufferedClickDir             = nil
-                data.humanTapShootDir             = nil
-                data.continuousBeamGraceTimer     = 0
-                data.lastContinuousBeamDir        = nil
-            end
-            local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
-            local needsEval = false
-            if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx ~= roomIdx then
-                data.overcharge = false
-                data.surgeBuff  = false
-                needsEval = true
-            end
-            if data.coastCityActive then
-                data.coastCityActive = false
-                needsEval = true
-            end
-            if needsEval and CacheFlag then
-                player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
-                player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
-                player:EvaluateItems()
+                local data = Core.GetPlayerData(player)
+                if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then
+                    if Core.StopContinuousBeam then
+                        Core.StopContinuousBeam(data)
+                    end
+                    data.shootHoldFrames              = 0
+                    data.firedSmallBeamThisPress      = false
+                    data.sawShootReleaseBetweenFrames = false
+                    data.sawShootPressBetweenFrames   = false
+                    data.wasHoldingShootOnRender      = false
+                    data.bufferedClickDir             = nil
+                    data.humanTapShootDir             = nil
+                    data.continuousBeamGraceTimer     = 0
+                    data.lastContinuousBeamDir        = nil
+                end
+                local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
+                local needsEval = false
+                if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx ~= roomIdx then
+                    data.overcharge = false
+                    data.surgeBuff  = false
+                    needsEval = true
+                end
+                if data.coastCityActive then
+                    data.coastCityActive = false
+                    needsEval = true
+                end
+                if needsEval and CacheFlag then
+                    player:AddCacheFlags(CacheFlag.CACHE_DAMAGE)
+                    player:AddCacheFlags(CacheFlag.CACHE_TEARFLAG)
+                    player:EvaluateItems()
+                end
             end
         end
 

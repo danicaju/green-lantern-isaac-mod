@@ -159,7 +159,8 @@ return function(Core)
             end
 
             if targetEnemy then
-              local dir      = (targetEnemy.Position - familiar.Position):Normalized()
+              local diff     = targetEnemy.Position - familiar.Position
+              local dir      = diff:Length() > 0.01 and diff:Normalized() or Vector(1, 0)
               local laserVel = dir * 18
               local tearVar  = (TearVariant and TearVariant.DEFAULT) or 0
               local ent      = Isaac.Spawn(

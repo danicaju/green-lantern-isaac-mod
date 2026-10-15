@@ -26,7 +26,7 @@ return function(Core)
 
         -- Tint all player lasers into blazing Hard-Light Emerald Construct Beams!
         laser.DepthOffset     = 35
-        laser:GetSprite().Color = isTech1 and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+        pcall(function() laser:GetSprite().Color = isTech1 and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20) end)
         local dmgMult = isTech1 and 1.30 or 1.25
         laser.CollisionDamage = laser.CollisionDamage * dmgMult
         laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
@@ -61,7 +61,7 @@ return function(Core)
         data.ringFlareTimer = 4
         laser.DepthOffset   = 35
         local ld = laser:GetData()
-        laser:GetSprite().Color = ld.isGLTechLaser and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20)
+        pcall(function() laser:GetSprite().Color = ld.isGLTechLaser and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20) end)
 
         local frame = Game():GetFrameCount()
         if ld.isGLTechLaser and (frame % 12 == 0) and Isaac and Isaac.Spawn then
@@ -92,7 +92,7 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        knife:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.10, 0.85, 0.25)
+        pcall(function() knife:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.10, 0.85, 0.25) end)
         if knife:IsFlying() then
             local data = Core.GetPlayerData(player)
             data.ringFlareTimer = 5

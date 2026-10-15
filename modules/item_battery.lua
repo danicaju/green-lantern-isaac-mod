@@ -115,7 +115,7 @@ return function(Core)
   -- Pickup suelo: Lil Battery recarga Willpower segun subtype (1=50, 2=25 micro, 3/4=100 mega/golden) + Dual Charging
   GL:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collider, low)
     if pickup.Variant ~= PickupVariant.PICKUP_LIL_BATTERY then return end
-    local player = collider:ToPlayer()
+    local player = collider and collider.ToPlayer and collider:ToPlayer()
     if not player or not Core.IsHalJordan(player) then return end
     local data = Core.GetPlayerData(player)
     local refillAmount = 50.0
