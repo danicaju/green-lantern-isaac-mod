@@ -24,6 +24,7 @@ include("modules.beam_synergies")(Core)
 include("modules.synergies_fetus")(Core)
 include("modules.synergies_tier1")(Core)
 include("modules.synergies_tier2")(Core)
+include("modules.synergies_tier3")(Core)
 
 include("modules.item_battery")(Core)
 include("modules.item_fist")(Core)
