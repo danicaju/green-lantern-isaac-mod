@@ -137,17 +137,13 @@ return function(Core)
             end
 
             if data.ringDepleted or (data.willpower or 0) <= 0 then
-                if data.lastDepletedRegenFrame ~= frame then
+                local passiveRate = Core.WILLPOWER_PASSIVE_REBOOT_RATE or 0.0
+                if passiveRate > 0 and data.lastDepletedRegenFrame ~= frame then
                     data.lastDepletedRegenFrame = frame
-                    data.willpower = math.min(maxW, (data.willpower or 0) + Core.WILLPOWER_PASSIVE_REBOOT_RATE)
+                    data.willpower = math.min(maxW, (data.willpower or 0) + passiveRate)
                     if data.willpower >= Core.WILLPOWER_REBOOT_THRESHOLD then
                         Core.RestoreHalRingPower(player, data.willpower, "RING REBOOTED!")
                     end
-                end
-            elseif not data.isFiringContinuousBeam and (frame - (data.lastSmallBeamFrame or -999)) > 60 then
-                -- Natural out-of-combat focus: slowly recovers willpower when resting / not shooting
-                if (data.willpower or 0) < maxW then
-                    data.willpower = math.min(maxW, (data.willpower or 0) + 0.12)
                 end
             end
         end

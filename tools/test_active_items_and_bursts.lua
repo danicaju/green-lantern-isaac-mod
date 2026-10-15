@@ -170,8 +170,8 @@ check(firedTears[1].CollisionDamage == 35.0, "Tammy's Head: burst tear preserved
 check(firedTears[1]._appliedSprite == true, "Tammy's Head: tears received emerald ring beam sprite")
 check((firedTears[1].TearFlags + 0) > 0, "Tammy's Head: tears received piercing/spectral flags")
 
--- ===================== TEST 2: HAL JORDAN NATURAL WILLPOWER REGENERATION =====================
--- Out-of-combat recovery test in player_update.lua
+-- ===================== TEST 2: NO TIME-BASED WILLPOWER REGENERATION =====================
+-- Out-of-combat test: Willpower must NOT increase passively over time when resting / not shooting
 local fUpdate = assert(io.open("modules/player_update.lua", "r"))
 local srcUpdate = fUpdate:read("*a"); fUpdate:close()
 srcUpdate = srcUpdate:gsub("|", "+")
@@ -195,7 +195,7 @@ playerStub.GetSoulHearts = function() return 2 end
 playerStub.HasCollectible = function() return true end
 
 postPlayerUpdateCb(nil, playerStub)
-check(halData.willpower > 40.0, "Out-of-combat focus: Hal Jordan regains willpower when resting (" .. tostring(halData.willpower) .. " > 40.0)")
+check(halData.willpower == 40.0, "No time-based regen: Hal Jordan willpower stays unchanged when resting (" .. tostring(halData.willpower) .. " == 40.0)")
 
 -- ===================== TEST 3: ACTIVE ITEM WILLPOWER SURGE =====================
 local fBatt = assert(io.open("modules/item_battery.lua", "r"))
