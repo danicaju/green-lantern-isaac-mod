@@ -62,8 +62,10 @@ return function(Core)
             or (Core.IsTaintedHal(player) and ((data.emeraldSparks or 0) >= 99.5 or data.coastCityActive))
             or (Core.HasGreenLanternRing(player) and (data.overcharge or (data.gatlingTimer or 0) > 0))
 
-        local auraScale = isMaxPower and 1.05 or 0.92
-        local auraAlpha = isMaxPower and 0.92 or 0.72
+        local scaleMult = Core.AURA_GLOW_SCALE or 1.0
+        local opacityMult = Core.AURA_GLOW_OPACITY or 1.0
+        local auraScale = (isMaxPower and 1.05 or 0.92) * scaleMult
+        local auraAlpha = (isMaxPower and 0.92 or 0.72) * opacityMult
         auraSpr.Scale = Vector(auraScale, auraScale)
         if data.overcharge then
             auraSpr.Color = Color(0.55, 1.0, 0.55, auraAlpha, 0.12, 0.45, 0.08)
@@ -241,12 +243,15 @@ return function(Core)
                     if CollectibleType and CollectibleType.COLLECTIBLE_BRIMSTONE and player:HasCollectible(CollectibleType.COLLECTIBLE_BRIMSTONE) then
                         baseThickness = baseThickness * 1.45
                     end
-                    local thickness = clampShortBeamThickness(baseThickness, totalScreenLen)
+                    local thickness = clampShortBeamThickness(baseThickness, totalScreenLen) * (Core.BEAM_WIDTH_MULT or 1.0)
                     local segWidth = 48.0
                     local segStep  = 48.0
                     local aimingUp = Core.IsAimingUp(player, rayDir)
                     local dist     = Core.ComputeBeamRenderStartSkip(aimingUp, totalScreenLen)
                     local animFrame = math.floor(frame / 2) % 4
+
+                    local beamOpacity = Core.BEAM_OPACITY or 1.0
+                    local finalBeamColor = Color(beamColor.R, beamColor.G, beamColor.B, (beamColor.A or 1.0) * beamOpacity, beamColor.RO, beamColor.GO, beamColor.BO)
 
                     while dist < visibleLen do
                         local rem = visibleLen - dist
@@ -257,7 +262,7 @@ return function(Core)
                         beamSpr:SetFrame("ContinuousBeam", animFrame)
                         beamSpr.Rotation = screenAngle
                         beamSpr.Scale = Vector(xScale, thickness)
-                        beamSpr.Color = beamColor
+                        beamSpr.Color = finalBeamColor
                         beamSpr:Render(startScreen + screenDir * dist, Vector.Zero, Vector.Zero)
                         if rem <= segWidth then
                             break
@@ -267,13 +272,14 @@ return function(Core)
 
                     local GL_BEAM_FLARE_MIN_DIST = 8.0
                     local GL_BEAM_FLARE_FULL_DIST = 120.0
-                    if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST then
+                    local flareMult = Core.RING_FLARE_INTENSITY or 1.0
+                    if flareSpr and visibleLen >= GL_BEAM_FLARE_MIN_DIST and flareMult > 0 then
                         local flareAlpha = (visibleLen - GL_BEAM_FLARE_MIN_DIST) / (GL_BEAM_FLARE_FULL_DIST - GL_BEAM_FLARE_MIN_DIST)
                         if flareAlpha < 0.0 then flareAlpha = 0.0 elseif flareAlpha > 1.0 then flareAlpha = 1.0 end
                         local flarePos = startScreen + screenDir * visibleLen
                         flareSpr:SetFrame("RingFlare", math.floor(frame / 2) % 4)
-                        flareSpr.Scale = Vector(0.95 * thickness, 0.95 * thickness)
-                        flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha, 0.15, 0.50, 0.18)
+                        flareSpr.Scale = Vector(0.95 * thickness * flareMult, 0.95 * thickness * flareMult)
+                        flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareAlpha * flareMult, 0.15, 0.50, 0.18)
                         flareSpr:Render(flarePos, Vector.Zero, Vector.Zero)
                     end
                 end
@@ -317,20 +323,23 @@ return function(Core)
             local flareFrame = math.floor(frame / (isFiring and 2 or 4)) % 4
             flareSpr:SetFrame("RingFlare", flareFrame)
 
-            if data.isFiringContinuousBeam then
-                local fScale = aimingUp and 0.78 or 1.05
-                flareSpr.Scale = Vector(fScale, fScale)
-                flareSpr.Color = Color(1.0, 1.0, 1.0, 0.98, 0.15, 0.50, 0.18)
-            elseif isFiring then
-                local fScale = aimingUp and 0.68 or 0.85
-                flareSpr.Scale = Vector(fScale, fScale)
-                flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95, 0.10, 0.35, 0.12)
-            else
-                local pulse = 0.45 + 0.20 * math.sin(frame * 0.20)
-                flareSpr.Scale = Vector(0.45, 0.45)
-                flareSpr.Color = Color(1.0, 1.0, 1.0, pulse, 0, 0, 0)
+            local flareMult = Core.RING_FLARE_INTENSITY or 1.0
+            if flareMult > 0 then
+                if data.isFiringContinuousBeam then
+                    local fScale = (aimingUp and 0.78 or 1.05) * flareMult
+                    flareSpr.Scale = Vector(fScale, fScale)
+                    flareSpr.Color = Color(1.0, 1.0, 1.0, 0.98 * flareMult, 0.15, 0.50, 0.18)
+                elseif isFiring then
+                    local fScale = (aimingUp and 0.68 or 0.85) * flareMult
+                    flareSpr.Scale = Vector(fScale, fScale)
+                    flareSpr.Color = Color(1.0, 1.0, 1.0, 0.95 * flareMult, 0.10, 0.35, 0.12)
+                else
+                    local pulse = (0.45 + 0.20 * math.sin(frame * 0.20)) * flareMult
+                    flareSpr.Scale = Vector(0.45 * flareMult, 0.45 * flareMult)
+                    flareSpr.Color = Color(1.0, 1.0, 1.0, pulse, 0, 0, 0)
+                end
+                flareSpr:Render(handScreenPos, Vector.Zero, Vector.Zero)
             end
-            flareSpr:Render(handScreenPos, Vector.Zero, Vector.Zero)
         end
     end
 end

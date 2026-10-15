@@ -102,4 +102,48 @@ return function(Core)
             SFXManager():Play(soundId, vol, 0, false, pitch or 1.0)
         end)
     end
+
+    -- Comic Sound Design: Ring Overcharge Chime
+    function Core.PlayOverchargeChime(player)
+        if Core.OVERCHARGE_CHIME_ENABLED == false then return end
+        local sfx = (SoundEffect and (SoundEffect.SOUND_SUPERHOLY or SoundEffect.SOUND_HOLY or SoundEffect.SOUND_POWERUP_SPEWER)) or 0
+        if sfx > 0 and Core.PlayRingSound then
+            Core.PlayRingSound(sfx, 0.95, 1.25)
+        end
+    end
+
+    -- Comic Sound Design: Low Willpower Warning Sputter (<15% Willpower)
+    function Core.PlayLowWillpowerWarning(player)
+        if Core.LOW_WILLPOWER_WARNING_ENABLED == false then return end
+        local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYDISCHARGE or SoundEffect.SOUND_THUMBS_DOWN)) or 0
+        if sfx > 0 and Core.PlayRingSound then
+            Core.PlayRingSound(sfx, 0.35, 1.40)
+        end
+    end
+
+    -- Comic Sound Design: Ring Rebooted / Recharged Power Restoration Chime
+    function Core.PlayRingRebootChime(player)
+        local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYCHARGE or SoundEffect.SOUND_SUPERHOLY)) or 0
+        if sfx > 0 and Core.PlayRingSound then
+            Core.PlayRingSound(sfx, 0.90, 1.15)
+        end
+    end
+
+    -- Comic Sound Design: Solid-Light Construct Punch
+    function Core.PlayConstructPunchSound(player, isHeavy)
+        if Core.CONSTRUCT_SFX_ENABLED == false then return end
+        local sfx = (SoundEffect and SoundEffect.SOUND_PUNCH) or 0
+        if sfx > 0 and Core.PlayRingSound then
+            Core.PlayRingSound(sfx, isHeavy and 1.0 or 0.85, isHeavy and 0.88 or 1.05)
+        end
+    end
+
+    -- Comic Sound Design: Solid-Light Crystallization / Shatter
+    function Core.PlayCrystallizationSound(player)
+        if Core.CONSTRUCT_SFX_ENABLED == false then return end
+        local sfx = (SoundEffect and (SoundEffect.SOUND_GLASS_BREAK or SoundEffect.SOUND_TEARIMPACTS)) or 0
+        if sfx > 0 and Core.PlayRingSound then
+            Core.PlayRingSound(sfx, 0.80, 1.15)
+        end
+    end
 end

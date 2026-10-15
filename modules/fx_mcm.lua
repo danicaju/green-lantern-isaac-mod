@@ -64,12 +64,37 @@ return function(Core)
     AddBool("Accessibility", "DYNAMIC_LIGHTING_ENABLED", "Iluminacion de constructos",
       {"Proyecta luz esmeralda dinamica en salas oscuras y al canalizar el rayo continuo."})
 
-    -- === 2. CONTROLS & FEEL ===
+    -- === 2. VISUALS & FX ===
+    AddNumber("Visuals", "BEAM_OPACITY", "Opacidad del rayo", 0.2, 1.0, 0.05,
+      {"Opacidad y transparencia del rayo continuo de luz solida.",
+       "1.0 = opaco brillante, 0.5 = semi-transparente."})
+    AddNumber("Visuals", "BEAM_WIDTH_MULT", "Grosor del rayo", 0.5, 2.0, 0.1,
+      {"Multiplicador de anchura y grosor visual del rayo continuo.",
+       "1.0 = normal, 1.5 = ancho comic, 0.7 = laser fino."})
+    AddNumber("Visuals", "RING_FLARE_INTENSITY", "Destello de anillo", 0.0, 2.0, 0.1,
+      {"Intensidad del destello brillante en la mano y punta del rayo.",
+       "0.0 = desactivado, 1.0 = normal, 1.5 = radiante."})
+    AddNumber("Visuals", "AURA_GLOW_SCALE", "Tamano del aura", 0.5, 1.8, 0.1,
+      {"Radio visual del aura protectora que envuelve al personaje."})
+    AddNumber("Visuals", "AURA_GLOW_OPACITY", "Opacidad del aura", 0.2, 1.0, 0.05,
+      {"Transparencia del halo de luz verde/amarillo alrededor del personaje."})
+
+    -- === 3. AUDIO & CUES ===
+    AddBool("Audio", "OVERCHARGE_CHIME_ENABLED", "Campana de sobrecarga",
+      {"Sonido heroico de campana energetica al superar el 100% de voluntad.",
+       "Indica que el jugador entro en estado de Sobrecarga (+15%/+25% dano)."})
+    AddBool("Audio", "LOW_WILLPOWER_WARNING_ENABLED", "Aviso de voluntad baja",
+      {"Aviso sonoro crepitante cuando la voluntad del anillo baja del 15% al disparar.",
+       "Alerta al jugador antes de que el anillo se agote por completo."})
+    AddBool("Audio", "CONSTRUCT_SFX_ENABLED", "Sonidos de constructos",
+      {"Sonidos de punos, impactos, cristales rotos y chispas de luz solida."})
+
+    -- === 4. CONTROLS & FEEL ===
     AddInt("Controls", "HAL_CONTINUOUS_HOLD_FRAMES", "Frames para rayo continuo", 4, 30, 1,
       {"Frames manteniendo disparo antes de pasar de proyectil discreto a rayo continuo.",
        "Default 10 frames (~1/3 de segundo)."})
 
-    -- === 3. BALANCE & BIRTHRIGHT ===
+    -- === 5. BALANCE & BIRTHRIGHT ===
     AddBool("Balance", "BIRTHRIGHT_ENABLED", "Habilidades de Birthright",
       {"Activa o desactiva las mecanicas de Birthright exclusivas para Hal Jordan y Parallax.",
        "Hal: 150% Voluntad y rayo mas grueso | Parallax: Onda de miedo y 15 anillos."})

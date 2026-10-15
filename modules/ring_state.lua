@@ -141,9 +141,13 @@ return function(Core)
                 end
             end)
             pcall(function()
-                local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYCHARGE or SoundEffect.SOUND_SUPERHOLY)) or 0
-                if sfx > 0 then
-                    SFXManager():Play(sfx, 0.85, 0, false, 1.08)
+                if Core.PlayRingRebootChime then
+                    Core.PlayRingRebootChime(player)
+                else
+                    local sfx = (SoundEffect and (SoundEffect.SOUND_BATTERYCHARGE or SoundEffect.SOUND_SUPERHOLY)) or 0
+                    if sfx > 0 then
+                        SFXManager():Play(sfx, 0.85, 0, false, 1.08)
+                    end
                 end
                 local handPos = player.Position + (data.lastRingHandOffset or Vector(18, -14))
                 local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, handPos, Vector.Zero, player)

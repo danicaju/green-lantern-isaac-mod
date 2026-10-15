@@ -96,6 +96,18 @@ Core.SFX_VOLUME_MULT        = 1.0
 Core.BIRTHRIGHT_ENABLED     = true
 Core.BOSS_OATH_CUES_ENABLED = true
 
+-- Visuales y efectos de constructo (MCM)
+Core.BEAM_OPACITY                  = 1.0
+Core.BEAM_WIDTH_MULT               = 1.0
+Core.RING_FLARE_INTENSITY          = 1.0
+Core.AURA_GLOW_SCALE               = 1.0
+Core.AURA_GLOW_OPACITY             = 1.0
+
+-- Efectos de audio y avisos de comic (MCM)
+Core.OVERCHARGE_CHIME_ENABLED      = true
+Core.LOW_WILLPOWER_WARNING_ENABLED = true
+Core.CONSTRUCT_SFX_ENABLED         = true
+
 -- Estado compartido: un vortice Coast City por jugador (co-op seguro).
 Core.activeCoastCityByPlayer = {}
 
@@ -190,6 +202,8 @@ function Core.GetPlayerData(player)
             multiShotFrame       = -1,
             multiShotIndex       = 0,
             lastPlayerType       = nil,
+            lastOverchargeState  = false,
+            lastLowWillpowerWarningFrame = -999,
         }
     end
     return d.GreenLantern

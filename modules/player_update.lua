@@ -120,6 +120,22 @@ return function(Core)
         if Core.IsHalJordan(player) then
             local frame = Game():GetFrameCount()
             local maxW = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
+
+            -- Audio Cue: Ring Overcharge Chime on entering Overcharge
+            if data.overcharge and not data.lastOverchargeState then
+                if Core.PlayOverchargeChime then Core.PlayOverchargeChime(player) end
+            end
+            data.lastOverchargeState = data.overcharge
+
+            -- Audio Cue: Low Willpower Warning sputter when actively firing near exhaustion (<15%)
+            if not data.ringDepleted and (data.willpower or 0) > 0 and (data.willpower or 0) < 15.0 then
+                local isFiring = data.isFiringContinuousBeam or ((data.shootHoldFrames or 0) > 0)
+                if isFiring and (frame - (data.lastLowWillpowerWarningFrame or -999)) >= 45 then
+                    data.lastLowWillpowerWarningFrame = frame
+                    if Core.PlayLowWillpowerWarning then Core.PlayLowWillpowerWarning(player) end
+                end
+            end
+
             if data.ringDepleted or (data.willpower or 0) <= 0 then
                 if data.lastDepletedRegenFrame ~= frame then
                     data.lastDepletedRegenFrame = frame
