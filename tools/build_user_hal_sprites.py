@@ -1,13 +1,15 @@
 """
 tools/build_user_hal_sprites.py
 Implements user-provided transparent Hal Jordan sprite sheet into The Binding of Isaac: Repentance format.
-- Input: 1024x1024 RGBA transparent PNG.
-- Preserves authentic white gloves, chest emblem, glowing eyes, and teeth.
-- Cleans up stray white, grey, and off-color noise pixels on hair, skin, mask perimeter, neck, and outlines.
-- Eliminates transparent edge fringes and ringing artifacts.
+- Input: 1024x1024 RGBA transparent PNG (media_1792140081953_e9e21585.png).
+- Subpixel filtering: averages only solid subpixels (alpha >= 200) to prevent transparent white/grey edge ringing.
+- Preserves authentic white gloves, circular chest emblem, glowing mint/white eyes, and open-mouth teeth.
+- Eliminates stray white, grey, and off-color noise pixels on hair, skin, mask perimeter, neck, boots, and crotch.
+- Eliminates inadvertent black noise dots by appropriately restoring green suit, black suit, and green boot colors.
+- Solidifies crisp dark perimeter outlines matching Isaac Repentance art style.
 - Exact 512x512 RGBA matching 001.000_player.anm2 grid.
 - Crisp 1-bit binary alpha (0 semi-transparent pixels) matching authentic Repentance engine standards.
-- Integrates teleport light beam & hole base in Col 4 & 6 (Y=320..448).
+- Integrates vanilla teleport light beam & trapdoor hole base in Col 4 & 6 (Y=320..448).
 - Saves to resources/gfx/characters/hal_jordan.png and hal_jordan_extra.png.
 """
 
@@ -40,21 +42,25 @@ def process_sheet():
     arr_v = np.array(vanilla)
 
     # 1. 2x2 area pooling downscale to 512x512 with subpixel filtering
-    print("Downscaling 1024x1024 to 512x512 RGBA with alpha-weighted pooling...")
+    # Subpixels with alpha < 200 hold transparent white-ringing from original white background.
+    # We strictly average subpixels with alpha >= 200 so background noise never enters foreground colors.
+    print("Downscaling 1024x1024 to 512x512 RGBA with solid subpixel filtering...")
     blocks = arr_src.reshape(512, 2, 512, 2, 4).transpose(0, 2, 1, 3, 4).reshape(512, 512, 4, 4)
     rgb = blocks[:, :, :, :3]
     alpha = blocks[:, :, :, 3]
 
-    # Filter out faint antialiased transparent fringes (alpha < 64)
-    valid = alpha >= 64
-    w = alpha * valid
+    solid_sub = alpha >= 180
+    has_fg = solid_sub.sum(axis=2) >= 2
+
+    w = (alpha >= 200).astype(float)
     w_sum = w.sum(axis=2)
-    # Majority vote: 2 or more solid subpixels -> solid 1-bit pixel
-    has_fg = (alpha >= 128).sum(axis=2) >= 2
+    fallback = (w_sum == 0) & has_fg
+    w[fallback] = (alpha[fallback] >= 180).astype(float)
+    w_sum = w.sum(axis=2)
 
     out_rgb = np.zeros((512, 512, 3), dtype=np.uint8)
-    mask_fg = w_sum > 0
-    out_rgb[mask_fg] = np.clip((rgb * w[:, :, :, None]).sum(axis=2)[mask_fg] / w_sum[mask_fg, None], 0, 255).astype(np.uint8)
+    valid = w_sum > 0
+    out_rgb[valid] = np.clip((rgb * w[:, :, :, None]).sum(axis=2)[valid] / w_sum[valid, None], 0, 255).astype(np.uint8)
 
     arr_512 = np.zeros((512, 512, 4), dtype=np.uint8)
     arr_512[:, :, :3] = out_rgb
@@ -66,7 +72,7 @@ def process_sheet():
     arr_512[384:448, 128:160] = arr_v[384:448, 128:160] # Col 4: Hole death base
     arr_512[320:448, 192:224] = arr_v[320:448, 192:224] # Col 6: Teleport beam
 
-    # 3. Step 2: Remove outside fringe noise (pixels bordering transparency outside solid dark outlines)
+    # 3. Outer edge fringe cleanup (removes antialiased white/grey halo pixels bordering dark outlines)
     print("Eliminating outside edge fringe noise...")
     fg = arr_512[:, :, 3] == 255
     is_edge = np.zeros((512, 512), dtype=bool)
@@ -77,99 +83,149 @@ def process_sheet():
     is_protected = np.zeros((512, 512), dtype=bool)
     is_protected[320:448, 192:224] = True
     is_protected[384:448, 128:160] = True
-    for r in [0, 1, 2, 3, 7, 9]:
+    for r in [0, 1, 2, 3]:
         for c in range(16):
-            if r in [1, 2, 7, 9] or (r == 0 and c in [6, 7]):
-                is_protected[r*32+15:r*32+25, c*32+5:c*32+13] = True
-                is_protected[r*32+15:r*32+25, c*32+19:c*32+27] = True
-                is_protected[r*32+21:r*32+26, c*32+13:c*32+19] = True
-            if r == 3 and c in [8, 9]:
-                is_protected[r*32+8:r*32+16, c*32+4:c*32+11] = True
-                is_protected[r*32+8:r*32+16, c*32+22:c*32+29] = True
+            if r in [1, 2] or (r == 0 and c in [6, 7, 14, 15]):
+                is_protected[r*32+14:r*32+21, c*32+6:c*32+12] = True
+                is_protected[r*32+14:r*32+21, c*32+20:c*32+26] = True
+                if c >= 8:
+                    is_protected[r*32+8:r*32+16, c*32+4:c*32+12] = True
+                    is_protected[r*32+8:r*32+16, c*32+21:c*32+28] = True
 
     for y in range(512):
         for x in range(512):
             if is_edge[y, x] and not is_protected[y, x]:
                 p = arr_512[y, x, :3]
-                diff = max(p) - min(p)
+                diff = int(max(p)) - int(min(p))
                 lum = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
                 if lum > 65 and (diff < 15 or min(p) > 180):
                     has_dark_inward = False
                     for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                         ny, nx = y + dy, x + dx
                         if 0 <= ny < 512 and 0 <= nx < 512 and fg[ny, nx]:
-                            if max(arr_512[ny, nx, :3]) < 40:
+                            if max(arr_512[ny, nx, :3]) < 45:
                                 has_dark_inward = True
                                 break
                     if has_dark_inward:
                         arr_512[y, x] = [0, 0, 0, 0]
 
-    # 4. Step 3: Clean up head hair, skin, and mask perimeters (preserving glowing eyes & teeth)
+    # 4. Step 3: Clean up head frames (preserving glowing eyes & teeth, restoring warm hair and skin)
     print("Sanitizing head frames (hair brown, uniform skin, glowing eyes, teeth)...")
-    for c in [0, 1, 2, 3, 4, 5, 8]:
+    head_cells = [(0, c) for c in [0, 1, 2, 3, 4, 5, 8]]
+    for r, c in head_cells:
         for y in range(32):
             for x in range(32):
-                gy, gx = y, c * 32 + x
+                gy, gx = r * 32 + y, c * 32 + x
                 if arr_512[gy, gx, 3] == 0:
                     continue
                 p = arr_512[gy, gx, :3]
-                r, g, b = int(p[0]), int(p[1]), int(p[2])
-                diff = max(r, g, b) - min(r, g, b)
-                lum = 0.299 * r + 0.587 * g + 0.114 * b
+                rc, gc, bc = int(p[0]), int(p[1]), int(p[2])
+                diff = max(rc, gc, bc) - min(rc, gc, bc)
+                lum = 0.299 * rc + 0.587 * gc + 0.114 * bc
+                is_skin = (rc > gc + 14) and (gc > bc + 8) and (rc > 160)
 
-                # Hair region (y <= 12)
-                if y <= 12:
-                    if min(r, g, b) > 180:
+                # Hair region (y <= 12 and not skin tone)
+                if y <= 12 and not is_skin:
+                    if min(rc, gc, bc) > 175:
                         arr_512[gy, gx, :3] = [95, 65, 42]
-                    elif diff < 14 and lum > 50:
+                    elif diff < 15 and lum > 50:
                         if y <= 2 or x <= 4 or x >= 27:
-                            arr_512[gy, gx, :3] = [20, 15, 10] # solid dark outline
+                            arr_512[gy, gx, :3] = [20, 15, 10]
                         else:
-                            arr_512[gy, gx, :3] = [95, 65, 42] # warm brown hair
+                            arr_512[gy, gx, :3] = [95, 65, 42]
                 # Face / skin / mask region (y >= 13)
                 else:
-                    is_eye = (14 <= y <= 19) and ((6 <= x <= 12) or (19 <= x <= 25) or (13 <= x <= 17)) and (g > 180 and g >= r)
-                    is_teeth = (c == 8 and y == 20 and 14 <= x <= 16)
+                    is_eye = (14 <= y <= 19) and ((6 <= x <= 12) or (19 <= x <= 25) or (13 <= x <= 17)) and (gc >= 180 and gc >= rc)
+                    is_teeth = (c == 8 and y in [20, 21] and 14 <= x <= 17)
                     if not (is_eye or is_teeth):
-                        # Stray white on skin or mask perimeter
-                        if min(r, g, b) > 190:
-                            arr_512[gy, gx, :3] = [230, 195, 178]
-                        # Stray grey dot on skin or mask perimeter
-                        elif diff < 12 and 60 < lum < 190:
+                        if min(rc, gc, bc) > 185:
+                            arr_512[gy, gx, :3] = [225, 190, 175]
+                        elif diff < 12 and 50 < lum < 185 and not is_skin:
                             arr_512[gy, gx, :3] = [225, 190, 175]
 
-    # 5. Step 4: Clean up body frames (remove neck/mint dots, preserve gloves & chest emblem)
-    print("Sanitizing body frames (clearing neck white dots, preserving white gloves & emblem)...")
-    for r in [0, 1, 2, 3]:
-        for c in range(16):
-            if r in [1, 2] or (r == 0 and c in [6, 7]) or (r == 3 and c in [0, 1]):
-                for y in range(32):
-                    for x in range(32):
-                        gy, gx = r * 32 + y, c * 32 + x
-                        if arr_512[gy, gx, 3] == 0:
-                            continue
-                        p = arr_512[gy, gx, :3]
-                        r_c, g_c, b_c = int(p[0]), int(p[1]), int(p[2])
-                        diff = max(r_c, g_c, b_c) - min(r_c, g_c, b_c)
-                        lum = 0.299 * r_c + 0.587 * g_c + 0.114 * b_c
+    # 5. Step 4: Clean up body frames (eliminate white boots/neck/crotch dots, preserve white gloves & emblem)
+    print("Sanitizing body frames (clearing boot/neck white dots, preserving white gloves & emblem)...")
+    body_cells = [(r, c) for r in [1, 2] for c in range(16)] + [(0, 6), (0, 7), (0, 14), (0, 15), (3, 0), (3, 1), (3, 8), (3, 9)]
+    for r, c in body_cells:
+        for y in range(32):
+            for x in range(32):
+                gy, gx = r * 32 + y, c * 32 + x
+                if arr_512[gy, gx, 3] == 0:
+                    continue
+                p = arr_512[gy, gx, :3]
+                rc, gc, bc = int(p[0]), int(p[1]), int(p[2])
+                diff = max(rc, gc, bc) - min(rc, gc, bc)
+                lum = 0.299 * rc + 0.587 * gc + 0.114 * bc
 
-                        is_glove = (15 <= y <= 24) and ((5 <= x <= 12) or (19 <= x <= 26))
-                        is_chest = (21 <= y <= 25) and (13 <= x <= 18)
+                # Context-aware glove protection
+                if r == 1 and c < 8:
+                    is_glove = (16 <= y <= 20) and ((7 <= x <= 12) or (20 <= x <= 25))
+                elif r == 2 and c < 8:
+                    is_glove = (14 <= y <= 19) and (18 <= x <= 25)
+                elif (r in [1, 2] and c >= 8) or (r == 0 and c in [14, 15]) or (r == 3 and c in [8, 9]):
+                    is_glove = (8 <= y <= 15) and ((4 <= x <= 12) or (20 <= x <= 28))
+                elif r == 0 and c in [6, 7]:
+                    is_glove = (16 <= y <= 20) and ((7 <= x <= 12) or (20 <= x <= 25))
+                elif r == 3 and c in [0, 1]:
+                    is_glove = (16 <= y <= 20) and ((7 <= x <= 12) or (20 <= x <= 25))
+                else:
+                    is_glove = False
 
-                        # Upper chest / neck neon white/mint pixels: restore to green suit
-                        if (12 <= y <= 17) and (12 <= x <= 20) and min(r_c, g_c, b_c) > 170:
-                            arr_512[gy, gx, :3] = [40, 145, 65]
-                        # Boots stray white/grey
-                        elif y >= 24 and not is_glove and (min(r_c, g_c, b_c) > 180 or (diff < 10 and 60 < lum < 185)):
-                            arr_512[gy, gx, :3] = [25, 70, 35]
-                        # Stray white outside gloves & chest:
-                        elif min(r_c, g_c, b_c) > 180 and not (is_glove or is_chest):
+                # Context-aware chest emblem protection
+                if r in [1, 2] and c >= 8:
+                    is_chest = (16 <= y <= 20) and (13 <= x <= 18)
+                else:
+                    is_chest = (13 <= y <= 17) and (13 <= x <= 18)
+
+                # A. Boots & crotch region (y >= 21) - boots must be green, crotch dark
+                if y >= 21:
+                    if min(rc, gc, bc) > 170 or (diff < 20 and lum > 150):
+                        if 14 <= x <= 17 and r in [1, 3] and c < 8:
+                            arr_512[gy, gx, :3] = [20, 20, 20] # dark suit
+                        else:
+                            arr_512[gy, gx, :3] = [35, 105, 52] # green boot
+                    elif diff < 15 and 50 < lum < 150:
+                        if 14 <= x <= 17 and r in [1, 3] and c < 8:
                             arr_512[gy, gx, :3] = [20, 20, 20]
-                        # Stray grey outside gloves & chest & outline:
-                        elif diff < 10 and 60 < lum < 185 and not (is_glove or is_chest):
-                            arr_512[gy, gx, :3] = [20, 20, 20]
+                        else:
+                            arr_512[gy, gx, :3] = [35, 105, 52]
 
-    # 6. Step 5: Solid dark outline crispness on outer perimeters
+                # B. Upper chest / neck (11 <= y <= 14)
+                elif 11 <= y <= 14 and 11 <= x <= 21:
+                    if min(rc, gc, bc) > 165 or (diff < 15 and lum > 140):
+                        if y <= 12:
+                            arr_512[gy, gx, :3] = [20, 15, 10] # dark collar outline
+                        else:
+                            arr_512[gy, gx, :3] = [40, 145, 65] # green suit
+
+                # C. Torso (y < 21) outside gloves and chest emblem
+                elif not (is_glove or is_chest):
+                    if min(rc, gc, bc) > 175:
+                        if 11 <= x <= 20:
+                            arr_512[gy, gx, :3] = [40, 145, 65] # green suit
+                        else:
+                            arr_512[gy, gx, :3] = [20, 20, 20] # black suit
+                    elif diff < 15 and 50 < lum < 175:
+                        if 11 <= x <= 20 and y <= 19:
+                            arr_512[gy, gx, :3] = [40, 145, 65] # green suit
+
+    # 6. Step 5: Clean up large 64x64 animation frames (Rows 4, 6, 8)
+    print("Sanitizing 64x64 animation frames (clearing white boot noise in pickup/death/jump)...")
+    for r_base in [4, 6, 8]:
+        for c_base in [0, 2, 4, 6]:
+            for y in range(48, 64):
+                for x in range(64):
+                    gy, gx = r_base * 32 + y, c_base * 32 + x
+                    if arr_512[gy, gx, 3] == 0:
+                        continue
+                    p = arr_512[gy, gx, :3]
+                    rc, gc, bc = int(p[0]), int(p[1]), int(p[2])
+                    diff = max(rc, gc, bc) - min(rc, gc, bc)
+                    lum = 0.299 * rc + 0.587 * gc + 0.114 * bc
+                    if min(rc, gc, bc) > 170 or (diff < 20 and lum > 150):
+                        arr_512[gy, gx, :3] = [35, 105, 52]
+
+    # 7. Step 6: Solid dark outline crispness on outer perimeters
     print("Solidifying dark perimeter outlines...")
     fg = arr_512[:, :, 3] == 255
     is_edge = np.zeros((512, 512), dtype=bool)
@@ -181,19 +237,19 @@ def process_sheet():
         for x in range(512):
             if is_edge[y, x] and not is_protected[y, x]:
                 p = arr_512[y, x, :3]
-                diff = max(p) - min(p)
+                diff = int(max(p)) - int(min(p))
                 lum = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
-                if 35 <= lum <= 70 and diff < 15:
+                if 30 <= lum <= 70 and diff < 15:
                     arr_512[y, x, :3] = [20, 15, 10]
 
-    # 7. Final sanitization: 1-bit binary alpha & zero dirty RGB
+    # 8. Step 7: Final sanitization: 1-bit binary alpha & zero dirty RGB
     print("Enforcing strict 1-bit binary alpha and clean zero RGB on transparent pixels...")
     arr_512[arr_512[:, :, 3] < 255, 3] = 0
     arr_512[arr_512[:, :, 3] == 0, :3] = 0
 
     final_sheet = Image.fromarray(arr_512, mode="RGBA")
 
-    # 8. Save output files
+    # 9. Save output files
     print(f"Saving {HAL_JORDAN_PATH}...")
     final_sheet.save(HAL_JORDAN_PATH, "PNG")
 
