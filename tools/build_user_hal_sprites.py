@@ -22,6 +22,256 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_IMAGE_PATH = r"C:/Users/danic/.gemini/antigravity/brain/25a8c9be-14f1-4e9c-8c5f-e17d8ccace13/.user_uploaded/media_1792140081953_e9e21585.png"
 VANILLA_ISAAC_PATH = r"C:\Program Files (x86)\Steam\steamapps\common\The Binding of Isaac Rebirth\extracted_resources\resources\gfx\characters\costumes\Character_001_Isaac.png"
 
+# Palette constants for authentic Hal Jordan superhero side head
+SIDE_DARK = np.array([20, 15, 10, 255], dtype=np.uint8)
+SIDE_HAIR_SHADOW = np.array([45, 28, 16, 255], dtype=np.uint8)
+SIDE_HAIR_BASE = np.array([95, 65, 42, 255], dtype=np.uint8)
+SIDE_HAIR_LIGHT = np.array([125, 88, 58, 255], dtype=np.uint8)
+
+SIDE_SKIN_BASE = np.array([225, 190, 175, 255], dtype=np.uint8)
+SIDE_SKIN_SHADOW = np.array([205, 160, 145, 255], dtype=np.uint8)
+
+SIDE_MASK_DARK = np.array([20, 65, 30, 255], dtype=np.uint8)
+SIDE_MASK_MID = np.array([45, 145, 65, 255], dtype=np.uint8)
+SIDE_MASK_LIGHT = np.array([75, 185, 95, 255], dtype=np.uint8)
+
+SIDE_EYE_MINT = np.array([130, 220, 160, 255], dtype=np.uint8)
+SIDE_EYE_CORE = np.array([238, 255, 245, 255], dtype=np.uint8)
+
+def build_side_head_idle(base):
+    c = base.copy()
+    
+    # y=10: Crown/bangs hair & forehead
+    c[10, 2:8] = SIDE_DARK
+    c[10, 8:12] = SIDE_HAIR_BASE
+    c[10, 12:15] = SIDE_HAIR_LIGHT
+    c[10, 15:18] = SIDE_HAIR_BASE
+    c[10, 18:26] = SIDE_SKIN_BASE
+    c[10, 26:30] = SIDE_DARK
+
+    # y=11: Hair flow & forehead skin
+    c[11, 2:6] = SIDE_DARK
+    c[11, 6:11] = SIDE_HAIR_BASE
+    c[11, 11:13] = SIDE_HAIR_LIGHT
+    c[11, 13:16] = SIDE_SKIN_SHADOW
+    c[11, 16:25] = SIDE_SKIN_BASE
+    c[11, 25:28] = SIDE_SKIN_SHADOW
+    c[11, 28:30] = SIDE_DARK
+
+    # y=12: Side hair, temple skin & mask brow top
+    c[12, 2:6] = SIDE_DARK
+    c[12, 6:11] = SIDE_HAIR_BASE
+    c[12, 11:14] = SIDE_HAIR_SHADOW
+    c[12, 14:16] = SIDE_SKIN_SHADOW
+    c[12, 16] = SIDE_MASK_DARK
+    c[12, 17:22] = SIDE_MASK_MID
+    c[12, 22:24] = SIDE_MASK_DARK
+    c[12, 24:27] = SIDE_SKIN_BASE
+    c[12, 27:30] = SIDE_DARK
+
+    # y=13: Sideburn, temple & upper mask
+    c[13, 2:5] = SIDE_DARK
+    c[13, 5:10] = SIDE_HAIR_BASE
+    c[13, 10:12] = SIDE_HAIR_SHADOW
+    c[13, 12] = SIDE_SKIN_SHADOW
+    c[13, 13] = SIDE_MASK_DARK
+    c[13, 14] = SIDE_MASK_LIGHT
+    c[13, 15:24] = SIDE_MASK_MID
+    c[13, 17:22] = SIDE_MASK_LIGHT
+    c[13, 24] = SIDE_MASK_DARK
+    c[13, 25:27] = SIDE_SKIN_BASE
+    c[13, 27:30] = SIDE_DARK
+
+    # y=14: Sideburn, mask wing tip & upper eye
+    c[14, 2:5] = SIDE_DARK
+    c[14, 5:9] = SIDE_HAIR_BASE
+    c[14, 9:11] = SIDE_HAIR_SHADOW
+    c[14, 11] = SIDE_SKIN_SHADOW
+    c[14, 12] = SIDE_MASK_DARK
+    c[14, 13:15] = SIDE_MASK_MID
+    c[14, 15] = SIDE_MASK_DARK
+    c[14, 16] = SIDE_EYE_MINT
+    c[14, 17:21] = SIDE_EYE_CORE
+    c[14, 21] = SIDE_EYE_MINT
+    c[14, 22:24] = SIDE_MASK_MID
+    c[14, 24] = SIDE_MASK_DARK
+    c[14, 25:27] = SIDE_SKIN_BASE
+    c[14, 27:30] = SIDE_DARK
+
+    # y=15: Sideburn tip, mask left rim, central glowing eye core & front mask
+    c[15, 2:5] = SIDE_DARK
+    c[15, 5:8] = SIDE_HAIR_BASE
+    c[15, 8:10] = SIDE_HAIR_SHADOW
+    c[15, 10:13] = SIDE_SKIN_BASE
+    c[15, 13:15] = SIDE_MASK_DARK
+    c[15, 15] = SIDE_MASK_MID
+    c[15, 16] = SIDE_EYE_MINT
+    c[15, 17:21] = SIDE_EYE_CORE
+    c[15, 21] = SIDE_EYE_MINT
+    c[15, 22:24] = SIDE_MASK_MID
+    c[15, 24] = SIDE_MASK_DARK
+    c[15, 25:27] = SIDE_SKIN_BASE
+    c[15, 27:30] = SIDE_DARK
+
+    # y=16: Cheek skin, mask left rim & lower glowing eye
+    c[16, 2:5] = SIDE_DARK
+    c[16, 5:7] = SIDE_HAIR_SHADOW
+    c[16, 7:15] = SIDE_SKIN_BASE
+    c[16, 15] = SIDE_MASK_DARK
+    c[16, 16] = SIDE_EYE_MINT
+    c[16, 17:21] = SIDE_EYE_CORE
+    c[16, 21] = SIDE_EYE_MINT
+    c[16, 22:24] = SIDE_MASK_MID
+    c[16, 24] = SIDE_MASK_DARK
+    c[16, 25:27] = SIDE_SKIN_BASE
+    c[16, 27:30] = SIDE_DARK
+
+    # y=17: Cheek skin & bottom mask arch
+    c[17, 2:5] = SIDE_DARK
+    c[17, 5:7] = SIDE_HAIR_SHADOW
+    c[17, 7:15] = SIDE_SKIN_BASE
+    c[17, 15:23] = SIDE_MASK_MID
+    c[17, 17:21] = SIDE_MASK_DARK
+    c[17, 23:25] = SIDE_MASK_DARK
+    c[17, 25:27] = SIDE_SKIN_BASE
+    c[17, 27:30] = SIDE_DARK
+
+    # y=18: Jaw and cheek skin
+    c[18, 2:5] = SIDE_DARK
+    c[18, 5:16] = SIDE_SKIN_BASE
+    c[18, 16:22] = SIDE_SKIN_SHADOW
+    c[18, 22:27] = SIDE_SKIN_BASE
+    c[18, 27:30] = SIDE_DARK
+
+    # y=19..20: Lower cheek / jawline
+    c[19, 3:5] = SIDE_DARK
+    c[19, 5:27] = SIDE_SKIN_BASE
+    c[19, 27:29] = SIDE_DARK
+
+    c[20, 3:5] = SIDE_DARK
+    c[20, 5:26] = SIDE_SKIN_BASE
+    c[20, 26:29] = SIDE_DARK
+    return c
+
+def build_side_head_shooting(base):
+    c = base.copy()
+    
+    # Shifted 2 pixels down for shooting pose
+    # y=12: Crown/bangs hair & forehead
+    c[12, 2:8] = SIDE_DARK
+    c[12, 8:12] = SIDE_HAIR_BASE
+    c[12, 12:15] = SIDE_HAIR_LIGHT
+    c[12, 15:18] = SIDE_HAIR_BASE
+    c[12, 18:26] = SIDE_SKIN_BASE
+    c[12, 26:30] = SIDE_DARK
+
+    # y=13: Hair flow & forehead skin
+    c[13, 2:6] = SIDE_DARK
+    c[13, 6:11] = SIDE_HAIR_BASE
+    c[13, 11:13] = SIDE_HAIR_LIGHT
+    c[13, 13:16] = SIDE_SKIN_SHADOW
+    c[13, 16:25] = SIDE_SKIN_BASE
+    c[13, 25:28] = SIDE_SKIN_SHADOW
+    c[13, 28:30] = SIDE_DARK
+
+    # y=14: Side hair, temple skin & mask brow top
+    c[14, 2:6] = SIDE_DARK
+    c[14, 6:11] = SIDE_HAIR_BASE
+    c[14, 11:14] = SIDE_HAIR_SHADOW
+    c[14, 14:16] = SIDE_SKIN_SHADOW
+    c[14, 16] = SIDE_MASK_DARK
+    c[14, 17:22] = SIDE_MASK_MID
+    c[14, 22:24] = SIDE_MASK_DARK
+    c[14, 24:27] = SIDE_SKIN_BASE
+    c[14, 27:30] = SIDE_DARK
+
+    # y=15: Sideburn, temple & upper mask
+    c[15, 2:5] = SIDE_DARK
+    c[15, 5:10] = SIDE_HAIR_BASE
+    c[15, 10:12] = SIDE_HAIR_SHADOW
+    c[15, 12] = SIDE_SKIN_SHADOW
+    c[15, 13] = SIDE_MASK_DARK
+    c[15, 14] = SIDE_MASK_LIGHT
+    c[15, 15:24] = SIDE_MASK_MID
+    c[15, 17:22] = SIDE_MASK_LIGHT
+    c[15, 24] = SIDE_MASK_DARK
+    c[15, 25:27] = SIDE_SKIN_BASE
+    c[15, 27:30] = SIDE_DARK
+
+    # y=16: Sideburn, mask wing tip & upper eye
+    c[16, 2:5] = SIDE_DARK
+    c[16, 5:9] = SIDE_HAIR_BASE
+    c[16, 9:11] = SIDE_HAIR_SHADOW
+    c[16, 11] = SIDE_SKIN_SHADOW
+    c[16, 12] = SIDE_MASK_DARK
+    c[16, 13:15] = SIDE_MASK_MID
+    c[16, 15] = SIDE_MASK_DARK
+    c[16, 16] = SIDE_EYE_MINT
+    c[16, 17:21] = SIDE_EYE_CORE
+    c[16, 21] = SIDE_EYE_MINT
+    c[16, 22:24] = SIDE_MASK_MID
+    c[16, 24] = SIDE_MASK_DARK
+    c[16, 25:27] = SIDE_SKIN_BASE
+    c[16, 27:30] = SIDE_DARK
+
+    # y=17: Sideburn tip, mask left rim, central glowing eye core & front mask
+    c[17, 2:5] = SIDE_DARK
+    c[17, 5:8] = SIDE_HAIR_BASE
+    c[17, 8:10] = SIDE_HAIR_SHADOW
+    c[17, 10:13] = SIDE_SKIN_BASE
+    c[17, 13:15] = SIDE_MASK_DARK
+    c[17, 15] = SIDE_MASK_MID
+    c[17, 16] = SIDE_EYE_MINT
+    c[17, 17:21] = SIDE_EYE_CORE
+    c[17, 21] = SIDE_EYE_MINT
+    c[17, 22:24] = SIDE_MASK_MID
+    c[17, 24] = SIDE_MASK_DARK
+    c[17, 25:27] = SIDE_SKIN_BASE
+    c[17, 27:30] = SIDE_DARK
+
+    # y=18: Cheek skin, mask left rim & lower glowing eye
+    c[18, 2:5] = SIDE_DARK
+    c[18, 5:7] = SIDE_HAIR_SHADOW
+    c[18, 7:15] = SIDE_SKIN_BASE
+    c[18, 15] = SIDE_MASK_DARK
+    c[18, 16] = SIDE_EYE_MINT
+    c[18, 17:21] = SIDE_EYE_CORE
+    c[18, 21] = SIDE_EYE_MINT
+    c[18, 22:24] = SIDE_MASK_MID
+    c[18, 24] = SIDE_MASK_DARK
+    c[18, 25:27] = SIDE_SKIN_BASE
+    c[18, 27:30] = SIDE_DARK
+
+    # y=19: Cheek skin & bottom mask arch
+    c[19, 2:5] = SIDE_DARK
+    c[19, 5:7] = SIDE_HAIR_SHADOW
+    c[19, 7:15] = SIDE_SKIN_BASE
+    c[19, 15:23] = SIDE_MASK_MID
+    c[19, 17:21] = SIDE_MASK_DARK
+    c[19, 23:25] = SIDE_MASK_DARK
+    c[19, 25:27] = SIDE_SKIN_BASE
+    c[19, 27:30] = SIDE_DARK
+
+    # y=20: Jaw and cheek skin
+    c[20, 2:5] = SIDE_DARK
+    c[20, 5:16] = SIDE_SKIN_BASE
+    c[20, 16:22] = SIDE_SKIN_SHADOW
+    c[20, 22:27] = SIDE_SKIN_BASE
+    c[20, 27:30] = SIDE_DARK
+
+    # y=21..22: Lower cheek / jawline
+    c[21, 3:5] = SIDE_DARK
+    c[21, 5:26] = SIDE_SKIN_BASE
+    c[21, 26:29] = SIDE_DARK
+
+    c[22, 3:5] = SIDE_DARK
+    c[22, 5:26] = SIDE_SKIN_BASE
+    c[22, 26:29] = SIDE_DARK
+
+    # y=23: Preserve shooting mouth
+    c[23, 17:23] = [62, 35, 23, 255]
+    return c
+
 HAL_JORDAN_PATH = os.path.join(PROJECT_ROOT, "resources", "gfx", "characters", "hal_jordan.png")
 HAL_EXTRA_PATH = os.path.join(PROJECT_ROOT, "resources", "gfx", "characters", "hal_jordan_extra.png")
 
@@ -111,7 +361,7 @@ def process_sheet():
 
     # 4. Step 3: Clean up head frames (preserving glowing eyes & teeth, restoring warm hair and skin)
     print("Sanitizing head frames (hair brown, uniform skin, glowing eyes, teeth)...")
-    head_cells = [(0, c) for c in [0, 1, 2, 3, 4, 5, 8]]
+    head_cells = [(0, c) for c in [0, 1, 4, 5, 8]]
     for r, c in head_cells:
         for y in range(32):
             for x in range(32):
@@ -142,6 +392,11 @@ def process_sheet():
                             arr_512[gy, gx, :3] = [225, 190, 175]
                         elif diff < 12 and 50 < lum < 185 and not is_skin:
                             arr_512[gy, gx, :3] = [225, 190, 175]
+
+    # 4B. Build authentic single-eye superhero side head frames (Col 2 Idle & Col 3 Shooting)
+    print("Applying authentic single-eye superhero side head for Col 2 (Idle) and Col 3 (Shooting)...")
+    arr_512[0:32, 64:96] = build_side_head_idle(arr_512[0:32, 64:96])
+    arr_512[0:32, 96:128] = build_side_head_shooting(arr_512[0:32, 96:128])
 
     # 5. Step 4: Clean up body frames (eliminate white boots/neck/crotch dots, preserve white gloves & emblem)
     print("Sanitizing body frames (clearing boot/neck white dots, preserving white gloves & emblem)...")
