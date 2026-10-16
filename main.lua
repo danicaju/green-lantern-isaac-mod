@@ -54,6 +54,7 @@ include("modules.fx_lighting")(Core)
 include("modules.hud_render")(Core)
 include("modules.fx_mcm")(Core)
 include("modules.compat_encyclopedia")(Core)
+include("modules.custom_costumes")(Core)
 
 include("modules.debug")(Core)
 

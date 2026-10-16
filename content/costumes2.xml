@@ -1,2 +1,3 @@
 <costumes anm2root="gfx/characters/">
+    <costume anm2="hal_costume_2020.anm2" type="none" />
 </costumes>
