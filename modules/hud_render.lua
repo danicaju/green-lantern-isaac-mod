@@ -101,6 +101,15 @@ return function(Core)
       if p and (Core.IsHalJordan(p) or Core.IsTaintedHal(p)) then
         local d = Core.GetPlayerData(p)
         local shootIn = (p.GetShootingInput and p:GetShootingInput()) or nil
+        if (not shootIn or (shootIn.Length and shootIn:Length() <= 0.1)) and Input and Input.IsMouseBtnPressed and Input.IsMouseBtnPressed(0) then
+          local mousePos = Input.GetMousePosition and Input.GetMousePosition(true)
+          if mousePos then
+            local diff = mousePos - p.Position
+            if diff:Length() > 5 then
+              shootIn = diff:Normalized()
+            end
+          end
+        end
         local holdingNow = (shootIn and shootIn.Length and shootIn:Length() > 0.1) or false
         if holdingNow then
           local rawDir = shootIn:Normalized()

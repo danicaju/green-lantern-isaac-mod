@@ -12,6 +12,16 @@ return function(Core)
       end
       local shootInput = player:GetShootingInput()
       local isHoldingShoot = (shootInput and shootInput:Length() > 0.1) or false
+      if not isHoldingShoot and Input and Input.IsMouseBtnPressed and Input.IsMouseBtnPressed(0) then
+        local mousePos = Input.GetMousePosition and Input.GetMousePosition(true)
+        if mousePos then
+          local diff = mousePos - player.Position
+          if diff:Length() > 5 then
+            shootInput = diff:Normalized()
+            isHoldingShoot = true
+          end
+        end
+      end
       local canUseBeam = Core.CanUseContinuousBeam(player)
       local recentClickSpam = (frame - (data.lastDiscreteClickReleaseFrame or -999)) <= 12
       local holdThreshold = Core.HAL_CONTINUOUS_HOLD_FRAMES + (recentClickSpam and Core.HAL_SPAM_EXTRA_HOLD_FRAMES or 0)
@@ -216,6 +226,7 @@ return function(Core)
           local minClickInterval = math.max(6, math.min(10, math.floor((player.MaxFireDelay or 10) * 0.70)))
           if (data.gatlingTimer or 0) > 0 then minClickInterval = 2 end
           if (frame - (data.lastSmallBeamFrame or -999)) >= minClickInterval then
+            local dir = Vector(data.bufferedClickDir.X, data.bufferedClickDir.Y)
             local hasTB = Core.HasTractorBeam and Core.HasTractorBeam(player)
             if hasTB then
               dir = Core.GetTractorBeamDirection(player, dir)
