@@ -41,6 +41,9 @@ SIDE_EYE_CORE = np.array([238, 255, 245, 255], dtype=np.uint8)
 SIDE_MOUTH_DARK = np.array([55, 22, 14, 255], dtype=np.uint8)
 
 def build_side_head_idle(base):
+    idle_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_side_idle_perfect_32.png")
+    if os.path.exists(idle_file):
+        return np.array(Image.open(idle_file))
     c = base.copy()
     
     # y=10: Crown/bangs hair & forehead
@@ -168,6 +171,9 @@ def build_side_head_idle(base):
     return c
 
 def build_side_head_shooting(base):
+    shoot_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_side_shoot_perfect_32.png")
+    if os.path.exists(shoot_file):
+        return np.array(Image.open(shoot_file))
     c = base.copy()
     
     # Shifted 2 pixels down for shooting pose
