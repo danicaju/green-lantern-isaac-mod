@@ -66,7 +66,18 @@ def sync_to_steam():
     print("Sync complete!")
     return True
 
+def run_linter():
+    linter_script = os.path.join(PROJECT_DIR, "tools", "lint_modules.py")
+    if os.path.exists(linter_script):
+        res = subprocess.run([sys.executable, linter_script], text=True)
+        return res.returncode == 0
+    return True
+
 if __name__ == "__main__":
+    linter_ok = run_linter()
+    if not linter_ok:
+        print("\nSkipping tests and sync due to linter failures.")
+        sys.exit(1)
     tests_ok = run_tests()
     if tests_ok:
         sync_to_steam()
