@@ -51,13 +51,13 @@ def build_side_head_idle(base):
     
     # y=2..9: Clean skull crown & hair contour (no white halo)
     c[2, :12] = 0; c[2, 12:21] = SIDE_DARK; c[2, 21:] = 0
-    c[3, :9] = 0; c[3, 9:12] = SIDE_DARK; c[3, 20:22] = SIDE_DARK; c[3, 22:] = 0
-    c[4, :8] = 0; c[4, 8:10] = SIDE_DARK; c[4, 22:24] = SIDE_DARK; c[4, 24:] = 0
-    c[5, :6] = 0; c[5, 6:8] = SIDE_DARK; c[5, 24:26] = SIDE_DARK; c[5, 26:] = 0
-    c[6, :5] = 0; c[6, 5:7] = SIDE_DARK; c[6, 25:27] = SIDE_DARK; c[6, 27:] = 0
-    c[7, :4] = 0; c[7, 4:6] = SIDE_DARK; c[7, 26:28] = SIDE_DARK; c[7, 28:] = 0
-    c[8, :3] = 0; c[8, 3:5] = SIDE_DARK; c[8, 27:29] = SIDE_DARK; c[8, 29:] = 0
-    c[9, :2] = 0; c[9, 2:4] = SIDE_DARK; c[9, 28:30] = SIDE_DARK; c[9, 30:] = 0
+    c[3, :10] = 0; c[3, 10:22] = SIDE_DARK; c[3, 22:] = 0
+    c[4, :8] = 0; c[4, 8:10] = SIDE_DARK; c[4, 10:20] = SIDE_HAIR_BASE; c[4, 20:22] = SIDE_HAIR_SHADOW; c[4, 22:24] = SIDE_DARK; c[4, 24:] = 0
+    c[5, :6] = 0; c[5, 6:8] = SIDE_DARK; c[5, 8:23] = SIDE_HAIR_BASE; c[5, 23] = SIDE_HAIR_SHADOW; c[5, 24:26] = SIDE_DARK; c[5, 26:] = 0
+    c[6, :5] = 0; c[6, 5:7] = SIDE_DARK; c[6, 7:24] = SIDE_HAIR_BASE; c[6, 24] = SIDE_HAIR_SHADOW; c[6, 25:27] = SIDE_DARK; c[6, 27:] = 0
+    c[7, :4] = 0; c[7, 4:6] = SIDE_DARK; c[7, 6:25] = SIDE_HAIR_BASE; c[7, 25] = SIDE_HAIR_SHADOW; c[7, 26:28] = SIDE_DARK; c[7, 28:] = 0
+    c[8, :3] = 0; c[8, 3:5] = SIDE_DARK; c[8, 5:26] = SIDE_HAIR_BASE; c[8, 26] = SIDE_HAIR_SHADOW; c[8, 27:29] = SIDE_DARK; c[8, 29:] = 0
+    c[9, :2] = 0; c[9, 2:4] = SIDE_DARK; c[9, 4:27] = SIDE_HAIR_BASE; c[9, 27] = SIDE_HAIR_SHADOW; c[9, 28:30] = SIDE_DARK; c[9, 30:] = 0
 
     # y=10: Crown/bangs hair & forehead
     c[10, 2:4] = SIDE_DARK
@@ -194,15 +194,15 @@ def build_side_head_shooting(base):
 
     # y=2..11: Clean skull crown & hair contour
     c[2, :12] = 0; c[2, 12:21] = SIDE_DARK; c[2, 21:] = 0
-    c[3, :9] = 0; c[3, 9:12] = SIDE_DARK; c[3, 20:22] = SIDE_DARK; c[3, 22:] = 0
-    c[4, :8] = 0; c[4, 8:10] = SIDE_DARK; c[4, 22:24] = SIDE_DARK; c[4, 24:] = 0
-    c[5, :6] = 0; c[5, 6:8] = SIDE_DARK; c[5, 24:26] = SIDE_DARK; c[5, 26:] = 0
-    c[6, :5] = 0; c[6, 5:7] = SIDE_DARK; c[6, 25:27] = SIDE_DARK; c[6, 27:] = 0
-    c[7, :4] = 0; c[7, 4:6] = SIDE_DARK; c[7, 26:28] = SIDE_DARK; c[7, 28:] = 0
-    c[8, :3] = 0; c[8, 3:5] = SIDE_DARK; c[8, 27:29] = SIDE_DARK; c[8, 29:] = 0
-    c[9, :3] = 0; c[9, 3:5] = SIDE_DARK; c[9, 27:29] = SIDE_DARK; c[9, 29:] = 0
-    c[10, :3] = 0; c[10, 3] = SIDE_DARK; c[10, 29] = SIDE_DARK; c[10, 30:] = 0
-    c[11, :2] = 0; c[11, 2] = SIDE_DARK; c[11, 29] = SIDE_DARK; c[11, 30:] = 0
+    c[3, :10] = 0; c[3, 10:22] = SIDE_DARK; c[3, 22:] = 0
+    c[4, :8] = 0; c[4, 8:10] = SIDE_DARK; c[4, 10:20] = SIDE_HAIR_BASE; c[4, 20:22] = SIDE_HAIR_SHADOW; c[4, 22:24] = SIDE_DARK; c[4, 24:] = 0
+    c[5, :6] = 0; c[5, 6:8] = SIDE_DARK; c[5, 8:23] = SIDE_HAIR_BASE; c[5, 23] = SIDE_HAIR_SHADOW; c[5, 24:26] = SIDE_DARK; c[5, 26:] = 0
+    c[6, :5] = 0; c[6, 5:7] = SIDE_DARK; c[6, 7:24] = SIDE_HAIR_BASE; c[6, 24] = SIDE_HAIR_SHADOW; c[6, 25:27] = SIDE_DARK; c[6, 27:] = 0
+    c[7, :4] = 0; c[7, 4:6] = SIDE_DARK; c[7, 6:25] = SIDE_HAIR_BASE; c[7, 25] = SIDE_HAIR_SHADOW; c[7, 26:28] = SIDE_DARK; c[7, 28:] = 0
+    c[8, :3] = 0; c[8, 3:5] = SIDE_DARK; c[8, 5:26] = SIDE_HAIR_BASE; c[8, 26] = SIDE_HAIR_SHADOW; c[8, 27:29] = SIDE_DARK; c[8, 29:] = 0
+    c[9, :3] = 0; c[9, 3:5] = SIDE_DARK; c[9, 5:26] = SIDE_HAIR_BASE; c[9, 26] = SIDE_HAIR_SHADOW; c[9, 27:29] = SIDE_DARK; c[9, 29:] = 0
+    c[10, :3] = 0; c[10, 3] = SIDE_DARK; c[10, 4:27] = SIDE_HAIR_BASE; c[10, 27:29] = SIDE_HAIR_SHADOW; c[10, 29] = SIDE_DARK; c[10, 30:] = 0
+    c[11, :2] = 0; c[11, 2] = SIDE_DARK; c[11, 3:28] = SIDE_HAIR_BASE; c[11, 28] = SIDE_HAIR_SHADOW; c[11, 29] = SIDE_DARK; c[11, 30:] = 0
 
     # Shifted 2 pixels down for shooting pose
     # y=12: Crown/bangs hair & forehead
@@ -426,25 +426,24 @@ def process_sheet():
                 diff = max(rc, gc, bc) - min(rc, gc, bc)
                 lum = 0.299 * rc + 0.587 * gc + 0.114 * bc
                 is_skin = (rc > gc + 14) and (gc > bc + 8) and (rc > 160)
+                is_eye = (15 <= y <= 19) and ((7 <= x <= 12) or (19 <= x <= 24)) and (gc >= 170 and gc >= rc)
+                is_teeth = (c in [1, 8] and y in [20, 21, 22] and 13 <= x <= 18)
 
-                # Hair region (y <= 12 and not skin tone)
-                if y <= 12 and not is_skin:
-                    if min(rc, gc, bc) > 175:
-                        arr_512[gy, gx, :3] = [95, 65, 42]
-                    elif diff < 15 and lum > 50:
-                        if y <= 2 or x <= 4 or x >= 27:
-                            arr_512[gy, gx, :3] = [20, 15, 10]
+                if not (is_eye or is_teeth):
+                    # Check for stray white, light grey, or off-color outline pixels from paper sketch
+                    if (lum > 130 and diff < 35) or (min(rc, gc, bc) > 175) or (diff < 15 and 50 < lum < 185 and not is_skin):
+                        if y <= 13:
+                            if y <= 2 or x <= 4 or x >= 27:
+                                arr_512[gy, gx, :3] = [20, 15, 10]
+                            else:
+                                arr_512[gy, gx, :3] = [95, 65, 42]
                         else:
-                            arr_512[gy, gx, :3] = [95, 65, 42]
-                # Face / skin / mask region (y >= 13)
-                else:
-                    is_eye = (14 <= y <= 19) and ((6 <= x <= 12) or (19 <= x <= 25) or (13 <= x <= 17)) and (gc >= 180 and gc >= rc)
-                    is_teeth = (c == 8 and y in [20, 21] and 14 <= x <= 17)
-                    if not (is_eye or is_teeth):
-                        if min(rc, gc, bc) > 185:
-                            arr_512[gy, gx, :3] = [225, 190, 175]
-                        elif diff < 12 and 50 < lum < 185 and not is_skin:
-                            arr_512[gy, gx, :3] = [225, 190, 175]
+                            if x <= 4 or x >= 27 or y >= 24:
+                                arr_512[gy, gx, :3] = [20, 15, 10]
+                            elif x <= 6 or x >= 25 or y >= 22:
+                                arr_512[gy, gx, :3] = [205, 160, 145]
+                            else:
+                                arr_512[gy, gx, :3] = [225, 190, 175]
 
     # 4B. Build authentic single-eye superhero side head frames (Col 2 Idle & Col 3 Shooting)
     print("Applying authentic single-eye superhero side head for Col 2 (Idle) and Col 3 (Shooting)...")
