@@ -1,49 +1,38 @@
+"""
+tools/build_menu_sheets.py
+Embeds 48x52 character menu portraits into 160x160 character menu sheets
+at (56, 2, 104, 54), zeroing dirty alpha and preserving name text.
+"""
+
 import os
 from PIL import Image
 
-PROJECT_DIR = r"C:\Users\danic\Desktop\green_lantern_mod"
-ARTIFACT_DIR = r"C:\Users\danic\.gemini\antigravity\brain\d0abad69-7124-472e-9088-fe0a1a3473a9"
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(TOOLS_DIR)
 
-from test_generate_menu_portraits import create_hal_menu_portrait, create_tainted_menu_portrait
-
-def build_menu_sheet(base_path, portrait_img):
-    sheet = Image.open(base_path).convert("RGBA")
-    
-    # 1. Clear portrait crop area (56, 2, 104, 54)
-    # Ensure zero dirty alpha in the area
+def build_menu_sheet(base_sheet_path: str, portrait_img: Image.Image) -> Image.Image:
+    sheet = Image.open(base_sheet_path).convert("RGBA")
     pix = sheet.load()
+
+    # 1. Clear portrait crop area (56, 2, 104, 54)
     for y in range(2, 54):
         for x in range(56, 104):
             pix[x, y] = (0, 0, 0, 0)
-            
-    # Also clean any stray pixels between Y=44 and Y=54 across the entire sheet
-    for y in range(45, 54):
+
+    # Clean stray artifact line between Y=44 and Y=53
+    for y in range(44, 54):
         for x in range(160):
-            pix[x, y] = (0, 0, 0, 0)
+            if y < 54:
+                pix[x, y] = (0, 0, 0, 0)
 
     # 2. Paste new handmade portrait
     sheet.paste(portrait_img, (56, 2), portrait_img)
 
-    # 3. Sanitize zero alpha channel everywhere
-    for y in range(160):
-        for x in range(160):
+    # 3. Sanitize zero dirty alpha
+    w, h = sheet.size
+    for y in range(h):
+        for x in range(w):
             if pix[x, y][3] == 0:
                 pix[x, y] = (0, 0, 0, 0)
 
     return sheet
-
-if __name__ == "__main__":
-    h_port = create_hal_menu_portrait()
-    t_port = create_tainted_menu_portrait()
-
-    hal_sheet = build_menu_sheet(os.path.join(PROJECT_DIR, "content/gfx/hal_charactermenu.png"), h_port)
-    t_sheet = build_menu_sheet(os.path.join(PROJECT_DIR, "content/gfx/tainted_charactermenu.png"), t_port)
-
-    # Save test sheets to artifact dir
-    hal_sheet.save(os.path.join(ARTIFACT_DIR, "test_hal_charactermenu.png"))
-    t_sheet.save(os.path.join(ARTIFACT_DIR, "test_tainted_charactermenu.png"))
-
-    print("Audit test sheets:")
-    for name, sh in [("Hal Menu", hal_sheet), ("Tainted Menu", t_sheet)]:
-        dirty = sum(1 for p in sh.getdata() if p[3] == 0 and p[:3] != (0, 0, 0))
-        print(f"  {name}: size={sh.size}, bbox={sh.getbbox()}, dirty_alpha={dirty}")
