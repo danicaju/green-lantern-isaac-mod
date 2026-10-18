@@ -251,33 +251,67 @@ return function(Core)
 
           -- Spammeable discrete rays destroy themselves when hitting room walls
           local hitWall = false
+          local impactPos = tear.Position
           if Core.IsWallAtPos then
               local pos = tear.Position
               local vel = tear.Velocity
-              if Core.IsWallAtPos(pos) then
-                  hitWall = true
-              elseif vel and vel.Length and vel:Length() > 0.1 then
-                  local dir = vel.Normalized and vel:Normalized() or vel
-                  local leadDist = math.max(6.0, (tear.Size or 12.0) * 0.8)
-                  local checkPos = (Vector and Vector(pos.X + dir.X * leadDist, pos.Y + dir.Y * leadDist)) or { X = pos.X + dir.X * leadDist, Y = pos.Y + dir.Y * leadDist }
-                  if Core.IsWallAtPos(checkPos) then
+              local speed = (vel and vel.Length and vel:Length()) or 0
+              local hasVel = speed > 0.1
+              local dir = hasVel and (vel.Normalized and vel:Normalized() or vel) or (td.glBeamVel and (td.glBeamVel.Normalized and td.glBeamVel:Normalized() or td.glBeamVel)) or (Vector and Vector(1, 0)) or { X = 1, Y = 0 }
+              local leadDist = math.max((tear.Size or 12.0) * 0.8, speed)
+              local checkPos = (Vector and Vector(pos.X + dir.X * leadDist, pos.Y + dir.Y * leadDist)) or { X = pos.X + dir.X * leadDist, Y = pos.Y + dir.Y * leadDist }
+
+              if td.hasEnteredRoom == false then
+                  if not Core.IsWallAtPos(pos) then
+                      td.hasEnteredRoom = true
+                  elseif (tear.FrameCount or 0) >= 5 or Core.IsWallAtPos(checkPos) then
                       hitWall = true
+                      impactPos = pos
+                  end
+              else
+                  if Core.IsWallAtPos(pos) then
+                      hitWall = true
+                      local inRoomPos = (Vector and Vector(pos.X - dir.X * leadDist, pos.Y - dir.Y * leadDist)) or { X = pos.X - dir.X * leadDist, Y = pos.Y - dir.Y * leadDist }
+                      if not Core.IsWallAtPos(inRoomPos) then
+                          local lo = inRoomPos
+                          local hi = pos
+                          for _ = 1, 4 do
+                              local mid = (Vector and Vector((lo.X + hi.X) * 0.5, (lo.Y + hi.Y) * 0.5)) or { X = (lo.X + hi.X) * 0.5, Y = (lo.Y + hi.Y) * 0.5 }
+                              if Core.IsWallAtPos(mid) then hi = mid else lo = mid end
+                          end
+                          impactPos = (Vector and Vector((lo.X + hi.X) * 0.5, (lo.Y + hi.Y) * 0.5)) or { X = (lo.X + hi.X) * 0.5, Y = (lo.Y + hi.Y) * 0.5 }
+                      else
+                          impactPos = pos
+                      end
+                  elseif hasVel and Core.IsWallAtPos(checkPos) then
+                      hitWall = true
+                      local lo = pos
+                      local hi = checkPos
+                      for _ = 1, 4 do
+                          local mid = (Vector and Vector((lo.X + hi.X) * 0.5, (lo.Y + hi.Y) * 0.5)) or { X = (lo.X + hi.X) * 0.5, Y = (lo.Y + hi.Y) * 0.5 }
+                          if Core.IsWallAtPos(mid) then hi = mid else lo = mid end
+                      end
+                      impactPos = (Vector and Vector((lo.X + hi.X) * 0.5, (lo.Y + hi.Y) * 0.5)) or { X = (lo.X + hi.X) * 0.5, Y = (lo.Y + hi.Y) * 0.5 }
                   end
               end
           end
 
           if hitWall then
               td.isGLRingBeam = false
+              tear.Position = impactPos
               tear.Visible = false
+              pcall(function() tear.CollisionDamage = 0 end)
               pcall(function()
                   if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-                  local vol = (Core.SFX_VOLUME_MULT or 1.0)
-                  if SFXManager and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
+                  if Core.PlayRingSound and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
+                      Core.PlayRingSound(SoundEffect.SOUND_TEARIMPACTS, 0.65, 1.15)
+                  elseif SFXManager and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
+                      local vol = (Core.SFX_VOLUME_MULT or 1.0)
                       SFXManager():Play(SoundEffect.SOUND_TEARIMPACTS, 0.65 * vol, 0, false, 1.15)
                   end
                   if Isaac and Isaac.Spawn and EntityType and EffectVariant and EffectVariant.WATER_SPLASH then
                       local zeroVec = (Vector and Vector.Zero) or { X = 0, Y = 0 }
-                      local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, tear.Position, zeroVec, tear)
+                      local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, impactPos, zeroVec, tear)
                       if fx and Core.SetEntityScaleAndColor then
                           Core.SetEntityScaleAndColor(fx, 0.60, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
                       end

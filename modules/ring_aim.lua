@@ -115,6 +115,9 @@ return function(Core)
       local td = tear:GetData()
       td.isGLRingBeam = true
       td.glBeamScale = scaleMult or 1.0
+      if td.hasEnteredRoom == nil then
+        td.hasEnteredRoom = not (Core.IsWallAtPos and Core.IsWallAtPos(tear.Position))
+      end
       if tear.Velocity and tear.Velocity:Length() > 0.1 then
         td.glBeamVel = Vector(tear.Velocity.X, tear.Velocity.Y)
       end

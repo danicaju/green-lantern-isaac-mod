@@ -100,6 +100,37 @@ check(mathCore.IsWallAtPos(Vector(200, 200)) == true, "Grid collision WALL is re
 mockGridCol = GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER
 check(mathCore.IsWallAtPos(Vector(200, 200)) == true, "Grid collision WALL_EXCEPT_PLAYER is recognized as a wall")
 
+-- GridEntityType.GRID_WALL via GetGridEntityFromPos -> IS a wall
+GridEntityType = { GRID_WALL = 4 }
+local mockWallEnt = { GetType = function() return GridEntityType.GRID_WALL end }
+Game = function()
+  return {
+    GetRoom = function()
+      return {
+        IsPositionInRoom = function(_, pos, margin) return true end,
+        GetGridCollisionAtPos = function(_, pos) return GridCollisionClass.COLLISION_NONE end,
+        GetGridEntityFromPos = function(_, pos) return (pos.X >= 500) and mockWallEnt or nil end,
+      }
+    end,
+    GetFrameCount = function() return 10 end,
+  }
+end
+check(mathCore.IsWallAtPos(Vector(550, 200)) == true, "GridEntityType.GRID_WALL is recognized as a wall")
+check(mathCore.IsWallAtPos(Vector(200, 200)) == false, "Position without GRID_WALL is not a wall")
+
+-- Restore original Game mock
+Game = function()
+  return {
+    GetRoom = function()
+      return {
+        IsPositionInRoom = function(_, pos, margin) return mockInRoom end,
+        GetGridCollisionAtPos = function(_, pos) return mockGridCol end,
+      }
+    end,
+    GetFrameCount = function() return 10 end,
+  }
+end
+
 -- Outside room boundary (IsPositionInRoom == false) -> IS a wall
 mockInRoom = false
 mockGridCol = GridCollisionClass.COLLISION_NONE
@@ -199,15 +230,57 @@ postTearUpdateFn(nil, rayTear)
 check(tearDied == false and tearRemoved == false, "Ray in open room does NOT die")
 check(rayTear:GetData().isGLRingBeam == true, "Ray in open room remains isGLRingBeam = true")
 
--- Now ray approaches wall: X = 395, velocity = (10, 0), leadDist = 10.4
--- checkPos.X = 405.4 >= 400 -> Hits wall and destroys itself!
+-- Now ray approaches wall: X = 395, velocity = (10, 0), speed = 10, leadDist = 10.4
+-- checkPos.X = 405.4 >= 400 -> Hits wall and destroys itself on wall surface!
 rayTear.Position = Vector(395, 100)
+spawnedFx = {}
+playedSounds = {}
 postTearUpdateFn(nil, rayTear)
 check(tearDied == true, "Ray destroying itself calls Die() upon hitting wall")
 check(rayTear:GetData().isGLRingBeam == false, "Ray isGLRingBeam cleared upon wall collision")
 check(rayTear.Visible == false, "Ray visibility set to false upon wall collision")
 check(#spawnedFx > 0, "Emerald splash effect spawned when ray destroys itself on wall")
 check(#playedSounds > 0, "Tear impact sound played when ray destroys itself on wall")
+check(spawnedFx[1].Position.X >= 395 and spawnedFx[1].Position.X <= 400.1, "Splash spawned exactly at wall boundary surface")
+
+-- Fast ray: velocity = (20, 0), pos = 385, checkPos.X = 405 >= 400 -> Hits wall cleanly
+tearDied = false
+local fastRay = {
+  Position = Vector(385, 100),
+  Velocity = Vector(20, 0),
+  Visible = true,
+  TearFlags = 3,
+  Size = 13,
+  GetSprite = function() return { Color = {}, GetAnimation = function() return "Idle" end, Load = function() end, Play = function() end } end,
+  GetData = function(self) self._d = self._d or { isGLRingBeam = true }; return self._d end,
+  Die = function() tearDied = true end,
+}
+postTearUpdateFn(nil, fastRay)
+check(tearDied == true, "Fast ray (speed 20) correctly detects wall and calls Die()")
+check(fastRay.Position.X >= 398 and fastRay.Position.X <= 400.1, "Fast ray impact point is accurately clamped to wall surface")
+
+-- Inward shot while flying at wall margin: starts at X = 405 (in wall margin), moving LEFT into open room (vel = -15, 0)
+local inwardDied = false
+local inwardRay = {
+  Position = Vector(405, 100),
+  Velocity = Vector(-15, 0),
+  Visible = true,
+  TearFlags = 3,
+  Size = 13,
+  FrameCount = 0,
+  GetSprite = function() return { Color = {}, GetAnimation = function() return "Idle" end, Load = function() end, Play = function() end } end,
+  GetData = function(self) self._d = self._d or { isGLRingBeam = true, hasEnteredRoom = false }; return self._d end,
+  Die = function() inwardDied = true end,
+}
+postTearUpdateFn(nil, inwardRay)
+check(inwardDied == false, "Inward shot from wall border does NOT die immediately on frame 0/1")
+check(inwardRay:GetData().isGLRingBeam == true, "Inward shot remains isGLRingBeam = true while entering room")
+
+-- Next frame inward ray has entered room: pos = 390 < 400
+inwardRay.Position = Vector(390, 100)
+postTearUpdateFn(nil, inwardRay)
+check(inwardDied == false, "Inward ray inside room remains alive")
+check(inwardRay:GetData().hasEnteredRoom == true, "Inward ray hasEnteredRoom updated to true")
 
 -- ===================== TEST 4: GIANT FIST DESTROYS ROCKS WITHOUT POISON =====================
 local rockDestroyed = false

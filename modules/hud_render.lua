@@ -267,7 +267,9 @@ return function(Core)
               tear.Visible = false
               pcall(function() if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end end)
 
-              if isStuck then
+              if Core.IsWallAtPos and Core.IsWallAtPos(tear.Position) then
+                -- Ray reached room wall: do not render sprite in or beyond the wall
+              elseif isStuck then
                 local screenPos = Isaac.WorldToScreen(tear.Position)
                 if Core.glBeamTearSprite then
                   Core.glBeamTearSprite:SetFrame("EnergyNode", animFrame)

@@ -79,20 +79,14 @@ return function(Core)
       local spin = (frame * 5) % 360
       return { spin, (spin + 90) % 360, (spin + 180) % 360, (spin + 270) % 360 }
     end
-    if count <= 1 then
-      return { 0 }
-    elseif count == 2 then
-      return { -4.5, 4.5 }
-    elseif count == 3 then
-      return { -9.0, 0, 9.0 }
-    elseif count == 4 then
-      return { -13.5, -4.5, 4.5, 13.5 }
+    if count <= 1 then return { 0 }
+    elseif count == 2 then return { -4.5, 4.5 }
+    elseif count == 3 then return { -9.0, 0, 9.0 }
+    elseif count == 4 then return { -13.5, -4.5, 4.5, 13.5 }
     else
       local angles = {}
       local step = 30.0 / math.max(1, count - 1)
-      for i = 1, count do
-        table.insert(angles, -15.0 + (i - 1) * step)
-      end
+      for i = 1, count do table.insert(angles, -15.0 + (i - 1) * step) end
       return angles
     end
   end
@@ -110,9 +104,14 @@ return function(Core)
       end
       if room.GetGridCollisionAtPos and GridCollisionClass then
         local col = room:GetGridCollisionAtPos(p)
-        if col == GridCollisionClass.COLLISION_WALL
-          or (GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER and col == GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER)
-        then
+        if col == GridCollisionClass.COLLISION_WALL or (GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER and col == GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER) then
+          isWall = true
+          return
+        end
+      end
+      if room.GetGridEntityFromPos and GridEntityType and GridEntityType.GRID_WALL then
+        local ge = room:GetGridEntityFromPos(p)
+        if ge and ge.GetType and ge:GetType() == GridEntityType.GRID_WALL then
           isWall = true
           return
         end
