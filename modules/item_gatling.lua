@@ -68,13 +68,21 @@ return function(Core)
     local data = Core.GetPlayerData(player)
     if data and data.gatlingTimer and data.gatlingTimer > 0 then
       if not Core.IsRingActive(player) then
-        tear:GetSprite().Color = Color(0.12, 1.0, 0.35, 1.0, 0.08, 0.65, 0.12)
+        local spr = tear.GetSprite and tear:GetSprite()
+        if spr then spr.Color = Color(0.12, 1.0, 0.35, 1.0, 0.08, 0.65, 0.12) end
         if tear.AddTearFlags then
           tear:AddTearFlags(TearFlags.TEAR_SPECTRAL)
           tear:AddTearFlags(TearFlags.TEAR_PIERCING)
         elseif tear.TearFlags then
           pcall(function()
-            tear.TearFlags = tear.TearFlags + (TearFlags and TearFlags.TEAR_SPECTRAL or 0) + (TearFlags and TearFlags.TEAR_PIERCING or 0)
+            local tfSpec = (TearFlags and TearFlags.TEAR_SPECTRAL) or 0
+            local tfPier = (TearFlags and TearFlags.TEAR_PIERCING) or 0
+            local cur = tear.TearFlags
+            if type(cur) == "number" then
+              if tfSpec > 0 and (cur % (tfSpec * 2) < tfSpec) then cur = cur + tfSpec end
+              if tfPier > 0 and (cur % (tfPier * 2) < tfPier) then cur = cur + tfPier end
+              tear.TearFlags = cur
+            end
           end)
         end
         pcall(function()

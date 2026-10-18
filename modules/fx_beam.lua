@@ -6,7 +6,8 @@ return function(Core)
         if not sparkSpr then return end
 
         local frame = Game():GetFrameCount()
-        local currentRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
+        local level = Game and Game().GetLevel and Game():GetLevel()
+        local currentRoomIdx = level and level:GetCurrentRoomIndex() or -1
         for _, sp in ipairs(Core.activeEmeraldSparks) do
             if sp and sp.roomIdx == currentRoomIdx then
                 if sp.collected and (onlyCollected == true or onlyCollected == nil) then

@@ -120,10 +120,10 @@ return function(Core)
     -- 2. ONDA DE MIEDO DE PARALLAX AL ENTRAR A UNA SALA HOSTIL
     function Core.EmitParallaxFearWave(player)
         if not player then return end
-        local room = Game():GetRoom()
+        local room = Game and Game().GetRoom and Game():GetRoom()
         local enemyCount = 0
         for _, ent in ipairs(Isaac.GetRoomEntities()) do
-            if ent:IsActiveEnemy(false) and ent:IsVulnerableEnemy() then
+            if ent and ent.IsActiveEnemy and ent:IsActiveEnemy(false) and ent.IsVulnerableEnemy and ent:IsVulnerableEnemy() then
                 enemyCount = enemyCount + 1
                 pcall(function()
                     ent:AddFear(EntityRef(player), 120)

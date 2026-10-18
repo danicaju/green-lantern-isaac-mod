@@ -86,7 +86,8 @@ return function(Core)
     if #Core.activeEmeraldSparks == 0 then return end
 
     local currentFrame = Game():GetFrameCount()
-    local currentRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    local level = Game and Game().GetLevel and Game():GetLevel()
+    local currentRoomIdx = level and level:GetCurrentRoomIndex() or -1
 
     for idx = #Core.activeEmeraldSparks, 1, -1 do
       local sp = Core.activeEmeraldSparks[idx]

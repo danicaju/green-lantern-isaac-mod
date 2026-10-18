@@ -5,7 +5,7 @@ return function(Core)
   local GL = Core.GL
 
   GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
-    local room = Game():GetRoom()
+    local room = Game and Game().GetRoom and Game():GetRoom()
     if room and room:GetType() == RoomType.ROOM_ANGEL then
       local hasTaintedHal = false
       for i = 0, Game():GetNumPlayers() - 1 do

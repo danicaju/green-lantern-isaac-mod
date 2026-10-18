@@ -138,7 +138,8 @@ end
 Core.activeEmeraldSparks = {}
 
 function Core.SpawnLanternEmblemDrop(pos)
-    local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    local level = Game and Game().GetLevel and Game():GetLevel()
+    local roomIdx = level and level:GetCurrentRoomIndex() or -1
     table.insert(Core.activeEmeraldSparks, {
         pos          = Vector(pos.X, pos.Y),
         spawnFrame   = Game():GetFrameCount(),

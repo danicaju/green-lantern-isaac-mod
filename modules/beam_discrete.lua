@@ -363,7 +363,7 @@ return function(Core)
       end
 
       if not (td and td.isGLRingBeam) then return end
-      if not (collider and collider:IsActiveEnemy(false) and collider:IsVulnerableEnemy()) then return end
+      if not (collider and collider.IsActiveEnemy and collider:IsActiveEnemy(false) and collider.IsVulnerableEnemy and collider:IsVulnerableEnemy()) then return end
 
       local frame = Game():GetFrameCount()
       if not td.lastPierceFlashFrame or (frame - td.lastPierceFlashFrame) >= 5 then

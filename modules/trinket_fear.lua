@@ -8,7 +8,7 @@ return function(Core)
     if entity.Type ~= EntityType.ENTITY_PLAYER then return end
     local player = entity:ToPlayer()
     if not player then return end
-    if not (Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)) then return end
+    if not (Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)) then return end
 
     local data = Core.GetPlayerData(player)
     if data.shieldBlockedFrame == Game():GetFrameCount() then return end
@@ -32,7 +32,7 @@ return function(Core)
     for i = 0, Game():GetNumPlayers() - 1 do
       local player = Isaac.GetPlayer(i)
       if player then
-        local hasTrinket = Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)
+        local hasTrinket = Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY)
         local data = Core.GetPlayerData(player)
         if data.fearSkullTimer and data.fearSkullTimer > 0 then
           data.fearSkullTimer = data.fearSkullTimer - 1

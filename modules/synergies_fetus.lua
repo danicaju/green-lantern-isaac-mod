@@ -179,7 +179,7 @@ return function(Core)
         if hasEpic then
             local aimDir = NormalizeVector(dir, data.lastShootDir or Vector(1, 0))
             local targetPos = Vector(player.Position.X + aimDir.X * 180, player.Position.Y + aimDir.Y * 180)
-            local room = Game():GetRoom()
+            local room = Game and Game().GetRoom and Game():GetRoom()
             if room and room.GetClampedPosition then targetPos = room:GetClampedPosition(targetPos, 20) end
             local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
             local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, targetPos, Vector.Zero, player)
@@ -238,7 +238,7 @@ return function(Core)
         if hasEpic and (frame % 45 == 0) then
             local aimDir = NormalizeVector(shootDir, Vector(1, 0))
             local strikePos = nil
-            local room = Game():GetRoom()
+            local room = Game and Game().GetRoom and Game():GetRoom()
             local ents = Isaac.FindInRadius and Isaac.FindInRadius(player.Position + aimDir * 150, 180, EntityPartition and EntityPartition.ENEMY or 0)
             if ents then
                 for _, e in ipairs(ents) do

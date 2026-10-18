@@ -181,9 +181,9 @@ return function(Core)
           end)
         end
 
-        local room = Game():GetRoom()
-        local gridIdx = room:GetGridIndex(tear.Position)
-        if gridIdx >= 0 then
+        local room = Game and Game().GetRoom and Game():GetRoom()
+        local gridIdx = room and room:GetGridIndex(tear.Position) or -1
+        if room and gridIdx >= 0 then
           local gridEntity = room:GetGridEntity(gridIdx)
           if gridEntity then
             local gtype = gridEntity:GetType()
@@ -192,6 +192,11 @@ return function(Core)
             or gtype == GridEntityType.GRID_ROCKT
             or gtype == GridEntityType.GRID_ROCK_BOMB
             or gtype == GridEntityType.GRID_ROCK_ALT
+            or (GridEntityType.GRID_ROCK_SS and gtype == GridEntityType.GRID_ROCK_SS)
+            or (GridEntityType.GRID_ROCK_SPIKED and gtype == GridEntityType.GRID_ROCK_SPIKED)
+            or (GridEntityType.GRID_ROCK_ALT2 and gtype == GridEntityType.GRID_ROCK_ALT2)
+            or (GridEntityType.GRID_ROCK_GOLD and gtype == GridEntityType.GRID_ROCK_GOLD)
+            or (GridEntityType.GRID_TNT and gtype == GridEntityType.GRID_TNT)
             or gtype == GridEntityType.GRID_POOP then
               gridEntity:Destroy(false)
               pcall(function()

@@ -72,7 +72,10 @@ local function makePlayer(pType)
         AddTrinket = function(s, id) s._trinkets[id] = true end,
         GetSoulHearts = function(s) return s._soulHearts end,
         AddSoulHearts = function(s, h) s._soulHearts = s._soulHearts + h end,
-        GetActiveItem = function(s, slot) return slot == 0 and 102 or 0 end,
+        GetActiveItem = function(s, slot) return slot == 0 and 102 or (slot == 2 and s._pocketItem or 0) end,
+        SetPocketActiveItem = function(s, id, slot, active) s._items[id] = true; s._pocketItem = id end,
+        FullCharge = function(s, slot, force) end,
+        AddBlackHearts = function(s, h) s._soulHearts = s._soulHearts + h end,
         NeedsCharge = function(s, slot) return true end,
         GetActiveCharge = function(s, slot) return s._activeCharge[slot] or 0 end,
         SetActiveCharge = function(s, c, slot) s._activeCharge[slot] = c end,
@@ -131,6 +134,15 @@ check(mockPlayer:HasCollectible(mockCore.ITEM_GIANT_FIST), "In Brightest Day gra
 check(mockPlayer:HasCollectible(mockCore.ITEM_POWER_BATTERY), "In Brightest Day grants Power Battery")
 check(mockPlayer._data.oathText:find("IN BRIGHTEST DAY") ~= nil, "In Brightest Day oath text set")
 
+check(mockPlayer._data.willpower == mockCore.WILLPOWER_MAX, "In Brightest Day initializes Willpower to max")
+check(mockPlayer._pocketItem == mockCore.ITEM_POWER_BATTERY, "In Brightest Day puts Power Battery in pocket item slot")
+
+-- Floor advance in Challenge 1 preserves blindfold
+mockPlayer.CanShoot = true
+activeStage = 2
+postNewLevelCb(nil)
+check(mockPlayer.CanShoot == false, "In Brightest Day re-enforces blindfold on floor advance")
+
 -- Test room clear bonus in Challenge 1
 mockPlayer._data.willpower = 40
 mockPlayer._activeCharge[0] = 0
@@ -144,6 +156,7 @@ mockPlayer = makePlayer(0)
 postGameStartedCb(nil, false)
 check(mockPlayer:GetPlayerType() == mockCore.PLAYER_HAL, "Emerald Twilight starts as Hal Jordan")
 check(mockPlayer:HasCollectible(mockCore.ITEM_COAST_CITY), "Emerald Twilight grants Coast City")
+check(mockPlayer._pocketItem == mockCore.ITEM_POWER_BATTERY, "Emerald Twilight grants Power Battery in pocket slot")
 check(mockPlayer._data.stolenRings == 1, "Emerald Twilight starts with 1 Stolen Ring")
 check(mockPlayer._data.oathText:find("EMERALD TWILIGHT") ~= nil, "Emerald Twilight oath set")
 
@@ -155,6 +168,7 @@ check(mockPlayer._data.stolenRings == 3, "Emerald Twilight adds +2 Stolen Rings 
 activeStage = 9
 postNewLevelCb(nil)
 check(mockPlayer:GetPlayerType() == mockCore.PLAYER_TAINTED_HAL, "Emerald Twilight transforms into Parallax in late game (Stage 9+)")
+check(mockPlayer._pocketItem == mockCore.ITEM_COAST_CITY, "Emerald Twilight Parallax transition grants Coast City pocket")
 check(mockPlayer._data.oathText:find("PARALLAX") ~= nil, "Parallax transformation oath set")
 
 -- Test Challenge 3: Blackest Night
@@ -164,7 +178,9 @@ addedCurses = 0
 postGameStartedCb(nil, false)
 check(mockPlayer:GetPlayerType() == mockCore.PLAYER_TAINTED_HAL, "Blackest Night sets Tainted Hal")
 check(mockPlayer:HasCollectible(mockCore.ITEM_COAST_CITY), "Blackest Night grants Coast City")
+check(mockPlayer._pocketItem == mockCore.ITEM_COAST_CITY, "Blackest Night puts Coast City in pocket slot")
 check(mockPlayer:HasTrinket(mockCore.TRINKET_YELLOW_IMPURITY), "Blackest Night grants Yellow Impurity")
+check(mockPlayer._soulHearts >= 6, "Blackest Night gives starting black hearts")
 check(mockPlayer._data.oathText:find("BLACKEST NIGHT") ~= nil, "Blackest Night oath set")
 
 postNewLevelCb(nil)
@@ -177,6 +193,8 @@ addedCurses = 0
 postGameStartedCb(nil, false)
 check(mockPlayer:GetPlayerType() == mockCore.PLAYER_HAL, "Sinestro Corps War sets Hal Jordan")
 check(mockPlayer:HasTrinket(mockCore.TRINKET_YELLOW_IMPURITY), "Sinestro Corps War grants Yellow Impurity")
+check(mockPlayer._pocketItem == mockCore.ITEM_POWER_BATTERY, "Sinestro Corps War puts Power Battery in pocket slot")
+check(mockPlayer._data.willpower == mockCore.WILLPOWER_MAX, "Sinestro Corps War initializes Willpower to max")
 check(mockPlayer._data.oathText:find("NO EVIL SHALL ESCAPE") ~= nil, "Sinestro Corps War oath set")
 
 postNewLevelCb(nil)

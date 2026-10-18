@@ -654,6 +654,7 @@ local testP = {
     ChangePlayerType = function(self, t) self._pType = t end,
     HasCollectible = function(self, id) return self._items[id] == true end,
     AddCollectible = function(self, id) self._items[id] = true end,
+    SetPocketActiveItem = function(self, id, slot, active) self._items[id] = true end,
     HasTrinket = function(self, id) return self._trinkets[id] == true end,
     AddTrinket = function(self, id) self._trinkets[id] = true end,
 }

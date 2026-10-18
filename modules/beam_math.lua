@@ -251,7 +251,7 @@ return function(Core)
     end
 
     -- Damage destroyable grid entities (GRID_POOP, GRID_TNT) along the beam ray (including lateral beam width)
-    local room = Game():GetRoom()
+    local room = Game and Game().GetRoom and Game():GetRoom()
     if room and GridEntityType then
       local visitedGrid = {}
       local perp = Vector(-segDir.Y, segDir.X)

@@ -27,7 +27,8 @@ return function(Core)
     data.coastCityFrame  = Game():GetFrameCount()
     data.ringFlareTimer  = 14
 
-    local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    local level = Game and Game().GetLevel and Game():GetLevel()
+    local roomIdx = level and level:GetCurrentRoomIndex() or -1
 
     -- Store 5-second vortex state in this player's slot (co-op safe)
     local cc = Core.GetCoastCity(player)
@@ -85,8 +86,8 @@ return function(Core)
       return
     end
 
-    local room        = Game():GetRoom()
-    local center      = room:GetCenterPos()
+    local room        = Game and Game().GetRoom and Game():GetRoom()
+    local center      = (room and room.GetCenterPos and room:GetCenterPos()) or Vector(320, 280)
     local ownerPlayer = cc.owner or Isaac.GetPlayer(0)
     local sparkBonus  = cc.sparkBonus or 1.0
 
@@ -132,7 +133,8 @@ return function(Core)
 
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
     local currentFrame = Game():GetFrameCount()
-    local roomIdx      = Game():GetLevel():GetCurrentRoomIndex()
+    local level        = Game and Game().GetLevel and Game():GetLevel()
+    local roomIdx      = level and level:GetCurrentRoomIndex() or -1
     for _, cc in pairs(Core.activeCoastCityByPlayer) do
       if cc.active then
         RenderCoastCityVortex(cc, currentFrame, roomIdx)

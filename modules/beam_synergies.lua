@@ -40,7 +40,7 @@ return function(Core)
             if data.lastLaserDrainFrame ~= frame then
                 data.lastLaserDrainFrame = frame
                 local prevWillBucket = math.floor((data.willpower or Core.WILLPOWER_MAX) + 0.5)
-                data.willpower = math.max(0, data.willpower - 1.2)
+                data.willpower = math.max(0, (data.willpower or Core.WILLPOWER_MAX) - 1.2)
                 local newWillBucket = math.floor(data.willpower + 0.5)
                 if data.willpower <= 0 then
                     Core.TriggerHalRingDepleted(player)

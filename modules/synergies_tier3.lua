@@ -117,7 +117,7 @@ return function(Core)
 
     -- 3. POST-NEW-ROOM: Blanket (540) Emerald Aegis Dome
     GL:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function(_)
-        local room = Game():GetRoom()
+        local room = Game and Game().GetRoom and Game():GetRoom()
         local isBossRoom = room and room.GetType and (room:GetType() == (RoomType.ROOM_BOSS or 4))
         if not isBossRoom then return end
 

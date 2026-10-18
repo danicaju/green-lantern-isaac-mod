@@ -44,9 +44,19 @@ return function(Core)
                     if Core.ITEM_GIANT_FIST and not player:HasCollectible(Core.ITEM_GIANT_FIST) then
                         player:AddCollectible(Core.ITEM_GIANT_FIST, 4, false)
                     end
-                    if Core.ITEM_POWER_BATTERY and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
-                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false)
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                                player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                            end
+                        elseif player.AddCollectible and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
+                            player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false)
+                        end
                     end
+                    data.willpower = Core.WILLPOWER_MAX
+                    data.ringDepleted = false
                     if player.GetSoulHearts and player.AddSoulHearts and player:GetSoulHearts() < 4 then
                         player:AddSoulHearts(4 - player:GetSoulHearts())
                     end
@@ -57,6 +67,17 @@ return function(Core)
                     -- Desafio 2: Emerald Twilight (La caida de Hal Jordan)
                     if Core.PLAYER_HAL and Core.PLAYER_HAL >= 0 and player:GetPlayerType() ~= Core.PLAYER_HAL then
                         pcall(function() player:ChangePlayerType(Core.PLAYER_HAL) end)
+                    end
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                                player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                            end
+                        elseif player.AddCollectible and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
+                            player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false)
+                        end
                     end
                     if Core.ITEM_COAST_CITY and not player:HasCollectible(Core.ITEM_COAST_CITY) then
                         player:AddCollectible(Core.ITEM_COAST_CITY, 4, false)
@@ -70,6 +91,7 @@ return function(Core)
                         player:AddCollectible(nineVoltId, 0, false)
                     end
                     data.willpower = Core.WILLPOWER_MAX
+                    data.ringDepleted = false
                     data.stolenRings = 1
                     data.oathTextTimer = 110
                     data.oathText = "EMERALD TWILIGHT: RECLAIM THE LIGHT!"
@@ -79,8 +101,16 @@ return function(Core)
                     if Core.PLAYER_TAINTED_HAL and Core.PLAYER_TAINTED_HAL >= 0 and player:GetPlayerType() ~= Core.PLAYER_TAINTED_HAL then
                         pcall(function() player:ChangePlayerType(Core.PLAYER_TAINTED_HAL) end)
                     end
-                    if Core.ITEM_COAST_CITY and not player:HasCollectible(Core.ITEM_COAST_CITY) then
-                        player:AddCollectible(Core.ITEM_COAST_CITY, 4, false)
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_COAST_CITY then
+                                player:SetPocketActiveItem(Core.ITEM_COAST_CITY, pocketSlot, true)
+                                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                            end
+                        elseif player.AddCollectible and not player:HasCollectible(Core.ITEM_COAST_CITY) then
+                            player:AddCollectible(Core.ITEM_COAST_CITY, 4, false)
+                        end
                     end
                     if Core.TRINKET_YELLOW_IMPURITY and not player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
                         player:AddTrinket(Core.TRINKET_YELLOW_IMPURITY)
@@ -89,7 +119,14 @@ return function(Core)
                     if not player:HasCollectible(deadCatId) then
                         player:AddCollectible(deadCatId, 0, false)
                     end
+                    if Core.EnforceTaintedHalNoRedHearts then
+                        Core.EnforceTaintedHalNoRedHearts(player)
+                    end
+                    if player.GetSoulHearts and player.AddBlackHearts and (player:GetSoulHearts() or 0) <= 0 then
+                        player:AddBlackHearts(6)
+                    end
                     data.emeraldSparks = 50.0
+                    data.stolenRings = 0
                     data.oathTextTimer = 120
                     data.oathText = "THE BLACKEST NIGHT FALLS FROM THE SKIES..."
 
@@ -105,9 +142,19 @@ return function(Core)
                     if not player:HasCollectible(birthrightId) then
                         player:AddCollectible(birthrightId, 0, false)
                     end
-                    if Core.ITEM_POWER_BATTERY and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
-                        player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false)
+                    local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                    if Core.ITEM_POWER_BATTERY and Core.ITEM_POWER_BATTERY > 0 then
+                        if player.SetPocketActiveItem then
+                            if not player.GetActiveItem or player:GetActiveItem(pocketSlot) ~= Core.ITEM_POWER_BATTERY then
+                                player:SetPocketActiveItem(Core.ITEM_POWER_BATTERY, pocketSlot, true)
+                                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                            end
+                        elseif player.AddCollectible and not player:HasCollectible(Core.ITEM_POWER_BATTERY) then
+                            player:AddCollectible(Core.ITEM_POWER_BATTERY, 4, false)
+                        end
                     end
+                    data.willpower = Core.WILLPOWER_MAX
+                    data.ringDepleted = false
                     data.oathTextTimer = 110
                     data.oathText = "NO EVIL SHALL ESCAPE MY SIGHT!"
                 end
@@ -121,10 +168,19 @@ return function(Core)
         if challengeId <= 0 then return end
 
         local chalBrightest, chalTwilight, chalBlackest, chalSinestro = GetChallengeIds()
-        local level = Game():GetLevel()
+        local level = Game and Game().GetLevel and Game():GetLevel()
         local stage = level and level:GetStage() or 1
 
-        if challengeId == chalBlackest then
+        if challengeId == chalBrightest then
+            -- In Brightest Day: mantener blindfold activo en todos los pisos
+            for i = 0, Game():GetNumPlayers() - 1 do
+                local player = Isaac.GetPlayer(i)
+                if player then
+                    player.CanShoot = false
+                end
+            end
+
+        elseif challengeId == chalBlackest then
             -- Blackest Night: Niebla y oscuridad perpetuas
             if level and level.AddCurse then
                 local curseDark = (LevelCurse and LevelCurse.CURSE_OF_DARKNESS) or 1
@@ -144,6 +200,17 @@ return function(Core)
                     if stage >= 9 and Core.PLAYER_TAINTED_HAL and player:GetPlayerType() ~= Core.PLAYER_TAINTED_HAL then
                         pcall(function()
                             player:ChangePlayerType(Core.PLAYER_TAINTED_HAL)
+                            if Core.EnforceTaintedHalNoRedHearts then
+                                Core.EnforceTaintedHalNoRedHearts(player)
+                            end
+                            if player.GetSoulHearts and player.AddBlackHearts and (player:GetSoulHearts() or 0) <= 0 then
+                                player:AddBlackHearts(4)
+                            end
+                            local pocketSlot = (ActiveSlot and ActiveSlot.SLOT_POCKET) or 2
+                            if Core.ITEM_COAST_CITY and Core.ITEM_COAST_CITY > 0 and player.SetPocketActiveItem then
+                                player:SetPocketActiveItem(Core.ITEM_COAST_CITY, pocketSlot, true)
+                                if player.FullCharge then player:FullCharge(pocketSlot, true) end
+                            end
                             data.oathTextTimer = 120
                             data.oathText = "OA IS FALLEN! I AM PARALLAX!"
                             if Core.PlayRingOverchargeChime then Core.PlayRingOverchargeChime(player) end

@@ -272,9 +272,10 @@ return function(Core)
         player.FireDelay = math.max(player.FireDelay, 2)
       end
     end
-    local count = player:GetCollectibleCount()
-    local activeId = player:GetActiveItem(ActiveSlot.SLOT_PRIMARY)
-    local queueEmpty = player:IsItemQueueEmpty()
+    local primarySlot = (ActiveSlot and ActiveSlot.SLOT_PRIMARY) or 0
+    local count = player.GetCollectibleCount and player:GetCollectibleCount() or 0
+    local activeId = player.GetActiveItem and player:GetActiveItem(primarySlot) or 0
+    local queueEmpty = (player.IsItemQueueEmpty and player:IsItemQueueEmpty()) or true
     if data.lastCollectibleCount ~= count
       or data.lastActiveItem ~= activeId
       or (data.wasQueueEmpty == false and queueEmpty == true)

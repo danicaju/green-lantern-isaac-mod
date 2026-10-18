@@ -118,7 +118,7 @@ return function(Core)
 
     -- TRINKET: YELLOW IMPURITY DAMAGE BUFF (scales with Mom's Box and Golden Trinket)
     if cacheFlag == CacheFlag.CACHE_DAMAGE then
-      if Core.TRINKET_YELLOW_IMPURITY and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
+      if Core.TRINKET_YELLOW_IMPURITY and Core.TRINKET_YELLOW_IMPURITY > 0 and player:HasTrinket(Core.TRINKET_YELLOW_IMPURITY) then
         local mult = 1
         if player.GetTrinketMultiplier then
           local ok, m = pcall(function() return player:GetTrinketMultiplier(Core.TRINKET_YELLOW_IMPURITY) end)

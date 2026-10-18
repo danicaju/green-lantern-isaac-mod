@@ -24,7 +24,8 @@ return function(Core)
     local prevWill = data.willpower or Core.WILLPOWER_MAX
     local wasDepleted = data.ringDepleted
 
-    data.overchargeRoomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    local level = Game and Game().GetLevel and Game():GetLevel()
+    data.overchargeRoomIdx = level and level:GetCurrentRoomIndex() or -1
     data.batteryConstructTimer = 45
     data.ringFlareTimer = 20
 

@@ -4,7 +4,8 @@ return function(Core)
 
   if ModCallbacks.MC_PRE_PLAYER_RENDER then
     GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
-      if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+      local room = Game and Game().GetRoom and Game():GetRoom()
+      if RenderMode and room and room.GetRenderMode and room:GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
       local p0 = Isaac.GetPlayer(0)
       if not p0 or player.Index == p0.Index then
         Core.RenderGLSparkDrops(false)
@@ -25,7 +26,8 @@ return function(Core)
   end
 
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function(_, player, renderOffset)
-    if RenderMode and Game():GetRoom():GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
+    local room = Game and Game().GetRoom and Game():GetRoom()
+    if RenderMode and room and room.GetRenderMode and room:GetRenderMode() == RenderMode.RENDER_WATER_REFLECT then return end
     local p0 = Isaac.GetPlayer(0)
     if not p0 or player.Index == p0.Index then
       if ModCallbacks.MC_PRE_PLAYER_RENDER then
@@ -201,7 +203,10 @@ return function(Core)
           end
         end
         if Core.IsTaintedHal(player) then
-          local pct = math.max(0.0, math.min(1.0, data.emeraldSparks / Core.SPARK_MAX))
+          local sparks = data.emeraldSparks or 0.0
+          local stolen = data.stolenRings or 0
+          local sMax = Core.SPARK_MAX or 100.0
+          local pct = math.max(0.0, math.min(1.0, sparks / sMax))
           local BAR_W = 36
           Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
           local r, g, b = 0.0, 0.85, 0.4
@@ -209,9 +214,9 @@ return function(Core)
           if pct > 0 then
             Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * pct * 0.14, 0.9, r, g, b, 0.95)
           end
-          local label = pct >= 1.0 and "100%" or string.format("%.0f%%", data.emeraldSparks)
-          if data.stolenRings > 0 then
-            label = string.format("%s [%d]", label, data.stolenRings)
+          local label = pct >= 1.0 and "100%" or string.format("%.0f%%", sparks)
+          if stolen > 0 then
+            label = string.format("%s [%d]", label, stolen)
           end
           Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then

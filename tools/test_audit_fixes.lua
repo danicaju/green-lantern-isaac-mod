@@ -233,5 +233,32 @@ check(beamContent:find("local flags = tear.TearFlags%s*local fistHasTB", 1) ~= n
       beamContent:find("local flags = tear.TearFlags%s*\n%s*local fistHasTB", 1) ~= nil,
       "Giant Fist branch defines local flags before fistHasTB check")
 
+-- ===================== TEST 7: ITEM GATLING LUA 5.1 COMPATIBILITY =====================
+local gatlingOk, gatlingModule = pcall(function() return dofile("modules/item_gatling.lua") end)
+check(gatlingOk == true, "modules/item_gatling.lua loads cleanly in Lua 5.1 without syntax errors")
+
+-- ===================== TEST 8: GIANT FIST DESTROYABLE ROCK TYPES =====================
+local fFist = io.open("modules/item_fist.lua", "r")
+check(fFist ~= nil, "modules/item_fist.lua exists")
+local fistContent = fFist:read("*a")
+fFist:close()
+check(fistContent:find("GRID_ROCK_SS", 1, true) ~= nil, "Giant Fist supports GRID_ROCK_SS")
+check(fistContent:find("GRID_ROCK_SPIKED", 1, true) ~= nil, "Giant Fist supports GRID_ROCK_SPIKED")
+check(fistContent:find("GRID_ROCK_GOLD", 1, true) ~= nil, "Giant Fist supports GRID_ROCK_GOLD")
+check(fistContent:find("GRID_TNT", 1, true) ~= nil, "Giant Fist supports GRID_TNT")
+
+-- ===================== TEST 9: LEVEL & ROOM NIL GUARDS =====================
+local fCoast = io.open("modules/item_coastcity.lua", "r")
+local coastContent = fCoast:read("*a")
+fCoast:close()
+check(coastContent:find("local roomIdx%s*=%s*Game%(%):GetLevel%(%):GetCurrentRoomIndex%(%)") == nil,
+      "item_coastcity.lua does not call GetLevel():GetCurrentRoomIndex() unguarded")
+
+local fHud = io.open("modules/hud_render.lua", "r")
+local hudContent = fHud:read("*a")
+fHud:close()
+check(hudContent:find("Game%(%):GetRoom%(%):GetRenderMode%(%)") == nil,
+      "hud_render.lua does not call GetRoom():GetRenderMode() unguarded")
+
 io.stderr:write(string.format("\n[test_audit_fixes] passes=%d failures=%d\n", passes, failures))
 if failures > 0 then os.exit(1) else os.exit(0) end

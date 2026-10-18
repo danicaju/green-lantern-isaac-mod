@@ -28,7 +28,8 @@ return function(Core)
                     data.continuousBeamGraceTimer     = 0
                     data.lastContinuousBeamDir        = nil
                 end
-                local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
+                local level = Game and Game().GetLevel and Game():GetLevel()
+                local roomIdx = level and level:GetCurrentRoomIndex() or -1
                 local needsEval = false
                 if (data.overcharge or data.surgeBuff) and data.overchargeRoomIdx ~= roomIdx then
                     data.overcharge = false
@@ -50,7 +51,7 @@ return function(Core)
         -- Boss Room Dramatic Battle Oath Cue
         pcall(function()
             if Core.BOSS_OATH_CUES_ENABLED ~= false and Game then
-                local room = Game():GetRoom()
+                local room = Game().GetRoom and Game():GetRoom()
                 if room then
                     local rtype = room:GetType()
                     local bossRoomId = (RoomType and RoomType.ROOM_BOSS) or 5
