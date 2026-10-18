@@ -97,6 +97,30 @@ return function(Core)
     end
   end
 
+  -- Room boundary & wall collision detection (shared between continuous beam and discrete rays)
+  function Core.IsWallAtPos(p)
+    if not p then return false end
+    local room = (Game and Game().GetRoom and Game():GetRoom()) or nil
+    if not room then return false end
+    local isWall = false
+    pcall(function()
+      if room.IsPositionInRoom and not room:IsPositionInRoom(p, 0) then
+        isWall = true
+        return
+      end
+      if room.GetGridCollisionAtPos and GridCollisionClass then
+        local col = room:GetGridCollisionAtPos(p)
+        if col == GridCollisionClass.COLLISION_WALL
+          or (GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER and col == GridCollisionClass.COLLISION_WALL_EXCEPT_PLAYER)
+        then
+          isWall = true
+          return
+        end
+      end
+    end)
+    return isWall
+  end
+
   -- Raycast from startWorld along dir across the current Room until hitting a wall (passing spectrally over rocks/pits)
   function Core.ComputeContinuousBeamEndWorld(startWorld, dir, maxRangeOverride)
     if not startWorld then return Vector.Zero end
@@ -120,16 +144,7 @@ return function(Core)
     end
 
     local function IsWallAt(p)
-      if room.IsPositionInRoom and not room:IsPositionInRoom(p, 0) then
-        return true
-      end
-      if room.GetGridCollisionAtPos and GridCollisionClass then
-        local col = room:GetGridCollisionAtPos(p)
-        if col == GridCollisionClass.COLLISION_WALL then
-          return true
-        end
-      end
-      return false
+      return Core.IsWallAtPos(p)
     end
 
     local maxDist = maxRangeOverride or 1600.0

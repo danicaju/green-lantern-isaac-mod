@@ -248,6 +248,49 @@ return function(Core)
           pcall(function()
               if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
           end)
+
+          -- Spammeable discrete rays destroy themselves when hitting room walls
+          local hitWall = false
+          if Core.IsWallAtPos then
+              local pos = tear.Position
+              local vel = tear.Velocity
+              if Core.IsWallAtPos(pos) then
+                  hitWall = true
+              elseif vel and vel.Length and vel:Length() > 0.1 then
+                  local dir = vel.Normalized and vel:Normalized() or vel
+                  local leadDist = math.max(6.0, (tear.Size or 12.0) * 0.8)
+                  local checkPos = (Vector and Vector(pos.X + dir.X * leadDist, pos.Y + dir.Y * leadDist)) or { X = pos.X + dir.X * leadDist, Y = pos.Y + dir.Y * leadDist }
+                  if Core.IsWallAtPos(checkPos) then
+                      hitWall = true
+                  end
+              end
+          end
+
+          if hitWall then
+              td.isGLRingBeam = false
+              tear.Visible = false
+              pcall(function()
+                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
+                  local vol = (Core.SFX_VOLUME_MULT or 1.0)
+                  if SFXManager and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
+                      SFXManager():Play(SoundEffect.SOUND_TEARIMPACTS, 0.65 * vol, 0, false, 1.15)
+                  end
+                  if Isaac and Isaac.Spawn and EntityType and EffectVariant and EffectVariant.WATER_SPLASH then
+                      local zeroVec = (Vector and Vector.Zero) or { X = 0, Y = 0 }
+                      local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, tear.Position, zeroVec, tear)
+                      if fx and Core.SetEntityScaleAndColor then
+                          Core.SetEntityScaleAndColor(fx, 0.60, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                      end
+                  end
+              end)
+              if tear.Die then
+                  tear:Die()
+              else
+                  tear:Remove()
+              end
+              return
+          end
+
           tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
 
           -- Keep discrete Ring Beam bolts flying straight (prevents post-depletion curve/circle artifacts unless homing/orbit is active)

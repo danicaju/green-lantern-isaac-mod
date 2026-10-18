@@ -1,5 +1,5 @@
--- modules/item_fist.lua -- RSI: solo Giant Fist (USE_ITEM + trail/rocas). Sin Willpower, sin beam, sin Coast City.
--- Responsabilidad unica: constructo puno gigante, trail esmeralda y destruccion de rocas. Estado via Core.*, sin globales sueltos.
+-- modules/item_fist.lua -- RSI: solo Giant Fist (USE_ITEM + rocas). Sin Willpower, sin beam, sin Coast City.
+-- Responsabilidad unica: constructo puno gigante y destruccion de rocas. Estado via Core.*, sin globales sueltos.
 return function(Core)
   local GL = Core.GL
 
@@ -92,95 +92,11 @@ return function(Core)
     return true
   end)
 
-  local FIST_POISON_LIFETIME = 60
-
-  local function UpdateFistPoisonCloud(effect, frame)
-    if not effect then return end
-    local ed = effect.GetData and effect:GetData()
-    if not (ed and ed.isGLFistPoison) then return end
-    if frame and ed.lastPoisonTickFrame == frame then return end
-    if frame then ed.lastPoisonTickFrame = frame end
-
-    pcall(function() effect.CollisionDamage = 0 end)
-
-    ed.glPoisonLife = (ed.glPoisonLife or FIST_POISON_LIFETIME) - 1
-    local age = 0
-    pcall(function() age = effect.FrameCount or 0 end)
-
-    if ed.glPoisonLife <= 0 or age >= FIST_POISON_LIFETIME then
-      effect:Remove()
-      return
-    end
-
-    if ed.glPoisonLife < 25 then
-      local alpha = math.max(0.05, (ed.glPoisonLife / 25) * 0.65)
-      pcall(function()
-        effect:GetSprite().Color = Color(0.1, 1.0, 0.35, alpha, 0.05, 0.5, 0.1)
-      end)
-    end
-
-    -- Poison and damage enemy mobs inside the cloud (never damages the player)
-    if ed.glPoisonLife % 12 == 0 and Isaac and Isaac.GetRoomEntities then
-      pcall(function()
-        local owner = ed.glPoisonOwner or (Isaac.GetPlayer and Isaac.GetPlayer(0))
-        local ownerPlayer = (owner and owner.ToPlayer and owner:ToPlayer()) or owner
-        local baseDmg = (ownerPlayer and ownerPlayer.Damage) or 3.5
-        local tickDmg = math.max(1.2, baseDmg * 0.40)
-        for _, ent in ipairs(Isaac.GetRoomEntities()) do
-          if ent and ent.IsActiveEnemy and ent:IsActiveEnemy(false)
-             and ent.IsVulnerableEnemy and ent:IsVulnerableEnemy()
-             and ent.Position and effect.Position then
-            local dist = (ent.Position - effect.Position):Length()
-            if dist <= 45 then
-              local ref = (EntityRef and ownerPlayer) and EntityRef(ownerPlayer) or nil
-              if ent.AddPoison and ref then
-                pcall(function() ent:AddPoison(ref, 60, tickDmg) end)
-              end
-              ent:TakeDamage(tickDmg, (DamageFlag and DamageFlag.DAMAGE_POISON_BURN) or 0, ref, 0)
-            end
-          end
-        end
-      end)
-    end
-  end
-
-  -- Giant Fist update, emerald trail, & rock destruction with sound and debris
+  -- Giant Fist update & rock destruction with sound and debris
   GL:AddCallback(ModCallbacks.MC_POST_UPDATE, function(_)
-    local frame = Game():GetFrameCount()
-    local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-
     for _, tear in ipairs(Isaac.FindByType(EntityType.ENTITY_TEAR, -1, -1, false)) do
       local td = tear:GetData()
       if td and td.isGiantFist then
-        -- Trailing emerald construct smoke dust
-        if frame % 2 == 0 then
-          pcall(function()
-            local owner = tear.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0)) or nil
-            local offset = (tear.Velocity and tear.Velocity:Length() > 0.1) and (tear.Velocity:Normalized() * 8) or Vector.Zero
-            local trail = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, tear.Position - offset, Vector.Zero, owner)
-            if trail then
-              local ed = trail:GetData()
-              if ed then
-                ed.isGLFistPoison = true
-                ed.glPoisonLife = FIST_POISON_LIFETIME
-                ed.glPoisonOwner = owner
-              end
-              pcall(function() trail.CollisionDamage = 0 end)
-              pcall(function()
-                trail:GetSprite().Color = Color(0.1, 1.0, 0.35, 0.65, 0.05, 0.5, 0.1)
-                trail.Scale = 0.6
-              end)
-              pcall(function()
-                local eff = trail:ToEffect()
-                if eff then
-                  eff.Timeout = FIST_POISON_LIFETIME
-                  eff.LifeSpan = FIST_POISON_LIFETIME
-                end
-              end)
-            end
-          end)
-        end
-
         local room = Game and Game().GetRoom and Game():GetRoom()
         local gridIdx = room and room:GetGridIndex(tear.Position) or -1
         if room and gridIdx >= 0 then
@@ -214,41 +130,5 @@ return function(Core)
         end
       end
     end
-
-    -- Tick and dissipate Giant Fist poison clouds directly in MC_POST_UPDATE
-    for _, eff in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, smokeVar, -1, false)) do
-      UpdateFistPoisonCloud(eff, frame)
-    end
   end)
-
-  -- Fade out and dissipate Giant Fist poison smoke clouds over time
-  GL:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, function(_, effect)
-    local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-    local isSmoke = (effect.Variant == smokeVar) or (effect.Variant == 141) or (effect.Variant == 39)
-    if not isSmoke then return end
-    local frame = (Game and Game() and Game().GetFrameCount and Game():GetFrameCount()) or nil
-    UpdateFistPoisonCloud(effect, frame)
-  end)
-
-  -- Prevent Giant Fist poison clouds from ever damaging the player
-  if ModCallbacks.MC_ENTITY_TAKE_DMG then
-    GL:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, entity, amount, damageFlags, source, countdownFrames)
-      if not source then return end
-      local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-      if source.Type == EntityType.ENTITY_EFFECT and (source.Variant == smokeVar or source.Variant == 141) then
-        local srcEnt = source.Entity
-        if srcEnt and srcEnt.GetData and srcEnt:GetData() and srcEnt:GetData().isGLFistPoison then
-          return false
-        end
-        if Isaac and Isaac.FindByType and entity and entity.Position then
-          for _, eff in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, smokeVar, -1, false)) do
-            local ed = eff.GetData and eff:GetData()
-            if ed and ed.isGLFistPoison and eff.Position and (eff.Position - entity.Position):Length() <= 65 then
-              return false
-            end
-          end
-        end
-      end
-    end, EntityType.ENTITY_PLAYER)
-  end
 end
