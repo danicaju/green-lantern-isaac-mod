@@ -13,8 +13,17 @@ import io
 from PIL import Image, ImageDraw, ImageFont
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ARTIFACT_DIR = r"C:\Users\danic\.gemini\antigravity\brain\6e2e37f2-e39b-4569-8b42-7189d19b55f7"
-os.makedirs(ARTIFACT_DIR, exist_ok=True)
+BRAIN_BASE = r"C:\Users\danic\.gemini\antigravity\brain"
+TARGET_CONVERSATIONS = [
+    "a00fcc93-2c0e-43e3-949e-638e3a3a6591",  # current conversation
+    "502ff7d2-0d0f-4856-9fec-fcc070b79f1b",  # caller parent
+    "6e2e37f2-e39b-4569-8b42-7189d19b55f7",  # prior session
+]
+ARTIFACT_DIRS = [
+    os.path.join(BRAIN_BASE, cid) for cid in TARGET_CONVERSATIONS
+]
+for ad in ARTIFACT_DIRS:
+    os.makedirs(ad, exist_ok=True)
 
 def draw_badge(draw, text, pos, color=(255, 255, 255), bg=(40, 40, 48, 220)):
     bbox = draw.textbbox(pos, text)
@@ -195,9 +204,10 @@ def generate_preview():
 
     # 4x zoom with Nearest Neighbor
     canvas_4x = canvas.resize((canvas.width * 4, canvas.height * 4), Image.NEAREST)
-    out_path = os.path.join(ARTIFACT_DIR, "character_menu_letters_comparison_4x.png")
-    canvas_4x.save(out_path)
-    print(f"  -> Successfully generated 4x preview artifact: {out_path}")
+    for ad in ARTIFACT_DIRS:
+        out_path = os.path.join(ad, "character_menu_letters_comparison_4x.png")
+        canvas_4x.save(out_path)
+        print(f"  -> Successfully generated 4x preview artifact: {out_path}")
     print(f"     Resolution: {canvas_4x.size[0]}x{canvas_4x.size[1]}")
 
 if __name__ == "__main__":
