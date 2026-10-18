@@ -10,6 +10,7 @@ return function(Core)
   end
 
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
+    if not player then return end
     if Core.DYNAMIC_LIGHTING_ENABLED == false then return end
     if not Core.IsRingActive(player) then return end
 

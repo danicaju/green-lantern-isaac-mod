@@ -111,6 +111,7 @@ return function(Core)
             Core.PlayRingSound(sfx, 0.95, 1.25)
         end
     end
+    Core.PlayRingOverchargeChime = Core.PlayOverchargeChime
 
     -- Comic Sound Design: Low Willpower Warning Sputter (<15% Willpower)
     function Core.PlayLowWillpowerWarning(player)

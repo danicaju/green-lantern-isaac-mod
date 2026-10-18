@@ -292,6 +292,7 @@ return function(Core)
           -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
           local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+          local flags = tear.TearFlags
           local fistHasTB = (sp and Core.HasTractorBeam and Core.HasTractorBeam(sp)) or (TearFlags and TearFlags.TEAR_TRACTOR_BEAM and flags and Core.HasTearFlag(flags, TearFlags.TEAR_TRACTOR_BEAM))
           if not fistHasTB then
               if td.glFistVel and td.glFistVel:Length() > 0.1 and tear.Velocity:Length() > 0.1 then

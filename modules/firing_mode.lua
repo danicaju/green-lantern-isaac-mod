@@ -3,6 +3,7 @@ return function(Core)
   local GL = Core.GL
 
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
+    if not player then return end
     local data = Core.GetPlayerData(player)
     if Core.IsHalJordan(player) or Core.IsTaintedHal(player) or Core.IsRingActive(player) then
       local frame = Game():GetFrameCount()

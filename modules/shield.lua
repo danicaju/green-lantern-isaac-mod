@@ -216,6 +216,7 @@ return function(Core)
           SFXManager():Play(SoundEffect.SOUND_TEARS_FIRE, 0.80 * vol, 0, false, 1.35)
           local hasBFFS = HasBFFS(player)
           local dmgMult = hasBFFS and 3.0 or 1.5
+          local minDmg = hasBFFS and 12.0 or 6.0
           local diff = srcEnt.Position - player.Position
           local dir = diff:Length() > 0.1 and diff:Normalized() or ((srcEnt.Velocity and srcEnt.Velocity:Length() > 0.1) and -srcEnt.Velocity:Normalized() or Vector(1, 0))
           local speed = math.max((srcEnt.Velocity and srcEnt.Velocity:Length() or 8.0) * 1.2, 9.0)

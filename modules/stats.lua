@@ -7,8 +7,10 @@ return function(Core)
   local GL = Core.GL
 
   GL:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, function(_, player, cacheFlag)
+    if not player then return end
     local data = Core.GetPlayerData(player)
-    local roomIdx = Game():GetLevel():GetCurrentRoomIndex()
+    local level = Game and Game().GetLevel and Game():GetLevel()
+    local roomIdx = level and level:GetCurrentRoomIndex() or -1
 
     -- HAL JORDAN STATS
     if Core.IsHalJordan(player) then

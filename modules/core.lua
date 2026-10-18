@@ -153,7 +153,9 @@ function Core.ClearAllLanternEmblemDrops()
 end
 
 function Core.GetPlayerData(player)
+    if not player or not player.GetData then return {} end
     local d = player:GetData()
+    if not d then return {} end
     if not d.GreenLantern then
         d.GreenLantern = {
             willpower                    = Core.WILLPOWER_MAX,

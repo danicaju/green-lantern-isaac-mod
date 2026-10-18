@@ -10,6 +10,7 @@ return function(Core)
     end)
 
     GL:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function(_, player)
+        if not player then return end
         Core.LoadItemIDs()
 
         -- HAL JORDAN INIT

@@ -1,13 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <challenges version="1">
     <!-- Challenge 1: In Brightest Day - Blindfold Construct Master -->
-    <challenge name="In Brightest Day" id="1" endstage="8" canshoot="false" roomfilter="4" />
+    <challenge name="In Brightest Day" endstage="8" canshoot="false" roomfilter="4" />
 
     <!-- Challenge 2: Emerald Twilight - The Fall of Hal Jordan -->
-    <challenge name="Emerald Twilight" id="2" endstage="10" altpath="true" roomfilter="4" />
+    <challenge name="Emerald Twilight" endstage="10" altpath="true" roomfilter="4" />
 
     <!-- Challenge 3: Blackest Night - Darkness & Reanimated Dead to Dark Room -->
-    <challenge name="Blackest Night" id="3" endstage="11" getcurse="9" altpath="true" />
+    <challenge name="Blackest Night" endstage="11" getcurse="9" altpath="true" />
 
     <!-- Challenge 4: Sinestro Corps War - War of Light and Fear to Mega Satan -->
-    <challenge name="Sinestro Corps War" id="4" endstage="12" megasatan="true" difficulty="1" />
+    <challenge name="Sinestro Corps War" endstage="12" megasatan="true" difficulty="1" />
 </challenges>

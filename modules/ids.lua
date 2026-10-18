@@ -64,6 +64,7 @@ return function(Core)
     end
 
     function Core.HasGreenLanternRing(player)
+        if not player then return false end
         if Core.IsHalJordan(player) or Core.IsTaintedHal(player) then return true end
         if not Core.ITEM_POWER_RING or Core.ITEM_POWER_RING < 0 then Core.LoadItemIDs() end
         return Core.ITEM_POWER_RING and Core.ITEM_POWER_RING > 0 and player:HasCollectible(Core.ITEM_POWER_RING)

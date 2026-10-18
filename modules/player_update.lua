@@ -3,6 +3,7 @@
 return function(Core)
     local GL = Core.GL
     GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
+        if not player then return end
         local data = Core.GetPlayerData(player)
         -- F4: anti-cruce de PlayerType (Glitched Crown / D4 / co-op swap).
         -- Si el tipo cambia desde el ultimo frame, resetear estado de run a
