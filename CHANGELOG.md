@@ -4,6 +4,13 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Arreglos de beams: vida, splits y Neptunus
+- `modules/core.lua`: `GL_BEAM_MAX_LIFE_FRAMES = 120` y `GL_BEAM_MAX_ALIVE = 32` (tope de proyectiles esmeralda vivos por jugador) — los beams dejan de acumularse por la sala.
+- `modules/beam_discrete.lua`: contador de vida por beam + culling del más antiguo del mismo spawner.
+- `modules/beam_synergies.lua`: los splits de The Parasite / Cricket's Body se crean con `Isaac.Spawn` directo (antes `player:FireTear` era suprimido por `MC_POST_FIRE_TEAR`, dejándolos invisibles) y heredan `SPECTRAL|PIERCING` (+`TEAR_FEAR` en Tainted), daño y sprite del anillo.
+- `modules/beam_math.lua`: Neptunus añadido a los items exentos del rayo continuo (antes sus lágrimas se eliminaban al nacer).
+- Nuevo `tools/test_beam_lifetime_and_splits.lua` (29 asserts). Suite 47/47.
+
 ### Retrato del character menu reconstruido
 
 - `content/gfx/hal_charactermenu.png` y `content/gfx/tainted_charactermenu.png`: el sprite del personaje (region `(56,2,48,52)` que recorta `characterportraits*.anm2`) se reconstruye componiendo cabeza (`r00c0`) + cuerpo (`r01c0`) del sheet recrispificado a escala entera con `NEAREST` y alpha duro. Nitidez maxima y arte identico al in-game.
