@@ -25,7 +25,8 @@ return function(Core)
     function Core.DrawHudText(text, x, y, r, g, b, a)
         local f = Core.GetHudFont()
         if f and KColor then
-            f:DrawStringScaled(text, x, y, 1.0, 1.0, KColor(r, g, b, a), 0, false)
+            local s = Core.HUD_TEXT_SCALE or 1.0
+            f:DrawStringScaled(text, x, y, s, s, KColor(r, g, b, a), 0, false)
         else
             Isaac.RenderScaledText(text, x, y, 0.5, 0.5, r, g, b, a)
         end
