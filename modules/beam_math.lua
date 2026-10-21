@@ -4,10 +4,15 @@
 return function(Core)
   -- NOTA: sin alias locales de constantes: MCM puede cambiarlas en runtime.
 
+  -- Lazily-built lookup of items that force the discrete beam instead of the
+  -- continuous one. Cached once because collectible IDs never change.
+  local continuousBeamOverrideItems
+
   function Core.CanUseContinuousBeam(player)
     if not Core.IsRingActive(player) then return false end
-    if CollectibleType then
-      local overrideItems = {
+    if not CollectibleType then return true end
+    if not continuousBeamOverrideItems then
+      continuousBeamOverrideItems = {
         (CollectibleType.COLLECTIBLE_MOMS_KNIFE or 114),
         (CollectibleType.COLLECTIBLE_LUDOVICO_TECHNIQUE or 316),
         (CollectibleType.COLLECTIBLE_SPIRIT_SWORD or 579),
@@ -17,11 +22,12 @@ return function(Core)
         (CollectibleType.COLLECTIBLE_CHOCOLATE_MILK or 69),
         (CollectibleType.COLLECTIBLE_CURSED_EYE or 315),
         (CollectibleType.COLLECTIBLE_MONSTROS_LUNG or 229),
+        (CollectibleType.COLLECTIBLE_NEPTUNUS or 597),
       }
-      for _, itemId in ipairs(overrideItems) do
-        if itemId and player:HasCollectible(itemId) then
-          return false
-        end
+    end
+    for _, itemId in ipairs(continuousBeamOverrideItems) do
+      if itemId and player:HasCollectible(itemId) then
+        return false
       end
     end
     return true
