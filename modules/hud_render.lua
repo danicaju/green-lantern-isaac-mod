@@ -1,6 +1,9 @@
 -- modules/hud_render.lua -- RSI: render player + HUD + ItemMenu guard + 60Hz poll.
 return function(Core)
   local GL = Core.GL
+  -- Escala del texto propio de la HUD (etiqueta %, GATLING, REBOOT, oathText).
+  -- Politica de tamano de este modulo; fx_sprites.DrawHudText la consume con default 1.0.
+  Core.HUD_TEXT_SCALE = 0.8
 
   if ModCallbacks.MC_PRE_PLAYER_RENDER then
     GL:AddCallback(ModCallbacks.MC_PRE_PLAYER_RENDER, function(_, player, renderOffset)
@@ -164,7 +167,7 @@ return function(Core)
         if Core.IsHalJordan(player) then
           local maxWill = (Core.GetMaxWillpower and Core.GetMaxWillpower(player)) or Core.WILLPOWER_MAX
           local pct = math.max(0.0, math.min(1.0, (data.willpower or 0) / maxWill))
-          local BAR_W = 36
+          local BAR_W = 30
           Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
           local r, g, b = 0.1, 0.95, 0.3
           if data.ringDepleted then
@@ -188,7 +191,7 @@ return function(Core)
             local bonus = (data.overchargeTier or 1) >= 2 and "+25%DMG" or "+15%DMG"
             label = string.format("%.0f%% %s", data.willpower or 0, bonus)
           end
-          Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
+          Core.DrawHudText(label, hudX + 28, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
             if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
             if data.oathText and data.oathText ~= "" then
@@ -207,7 +210,7 @@ return function(Core)
           local stolen = data.stolenRings or 0
           local sMax = Core.SPARK_MAX or 100.0
           local pct = math.max(0.0, math.min(1.0, sparks / sMax))
-          local BAR_W = 36
+          local BAR_W = 30
           Isaac.RenderScaledText("_", hudX, hudY - 4, BAR_W * 0.14, 0.9, 0.08, 0.08, 0.08, 0.85)
           local r, g, b = 0.0, 0.85, 0.4
           if pct >= 1.0 then r, g, b = 0.25, 1.0, 0.55 end
@@ -218,7 +221,7 @@ return function(Core)
           if stolen > 0 then
             label = string.format("%s [%d]", label, stolen)
           end
-          Core.DrawHudText(label, hudX + 33, hudY - 2, r, g, b, 0.95)
+          Core.DrawHudText(label, hudX + 28, hudY - 2, r, g, b, 0.95)
           if data.oathTextTimer and data.oathTextTimer > 0 then
             if gameAdvancedThisRender and currentGameFrame % 2 == 0 then data.oathTextTimer = data.oathTextTimer - 1 end
             if data.oathText and data.oathText ~= "" then
