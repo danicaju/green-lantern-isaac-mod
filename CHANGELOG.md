@@ -4,6 +4,20 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Iconos de items normalizados + dudas de spec resueltas
+- Los 7 iconos (`collectible_*` + `trinket_yellow_impurity`) normalizados a estilo
+  vanilla: outline repintado de negro puro a `#1C1615`, contenido recentrado en
+  (15.5, 15.5) y huella unificada ≤26px (el shield 27x29 y el ring 26x27 se
+  reducen suavemente con nearest-neighbour; fist/gatling/battery/coast/trinket
+  conservan su arte intacto). Fuente reproducible: `tools/normalize_item_icons.py`.
+- Guard nuevo `tools/test_icon_compliance.py` (61 checks): 32x32, alpha solo
+  0/255, zero-dirty-alpha, huella ≤26, centro ±1px y outline `#1C1615`.
+- Dudas de spec resueltas con evidencia del juego real (recursos extraídos):
+  trinket **32x32** (vanilla `trinket_001` = 32x32, NO 16x16) y stage big
+  portraits **144x144** (vanilla `ui/stage/playerportrait_*` = 144x144, NO
+  100x100). Nombres VS 192x64 y portrait 112x80 quedan conformes (vanilla
+  `playername_01_isaac` = 192x64, `playerportrait_lucifer` = 112x78).
+
 ### X2 — HUD propia más compacta
 - Barra de Willpower/Sparks `BAR_W` 36→30 en ambas ramas (Hal y Tainted).
 - Texto propio a escala 0.8 (`Core.HUD_TEXT_SCALE` en `hud_render`, consumido
