@@ -2,6 +2,9 @@
 return function(Core)
     local GL = Core.GL
 
+    -- Base flags applied to every GL split/construct tear.
+    local BASE_SPLIT_FLAGS = (TearFlags and (TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING)) or 0
+
     -- 1. LASER SYNERGIES: Brimstone, Tech X, Technology, Technology 2, Tech.5, Jacob's Ladder
     GL:AddCallback(ModCallbacks.MC_POST_LASER_INIT, function(_, laser)
         local spawner = laser.SpawnerEntity
@@ -29,7 +32,7 @@ return function(Core)
         pcall(function() laser:GetSprite().Color = isTech1 and Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) or Color(0.1, 1.0, 0.38, 1, 0.06, 0.78, 0.20) end)
         local dmgMult = isTech1 and 1.30 or 1.25
         laser.CollisionDamage = laser.CollisionDamage * dmgMult
-        laser.TearFlags = laser.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
+        laser.TearFlags = laser.TearFlags | BASE_SPLIT_FLAGS
         if Core.IsTaintedHal(player) and math.random() < (Core.TAINTED_FEAR_CHANCE or 0.25) then
             laser.TearFlags = laser.TearFlags | TearFlags.TEAR_FEAR
         end
@@ -179,15 +182,19 @@ return function(Core)
     -- 8. THE PARASITE & CRICKET'S BODY SYNERGIES: Hard-Light Refraction Shards
     local function SpawnSplitTear(player, pos, vel, damage, scale, flag)
         local tear = nil
-        if player and player.FireTear then
-            tear = player:FireTear(pos, vel, false, true, false)
-        elseif Isaac and Isaac.Spawn then
+        -- FireTear triggers MC_POST_FIRE_TEAR, which removes the split under
+        -- continuous beam suppression. Use direct spawn so the shard survives.
+        if Isaac and Isaac.Spawn then
             local tVar = (TearVariant and TearVariant.DEFAULT) or 0
-            tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
-            if tear and tear.ToTear then tear = tear:ToTear() end
+            local ent = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
+            if ent and ent.ToTear then tear = ent:ToTear() end
         end
         if tear then
             tear.CollisionDamage = damage
+            tear.TearFlags = tear.TearFlags | BASE_SPLIT_FLAGS
+            if Core.IsTaintedHal(player) then
+                tear.TearFlags = tear.TearFlags | TearFlags.TEAR_FEAR
+            end
             local sd = tear:GetData()
             sd.isGLRingBeam = true
             if flag then sd[flag] = true end
