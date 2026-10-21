@@ -3,6 +3,53 @@
 return function(Core)
   local GL = Core.GL
 
+  -- Helper: make the engine's tear invisible and tint its sprite transparent.
+  -- All GL ring beams are rendered via our own sprite system.
+  local function HideTearSprite(tear)
+      if not tear then return end
+      tear.Visible = false
+      pcall(function()
+          local spr = tear:GetSprite()
+          if spr then spr.Color = Color(0, 0, 0, 0) end
+      end)
+  end
+
+  -- Enforce lifetime cap and per-player alive cap for GL ring beams.
+  -- Returns true if the tear was removed.
+  local function ApplyBeamLifetimeAndCull(tear, td)
+      td.glBeamLifeFrames = (td.glBeamLifeFrames or 0) + 1
+      if Core.GL_BEAM_MAX_LIFE_FRAMES and td.glBeamLifeFrames > Core.GL_BEAM_MAX_LIFE_FRAMES then
+          tear:Remove()
+          return true
+      end
+
+      local maxAlive = Core.GL_BEAM_MAX_ALIVE or 32
+      local spawner = tear.SpawnerEntity
+      local oldestBeam, oldestLife, aliveCount = nil, -1, 0
+      if Isaac and Isaac.GetRoomEntities and EntityType and EntityType.ENTITY_TEAR then
+          for _, ent in ipairs(Isaac.GetRoomEntities()) do
+              if ent and ent.Type == EntityType.ENTITY_TEAR then
+                  local other = ent:ToTear()
+                  if other then
+                      local od = other:GetData()
+                      if od and od.isGLRingBeam and other.SpawnerEntity == spawner then
+                          aliveCount = aliveCount + 1
+                          local life = od.glBeamLifeFrames or 0
+                          if life > oldestLife then
+                              oldestLife = life
+                              oldestBeam = other
+                          end
+                      end
+                  end
+              end
+          end
+      end
+      if aliveCount > maxAlive and oldestBeam and oldestBeam ~= tear then
+          oldestBeam:Remove()
+      end
+      return false
+  end
+
   -- ---------------------------------------------------------------------------
   -- SECTION 6: GREEN LANTERN RING BEAM HANDLING (Hand origin + Piercing + Spectral)
   -- ---------------------------------------------------------------------------
@@ -22,10 +69,7 @@ return function(Core)
       if data.spawningGiantFist or (td and (td.isGiantFist or td.isGLFist)) then
           tear:GetData().isGiantFist = true
           tear:GetData().isGLFist = true
-          tear.Visible = false
-          pcall(function()
-              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-          end)
+          HideTearSprite(tear)
           return
       end
 
@@ -43,10 +87,7 @@ return function(Core)
       -- Suppress unbuffered C++ tears when CanUseContinuousBeam(player) is active (so holding shoot never fires a Frame-1 discrete bolt!)
       if (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) and not isItemBurst then
           if data.isFiringContinuousBeam or (Core.CanUseContinuousBeam(player) and not data.allowingTapTear) then
-              tear.Visible = false
-              pcall(function()
-                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-              end)
+              HideTearSprite(tear)
               if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
                   local rawDir = tear.Velocity:Normalized()
                   if Core.HasTractorBeam and Core.HasTractorBeam(player) then
@@ -123,10 +164,7 @@ return function(Core)
       -- Grant Piercing (pass through enemies) + Spectral (pass through rocks/objects)
       -- (Fear de Tainted ya no va en el flag: se tira probabilidad al impactar)
       tear.TearFlags = tear.TearFlags | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL
-      tear.Visible = false
-      pcall(function()
-          if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-      end)
+      HideTearSprite(tear)
       -- Balance click-vs-hold: el beam discreto pega una fraccion del dano de ficha
       -- (el Puño Gigante y ráfagas de items activos quedan excluidos)
       local btd = tear:GetData()
@@ -180,7 +218,7 @@ return function(Core)
   end)
 
   local function EnforceRingBeamTearSprite(tear, td)
-      tear.Visible = false
+      HideTearSprite(tear)
       local ts = tear:GetSprite()
       if ts then
           if ts:GetAnimation() ~= "Idle" then
@@ -190,7 +228,6 @@ return function(Core)
           if td and td.glBeamScale then
               ts.Scale = Vector(td.glBeamScale, td.glBeamScale)
           end
-          ts.Color = Color(0, 0, 0, 0)
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
           elseif td and td.glBeamVel and td.glBeamVel:Length() > 0.1 then
@@ -230,6 +267,9 @@ return function(Core)
   GL:AddCallback(ModCallbacks.MC_POST_TEAR_UPDATE, function(_, tear)
       local td = tear:GetData()
       if td and td.isGLRingBeam then
+          -- Lifetime cap and per-player alive cap to prevent oppressive beam spam accumulation.
+          if ApplyBeamLifetimeAndCull(tear, td) then return end
+
           local isStuck = false
           pcall(function()
               if tear.StickTarget ~= nil then isStuck = true end
@@ -237,17 +277,11 @@ return function(Core)
               if tear.FrameCount > 6 and tear.Velocity and tear.Velocity:Length() < 0.8 then isStuck = true end
           end)
           if isStuck then
-              tear.Visible = false
-              pcall(function()
-                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-              end)
+              HideTearSprite(tear)
               return
           end
 
-          tear.Visible = false
-          pcall(function()
-              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-          end)
+          HideTearSprite(tear)
 
           -- Spammeable discrete rays destroy themselves when hitting room walls
           local hitWall = false
@@ -299,10 +333,9 @@ return function(Core)
           if hitWall then
               td.isGLRingBeam = false
               tear.Position = impactPos
-              tear.Visible = false
+              HideTearSprite(tear)
               pcall(function() tear.CollisionDamage = 0 end)
               pcall(function()
-                  if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
                   if Core.PlayRingSound and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
                       Core.PlayRingSound(SoundEffect.SOUND_TEARIMPACTS, 0.65, 1.15)
                   elseif SFXManager and SoundEffect and SoundEffect.SOUND_TEARIMPACTS then
@@ -362,10 +395,7 @@ return function(Core)
 
           EnforceRingBeamTearSprite(tear, td)
       elseif td and td.isGLFist then
-          tear.Visible = false
-          pcall(function()
-              if tear:GetSprite() then tear:GetSprite().Color = Color(0, 0, 0, 0) end
-          end)
+          HideTearSprite(tear)
           -- T6: refuerzo del sprite del Giant Fist (rama independiente,
           -- no interfiere con isGLRingBeam). Reaplica Idle y Rotation por velocidad.
           local sp = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
