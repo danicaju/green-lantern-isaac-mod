@@ -4,6 +4,14 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### X2 — HUD propia más compacta
+- Barra de Willpower/Sparks `BAR_W` 36→30 en ambas ramas (Hal y Tainted).
+- Texto propio a escala 0.8 (`Core.HUD_TEXT_SCALE` en `hud_render`, consumido
+  por `Core.DrawHudText` con fallback neutral a 1.0) y etiqueta `%` de
+  `hudX + 33` a `hudX + 28`.
+- Sin tocar el icono del slot activo del engine, EID ni `GetCoopHUDOrigin`.
+- Harness `tools/test_hud_text_scale.lua` 17/17.
+
 ### SPEC-X1 — Haz visible pegado al muro (fino, sin tapar la cara)
 - Pegado a un muro el haz continuo ahora sí se ve (antes desaparecía por
   debajo de ~44px); de cerca se dibuja fino para no tapar la cara, de lejos
