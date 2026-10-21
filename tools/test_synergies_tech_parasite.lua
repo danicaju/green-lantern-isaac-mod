@@ -47,6 +47,8 @@ TearFlags = {
 EffectVariant = { HALO = 10, WATER_SPLASH = 20 }
 SoundEffect = { SOUND_TEARIMPACTS = 1 }
 CacheFlag = { CACHE_DAMAGE = 8 }
+EntityFlag = { FLAG_FEAR = 1 }
+TearVariant = { DEFAULT = 0 }
 ModCallbacks = {
     MC_POST_LASER_INIT = 1,
     MC_POST_LASER_UPDATE = 2,
@@ -82,6 +84,30 @@ Game = function() return {
     GetNumPlayers = function() return 1 end,
     GetRoomEntities = function() return {} end,
 } end
+spawnedTears = {}
+Isaac = {
+    GetPlayer = function() return nil end,
+    GetRoomEntities = function() return {} end,
+    Spawn = function(etype, variant, subtype, pos, vel, spawner)
+        if etype ~= EntityType.ENTITY_TEAR then return nil end
+        local t = {
+            Type = etype,
+            Variant = variant,
+            SubType = subtype,
+            Position = pos,
+            Velocity = vel,
+            SpawnerEntity = spawner,
+            CollisionDamage = 0,
+            Scale = 1.0,
+            TearFlags = 0,
+            _data = {},
+            GetData = function(self) return self._data end,
+            ToTear = function(self) return self end,
+        }
+        table.insert(spawnedTears, t)
+        return t
+    end,
+}
 
 -- ===================== CORE MOCK =====================
 local Core = {
@@ -211,18 +237,7 @@ local preTearCollisionCb = findCb(ModCallbacks.MC_PRE_TEAR_COLLISION)
 check(preTearCollisionCb ~= nil, "MC_PRE_TEAR_COLLISION registered")
 
 local pParasite = makePlayer({ CollectibleType.COLLECTIBLE_PARASITE })
-local spawnedTears = {}
-pParasite.FireTear = function(self, pos, vel, canEye, noVer, cantTrig)
-    local t = {
-        Position = pos,
-        Velocity = vel,
-        CollisionDamage = 0,
-        _data = {},
-        GetData = function(s) return s._data end,
-    }
-    table.insert(spawnedTears, t)
-    return t
-end
+spawnedTears = {}
 
 local mainTear = {
     SpawnerEntity = pParasite,
@@ -253,17 +268,6 @@ end
 -- ===================== TEST 5: CRICKET'S BODY TAP REFRACTION SHARDS =====================
 local pCricket = makePlayer({ CollectibleType.COLLECTIBLE_CRICKETS_BODY })
 spawnedTears = {}
-pCricket.FireTear = function(self, pos, vel, canEye, noVer, cantTrig)
-    local t = {
-        Position = pos,
-        Velocity = vel,
-        CollisionDamage = 0,
-        _data = {},
-        GetData = function(s) return s._data end,
-    }
-    table.insert(spawnedTears, t)
-    return t
-end
 local cricketTear = {
     SpawnerEntity = pCricket,
     Position = Vector(150, 100),
@@ -287,9 +291,7 @@ check(bombInitCb ~= nil, "MC_POST_BOMB_INIT registered")
 
 local pHal = makePlayer({})
 pHal._isHal = true
-Isaac = {
-    GetPlayer = function(i) return pHal end,
-}
+Isaac.GetPlayer = function(i) return pHal end
 local normalBombSpr = { Color = nil }
 local normalBomb = {
     Type = EntityType.ENTITY_BOMB,
