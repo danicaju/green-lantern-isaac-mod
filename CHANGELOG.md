@@ -4,6 +4,12 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Retrato del character menu reconstruido
+
+- `content/gfx/hal_charactermenu.png` y `content/gfx/tainted_charactermenu.png`: el sprite del personaje (region `(56,2,48,52)` que recorta `characterportraits*.anm2`) se reconstruye componiendo cabeza (`r00c0`) + cuerpo (`r01c0`) del sheet recrispificado a escala entera con `NEAREST` y alpha duro. Nitidez maxima y arte identico al in-game.
+- Textos "HAL JORDAN"/"POWER BATTERY" y "TAINTED HAL"/"COAST CITY" intactos (se preserva su AA tipografico), hoja 160x160 y crop del `.anm2` sin cambios.
+- Herramienta reproducible: `tools/build_menu_portrait.py` (`--preview` / `--apply`).
+
 ### Sheets de personaje recrispificados
 - `hal_jordan(.extra).png` y `tainted_hal(.extra).png`: cuantización de paleta a 33
   colores + alpha duro (0/255) con Zero-Dirty-Alpha. Los sheets estaban
