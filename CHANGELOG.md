@@ -4,6 +4,14 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Sheets de personaje recrispificados
+- `hal_jordan(.extra).png` y `tainted_hal(.extra).png`: cuantización de paleta a 33
+  colores + alpha duro (0/255) con Zero-Dirty-Alpha. Los sheets estaban
+  remuestreados (21k-22k colores = blur); ahora son pixel art nítido.
+- Canvas 512x512, celdas 32x32 y posiciones intactas (no rompe `001.000_player.anm2`).
+- Herramienta reproducible: `tools/recrisp_character_sheets.py` (`--preview` / `--apply`).
+- Suite `tools/test_*.lua` 46/46 y `lint_modules.py` 42/42 tras el cambio.
+
 ### Iconos de items normalizados + dudas de spec resueltas
 - Los 7 iconos (`collectible_*` + `trinket_yellow_impurity`) normalizados a estilo
   vanilla: outline repintado de negro puro a `#1C1615`, contenido recentrado en
