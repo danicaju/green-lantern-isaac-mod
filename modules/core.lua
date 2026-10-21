@@ -47,6 +47,9 @@ Core.HAL_CONTINUOUS_BEAM_DMG_MULT  = 0.35
 Core.DISCRETE_BEAM_DMG_MULT        = 0.60
 Core.HAL_CONTINUOUS_TICK_FRAMES    = 4
 Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
+-- Vida y tope de beams GL discretos (evita acumulacion opresiva en sala).
+Core.GL_BEAM_MAX_LIFE_FRAMES       = 120
+Core.GL_BEAM_MAX_ALIVE             = 32
 -- SPEC-D: crecimiento fluido del rayo continuo (solo render, estilo Brimstone).
 -- El haz visible crece 0->full en N frames al iniciar/cambiar de direccion.
 -- Raycast/dano/tick-rate intactos (viven en beam_math.lua con el endWorld completo).
