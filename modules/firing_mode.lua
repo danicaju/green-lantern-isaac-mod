@@ -2,6 +2,20 @@
 return function(Core)
   local GL = Core.GL
 
+  -- Un mismo clic fisico puede detectarse por 3 vias distintas: el "press"
+  -- capturado en render (input_poll), el "release" capturado en render y el
+  -- "release" del gameplay. Sin este guard cada clic encolaba DOS beams
+  -- (lagrimas pequenas duplicadas). El flag se libera cuando el clic se
+  -- consume o expira.
+  local function QueueDiscreteClick(data, dir, frame)
+    if not (data and dir) then return end
+    if data.clickQueuedThisPress then return end
+    data.clickQueuedThisPress = true
+    data.bufferedClickDir = Vector(dir.X, dir.Y)
+    data.bufferedClickExpireFrame = frame + 15
+    data.lastDiscreteClickReleaseFrame = frame
+  end
+
   GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
     if not player then return end
     local data = Core.GetPlayerData(player)
@@ -35,9 +49,7 @@ return function(Core)
           and releaseDir
         then
           if canUseBeam then
-            data.bufferedClickDir = Vector(releaseDir.X, releaseDir.Y)
-            data.bufferedClickExpireFrame = frame + 15
-            data.lastDiscreteClickReleaseFrame = frame
+            QueueDiscreteClick(data, releaseDir, frame)
           elseif Core.IsHalJordan(player) and data.ringDepleted then
             data.humanTapShootDir = Vector(releaseDir.X, releaseDir.Y)
             data.humanTapExpireFrame = frame + 12
@@ -58,9 +70,7 @@ return function(Core)
         local tapDir = data.renderLastShootDir or data.lastShootDir
         if tapDir then
           if canUseBeam then
-            data.bufferedClickDir = Vector(tapDir.X, tapDir.Y)
-            data.bufferedClickExpireFrame = frame + 15
-            data.lastDiscreteClickReleaseFrame = frame
+            QueueDiscreteClick(data, tapDir, frame)
           elseif Core.IsHalJordan(player) and data.ringDepleted then
             data.humanTapShootDir = Vector(tapDir.X, tapDir.Y)
             data.humanTapExpireFrame = frame + 12
@@ -187,9 +197,7 @@ return function(Core)
             if Core.HasTractorBeam and Core.HasTractorBeam(player) then
               bDir = Core.GetTractorBeamDirection(player, bDir)
             end
-            data.bufferedClickDir = bDir
-            data.bufferedClickExpireFrame = frame + 15
-            data.lastDiscreteClickReleaseFrame = frame
+            QueueDiscreteClick(data, bDir, frame)
           elseif Core.IsHalJordan(player) and data.ringDepleted then
             local hDir = Vector(releaseDir.X, releaseDir.Y)
             if Core.HasTractorBeam and Core.HasTractorBeam(player) then
@@ -223,6 +231,7 @@ return function(Core)
       if data.bufferedClickDir and not data.isFiringContinuousBeam then
         if frame > (data.bufferedClickExpireFrame or 0) or not Core.CanUseContinuousBeam(player) then
           data.bufferedClickDir = nil
+          data.clickQueuedThisPress = false
         else
           local minClickInterval = math.max(6, math.min(10, math.floor((player.MaxFireDelay or 10) * 0.70)))
           if (data.gatlingTimer or 0) > 0 then minClickInterval = 2 end
@@ -233,6 +242,7 @@ return function(Core)
               dir = Core.GetTractorBeamDirection(player, dir)
             end
             data.bufferedClickDir = nil
+            data.clickQueuedThisPress = false
             data.lastSmallBeamFrame = frame
             local spawnOffset = Core.GetRingBeamTearSpawnOffset(player, dir)
             local shotSpeed = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
@@ -263,6 +273,10 @@ return function(Core)
             end)
             data.allowingTapTear = false
             data.firingBufferedClick = false
+            -- Marca la pulsacion como consumida: sin esto, el "release" que
+            -- llega unos frames despues volvia a encolar otro clic y el jugador
+            -- veia DOS lagrimas pequenas por cada click.
+            data.firedSmallBeamThisPress = true
             data.tapBurstCount, data.tapBurstIndex, data.tapBurstBaseDir = nil, nil, nil
             player.FireDelay = math.max(player.MaxFireDelay or 10, 2)
           end
