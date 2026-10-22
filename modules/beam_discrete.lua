@@ -79,13 +79,7 @@ return function(Core)
           pcall(function() fam = spawner:ToFamiliar() end)
           if not fam then return end
           if not ALLOWED_FAMILIAR_BEAMERS[fam.Variant] then return end
-          local owner = nil
-          pcall(function()
-              owner = fam.Player
-              if not owner and fam.SpawnerEntity then
-                  owner = fam.SpawnerEntity:ToPlayer()
-              end
-          end)
+          local owner = Core.ResolveBeamPlayer(spawner)
           if owner and Core.IsRingActive(owner) then
               local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
               Core.ApplyRingBeamSprite(tear, 1.05 * math.sqrt(sizeFactor))
@@ -266,17 +260,7 @@ return function(Core)
           if td and td.glBeamTint then
               tint = td.glBeamTint
           else
-              local beamPlayer = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
-              if not beamPlayer and tear.SpawnerEntity then
-                  local fam = nil
-                  pcall(function() fam = tear.SpawnerEntity:ToFamiliar() end)
-                  if fam then
-                      pcall(function() beamPlayer = fam.Player end)
-                      if not beamPlayer then
-                          pcall(function() beamPlayer = fam.SpawnerEntity and fam.SpawnerEntity:ToPlayer() end)
-                      end
-                  end
-              end
+              local beamPlayer = Core.ResolveBeamPlayer(tear.SpawnerEntity)
               if beamPlayer and Core.GetRingBeamVisual then
                   local ok, t = pcall(Core.GetRingBeamVisual, beamPlayer)
                   if ok and t then tint = t end

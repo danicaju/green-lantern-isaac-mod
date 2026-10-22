@@ -96,7 +96,7 @@ return function(Core)
   end
 
   -- Resolve the player owner of a tear, including familiars such as Incubus.
-  local function ResolveBeamPlayer(spawner)
+  function Core.ResolveBeamPlayer(spawner)
     if not spawner then return nil end
     local player = spawner:ToPlayer()
     if player then return player end
@@ -116,7 +116,7 @@ return function(Core)
   function Core.ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
     pcall(function()
-      local beamPlayer = ResolveBeamPlayer(tear.SpawnerEntity)
+      local beamPlayer = Core.ResolveBeamPlayer(tear.SpawnerEntity)
       local tint = Color(1, 1, 1, 1, 0, 0, 0)
       local extraScale = 1.0
       if beamPlayer and Core.GetRingBeamVisual then
