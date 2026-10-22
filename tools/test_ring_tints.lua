@@ -89,19 +89,39 @@ for _, c in ipairs(cases) do
     check(approx(scale, c[3]), c[4] .. " scale is " .. c[3])
 end
 
--- 3) Precedencia: el ultimo en la tabla de orden gana el tinte; las escalas se multiplican
+-- 3) Blend multiplicativo suave: media geometrica de RGB + media de alpha/offset.
+-- Un item blanco (Sacred Heart) aclara el tono sin borrarlo.
+local function blendColors(colors)
+    local n = #colors
+    local r, g, b = 1.0, 1.0, 1.0
+    local a, ro, go, bo = 0.0, 0.0, 0.0, 0.0
+    for _, c in ipairs(colors) do
+        r = r * c.R; g = g * c.G; b = b * c.B
+        a = a + c.A; ro = ro + (c.RO or 0); go = go + (c.GO or 0); bo = bo + (c.BO or 0)
+    end
+    local invN = 1.0 / n
+    local function clamp01(x) return math.max(0, math.min(1, x)) end
+    return {
+        R = clamp01(r ^ invN), G = clamp01(g ^ invN), B = clamp01(b ^ invN),
+        A = clamp01(a / n), RO = ro / n, GO = go / n, BO = bo / n,
+    }
+end
+
 local tintMix, scaleMix = Core.GetRingBeamVisual(makePlayer({
     CollectibleType.COLLECTIBLE_SOY_MILK,
     CollectibleType.COLLECTIBLE_8_INCH_NAILS,
 }))
-checkColor(tintMix, NAILS_TINT, "Soy Milk + 8 Inch Nails: later tint wins")
+checkColor(tintMix, blendColors({SOY_TINT, NAILS_TINT}), "Soy Milk + 8 Inch Nails: blended tint (geometric mean)")
 check(approx(scaleMix, 0.8 * 1.4), "Soy Milk + 8 Inch Nails scale multiplied")
 
 local tintOverride, scaleOverride = Core.GetRingBeamVisual(makePlayer({
     CollectibleType.COLLECTIBLE_MIDAS_TOUCH,
     CollectibleType.COLLECTIBLE_SACRED_HEART,
 }))
-checkColor(tintOverride, SACRED_TINT, "Midas + Sacred Heart: Sacred Heart overrides to pure white")
+local midasSacredBlend = blendColors({MIDAS_TINT, SACRED_TINT})
+checkColor(tintOverride, midasSacredBlend, "Midas + Sacred Heart: white lightens gold instead of replacing it")
+check(tintOverride.R < 1.0 or tintOverride.G < 1.0 or tintOverride.B < 1.0,
+    "Midas + Sacred Heart: tint is not pure white (gold tone preserved)")
 check(approx(scaleOverride, 1.0 * 1.2), "Midas + Sacred Heart scale multiplied")
 
 -- 4) Jugador nil devuelve blanco + 1.0 sin error
