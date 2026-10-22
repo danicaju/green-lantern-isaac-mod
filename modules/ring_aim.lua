@@ -127,6 +127,10 @@ return function(Core)
         end
       end
       local finalScale = (scaleMult or 1.0) * extraScale
+      -- D2: clamp de escala final para evitar beams desproporcionados con
+      -- multiples synergias (worst-case ~3.09x).
+      local maxScale = (Core.GL_BEAM_MAX_SCALE or 2.25)
+      if finalScale > maxScale then finalScale = maxScale end
 
       tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
       tear.FallingAcceleration = -0.04
