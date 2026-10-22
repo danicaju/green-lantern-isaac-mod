@@ -4,6 +4,22 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Fix — dos lágrimas por clic (lágrima nativa del motor)
+- `beam_discrete.lua`: para Hal y Tainted Hal se suprime **cualquier** lágrima nativa
+  del motor que el mod no haya pedido (`not data.allowingTapTear`), sin depender ya de
+  `CanUseContinuousBeam`. Antes, con el willpower bajo, la lágrima nativa sobrevivía y se
+  dibujaba junto al beam manual: el jugador veía dos lágrimas pequeñas por clic.
+- `firing_mode.lua`: el tap con el anillo agotado marca `allowingTapTear` mientras dispara
+  (si no, la nueva supresión borraría su propia lágrima).
+- `tools/test_single_click_beam.lua`: 11 checks (añadidos los 3 de la supresión nativa).
+
+### Arte — nombres y retratos de boss
+- `name_hal_jordan.png` / `name_tainted_hal.png`: vuelven al canvas **192×64** (el 384×128
+  se recortaba en la pantalla VS) con las letras escaladas **1.5×** y centradas.
+- `portrait_hal_jordan.png` / `portrait_tainted_hal.png`: recentrados por centro de masa
+  alfa en el canvas 112×80.
+
+
 ### Fix — un clic, un beam
 
 - **Click izquierdo duplicaba la lágrima pequeña**: el mismo clic se encolaba por
