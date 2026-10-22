@@ -167,6 +167,7 @@ function Core.GetPlayerData(player)
             hadItemFlight                = false,
             overcharge                   = false,
             surgeBuff                    = false,
+            overchargeTier = 0,
             overchargeRoomIdx            = -1,
             oathTextTimer                = 0,
             oathText                     = "",
