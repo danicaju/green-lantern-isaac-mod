@@ -88,7 +88,9 @@ return function(Core)
             local d = diff:Length()
             if d <= (familiar.Size + (ent.Size or 16) + 6) then
               local dmg = player and (player.Damage * 2.5) or 10.0
-              ent:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(familiar), 0)
+              pcall(function()
+                ent:TakeDamage(dmg, DamageFlag.DAMAGE_NO_MODIFIERS, EntityRef(familiar), 0)
+              end)
               if d > 0.01 then
                 local push = diff:Normalized() * 5.0
                 ent.Velocity = ent.Velocity + push
@@ -131,7 +133,10 @@ return function(Core)
           local diff = nearestEnemy.Position - familiar.Position
           local dir = diff:Length() > 0.01 and diff:Normalized() or Vector(1, 0)
           local tearVar = (TearVariant and TearVariant.DEFAULT) or 0
-          local ent = Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, familiar.Position, dir * 14.0, familiar)
+          local okSpawn, spawned = pcall(function()
+            return Isaac.Spawn(EntityType.ENTITY_TEAR, tearVar, 0, familiar.Position, dir * 14.0, familiar)
+          end)
+          local ent = okSpawn and spawned or nil
           local tear = ent and ent:ToTear()
           if tear then
             tear.CollisionDamage = math.max(3.5, player.Damage * 0.75)
