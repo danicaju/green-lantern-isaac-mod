@@ -209,6 +209,41 @@ return function(Core)
         local spawner = tear.SpawnerEntity
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
+
+        -- Lost Contact: emerald flash when the player's tear blocks an enemy projectile.
+        if tear and type(tear.ToTear) == "function" and tear:ToTear()
+           and collider and type(collider.ToTear) == "function" and collider:ToTear() then
+            local colSpawner = collider.SpawnerEntity
+            local isEnemyShot = true
+            if colSpawner then
+                pcall(function()
+                    if colSpawner:ToPlayer() then isEnemyShot = false end
+                    local cf = colSpawner:ToFamiliar()
+                    if cf and (cf.Player or (cf.SpawnerEntity and cf.SpawnerEntity:ToPlayer())) then
+                        isEnemyShot = false
+                    end
+                end)
+            end
+            if isEnemyShot then
+                local lostContact = (CollectibleType and CollectibleType.COLLECTIBLE_LOST_CONTACT) or 213
+                if player.HasCollectible and player:HasCollectible(lostContact) then
+                    local td = tear:GetData()
+                    local frame = Game():GetFrameCount()
+                    if not (td.lostContactFlashFrame and (frame - td.lostContactFlashFrame) < 3) then
+                        td.lostContactFlashFrame = frame
+                        pcall(function()
+                            if Isaac and Isaac.Spawn and EntityType and EffectVariant and EffectVariant.WATER_SPLASH then
+                                local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.WATER_SPLASH, 0, collider.Position, Vector.Zero, player)
+                                if fx and Core.SetEntityScaleAndColor then
+                                    Core.SetEntityScaleAndColor(fx, 0.55, Color(0.1, 1.0, 0.35, 0.85, 0.15, 0.85, 0.25))
+                                end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+
         if not (collider and collider.IsActiveEnemy and collider:IsActiveEnemy(false) and collider.IsVulnerableEnemy and collider:IsVulnerableEnemy()) then return end
 
         local td = tear:GetData()
