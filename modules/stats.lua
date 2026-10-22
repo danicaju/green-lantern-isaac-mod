@@ -14,12 +14,11 @@ return function(Core)
 
     -- HAL JORDAN STATS
     if Core.IsHalJordan(player) then
+      local ringOnline = not data.ringDepleted
       if cacheFlag == CacheFlag.CACHE_SPEED then
         player.MoveSpeed = player.MoveSpeed + Core.HAL_SPEED_BONUS
-      end
-
-      if cacheFlag == CacheFlag.CACHE_DAMAGE then
-        if not data.ringDepleted then
+      elseif cacheFlag == CacheFlag.CACHE_DAMAGE then
+        if ringOnline then
           -- While the Power Ring is active, scale damage along 1.10x -> 1.25x
           -- (+0.10 extra at full Willpower = 1.35x peak).
           local will = data.willpower or Core.WILLPOWER_MAX
@@ -31,24 +30,18 @@ return function(Core)
           player.Damage = player.Damage * willMult
         end
         -- When ringDepleted is true, Hal loses the ability to use the Ring (no ring bonus, but NO harsh 50% damage nerf!)
-      end
-
-      if cacheFlag == CacheFlag.CACHE_SHOTSPEED then
-        if not data.ringDepleted then
+      elseif cacheFlag == CacheFlag.CACHE_SHOTSPEED then
+        if ringOnline then
           player.ShotSpeed = player.ShotSpeed + Core.HAL_SHOT_SPEED_BONUS
         end
-      end
-
-      if cacheFlag == CacheFlag.CACHE_FIREDELAY then
+      elseif cacheFlag == CacheFlag.CACHE_FIREDELAY then
         -- SPEC-C: Hal dispara un poco mas lento para que el hold domine al click.
         -- Solo con el anillo activo: depletado dispara lagrimas normales sin penalizar.
-        if not data.ringDepleted then
+        if ringOnline then
           player.MaxFireDelay = player.MaxFireDelay + (Core.HAL_FIREDELAY_BONUS or 2)
         end
-      end
-
-      if cacheFlag == CacheFlag.CACHE_FLYING then
-        if not data.ringDepleted then
+      elseif cacheFlag == CacheFlag.CACHE_FLYING then
+        if ringOnline then
           -- Sample item-based flight BEFORE granting the Ring's, so depletion
           -- only revokes flight the Ring itself gave (e.g. keeps Spirit Wings).
           data.hadItemFlight = player.CanFly
@@ -56,10 +49,8 @@ return function(Core)
         else
           player.CanFly = data.hadItemFlight and true or false
         end
-      end
-
-      if cacheFlag == CacheFlag.CACHE_TEARFLAG then
-        if not data.ringDepleted then
+      elseif cacheFlag == CacheFlag.CACHE_TEARFLAG then
+        if ringOnline then
           -- All Green Lantern Ring energy beams pass through enemies and obstacles!
           player.TearFlags = player.TearFlags | TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_PIERCING
         end
