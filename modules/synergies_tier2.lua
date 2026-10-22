@@ -4,27 +4,6 @@
 return function(Core)
     local GL = Core.GL
 
-    local function SpawnConstructShard(player, pos, vel, damage, scale, flag)
-        local tear = nil
-        if player and player.FireTear then
-            tear = player:FireTear(pos, vel, false, true, false)
-        elseif Isaac and Isaac.Spawn then
-            local tVar = (TearVariant and TearVariant.DEFAULT) or 0
-            tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
-            if tear and tear.ToTear then tear = tear:ToTear() end
-        end
-        if tear then
-            tear.CollisionDamage = damage
-            local sd = tear:GetData()
-            sd.isGLRingBeam = true
-            if flag then sd[flag] = true end
-            if Core.ApplyRingBeamSprite then
-                Core.ApplyRingBeamSprite(tear, scale or 0.55)
-            end
-        end
-        return tear
-    end
-
     -- 1. PRE-TEAR COLLISION: Compound Fracture (509), Fire Mind (257), Explosivo (400)
     GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
         local spawner = tear.SpawnerEntity
@@ -51,7 +30,7 @@ return function(Core)
                 for i = -1, 1 do
                     local angle = math.atan2(dir.Y, dir.X) + i * 0.40
                     local sVel = Vector(math.cos(angle) * 7.5, math.sin(angle) * 7.5)
-                    SpawnConstructShard(player, tear.Position, sVel, baseDmg * 0.50, 0.50, "isCompoundShard")
+                    Core.SpawnGLConstructTear(player, tear.Position, sVel, baseDmg * 0.50, 0.50, "isCompoundShard")
                 end
             end)
         end
@@ -68,7 +47,7 @@ return function(Core)
                     local fxVar = (EffectVariant and EffectVariant.RED_CANDLE_FLAME) or (EffectVariant and EffectVariant.FIRE_WAVE) or 10
                     local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, tear.Position, Vector.Zero, player)
                     if fx and Core.SetEntityScaleAndColor then
-                        Core.SetEntityScaleAndColor(fx, 1.2, Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25))
+                        Core.SetEntityScaleAndColor(fx, 1.2, Core.GL_EMERALD_COLOR)
                     end
                     local sfx = (SoundEffect and SoundEffect.SOUND_FIREDEATH_HISS) or (SoundEffect and SoundEffect.SOUND_EXPLOSION_WEAK) or 0
                     if sfx > 0 and SFXManager and SFXManager().Play then
@@ -125,7 +104,7 @@ return function(Core)
                     local angle = math.atan2(dir.Y, dir.X) + i * 0.50
                     local sVel = Vector(math.cos(angle) * 7.0, math.sin(angle) * 7.0)
                     pcall(function()
-                        SpawnConstructShard(player, spawnPos, sVel, tickDmg * 1.5, 0.45, "isCompoundShard")
+                        Core.SpawnGLConstructTear(player, spawnPos, sVel, tickDmg * 1.5, 0.45, "isCompoundShard")
                     end)
                 end
             end
@@ -172,7 +151,7 @@ return function(Core)
 
             -- Eye of the Occult (601): Emerald energy trail
             if hasOccult then
-                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+                spr.Color = Core.GL_EMERALD_BRIGHT
                 if not td.isGLOccultTear then
                     td.isGLOccultTear = true
                     tear.CollisionDamage = (tear.CollisionDamage or player.Damage or 3.5) * 1.20
@@ -224,7 +203,7 @@ return function(Core)
 
         pcall(function()
             laser.DepthOffset = 35
-            laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+            laser:GetSprite().Color = Core.GL_EMERALD_COLOR
             laser.CollisionDamage = laser.CollisionDamage * 1.25
         end)
     end)

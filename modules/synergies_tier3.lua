@@ -4,27 +4,6 @@
 return function(Core)
     local GL = Core.GL
 
-    local function SpawnConstructShard(player, pos, vel, damage, scale, flag)
-        local tear = nil
-        if player and player.FireTear then
-            tear = player:FireTear(pos, vel, false, true, false)
-        elseif Isaac and Isaac.Spawn then
-            local tVar = (TearVariant and TearVariant.DEFAULT) or 0
-            tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
-            if tear and tear.ToTear then tear = tear:ToTear() end
-        end
-        if tear then
-            tear.CollisionDamage = damage
-            local sd = tear:GetData()
-            sd.isGLRingBeam = true
-            if flag then sd[flag] = true end
-            if Core.ApplyRingBeamSprite then
-                Core.ApplyRingBeamSprite(tear, scale or 0.55)
-            end
-        end
-        return tear
-    end
-
     -- 1. PRE-TEAR COLLISION: Eye of Belial (462), Little Horn (408), Sinus (507), Mucor (618)
     GL:AddCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, function(_, tear, collider, low)
         local spawner = tear.SpawnerEntity
@@ -105,7 +84,7 @@ return function(Core)
         for i = 0, 9 do
             local angle = (i / 10) * math.pi * 2
             local vel = Vector(math.cos(angle) * 10.5, math.sin(angle) * 10.5)
-            SpawnConstructShard(player, entity.Position, vel, dmg, 0.50, "isEuthanasiaNeedle")
+            Core.SpawnGLConstructTear(player, entity.Position, vel, dmg, 0.50, "isEuthanasiaNeedle")
         end
         pcall(function()
             local sfx = (SoundEffect and SoundEffect.SOUND_TEARIMPACTS) or 0
@@ -185,7 +164,7 @@ return function(Core)
                 laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.40, 1.0, 0.40)
                 laser.CollisionDamage = laser.CollisionDamage * 1.25
             elseif hasRev then
-                laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+                laser:GetSprite().Color = Core.GL_EMERALD_BRIGHT
                 laser.CollisionDamage = laser.CollisionDamage * 1.20
             elseif hasShoop or hasKrampus then
                 laser:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.25)
@@ -218,7 +197,7 @@ return function(Core)
         for i = 0, 2 do
             local angle = (i / 3) * math.pi * 2 + math.random() * 0.5
             local vel = Vector(math.cos(angle) * 6.5, math.sin(angle) * 6.5)
-            SpawnConstructShard(player, entity.Position, vel, dmg, 0.60, "isScatterShard")
+            Core.SpawnGLConstructTear(player, entity.Position, vel, dmg, 0.60, "isScatterShard")
         end
     end)
 
@@ -236,7 +215,7 @@ return function(Core)
             td.isGLNeptunusStyled = true
             pcall(function()
                 local spr = tear:GetSprite()
-                if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25) end
+                if spr then spr.Color = Core.GL_EMERALD_COLOR end
             end)
         end
     end)

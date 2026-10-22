@@ -108,6 +108,12 @@ Core.RING_FLARE_INTENSITY          = 1.0
 Core.AURA_GLOW_SCALE               = 1.0
 Core.AURA_GLOW_OPACITY             = 1.0
 
+-- Constantes esmeralda mas usadas (RGBA + offsets).
+-- Dejar intactos los Color() con base RGB distinta (Midas, etc.).
+Core.GL_EMERALD_COLOR        = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+Core.GL_EMERALD_BRIGHT       = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+Core.GL_EMERALD_DIM          = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+
 -- Efectos de audio y avisos de comic (MCM)
 Core.OVERCHARGE_CHIME_ENABLED      = true
 Core.LOW_WILLPOWER_WARNING_ENABLED = true
@@ -156,6 +162,29 @@ end
 
 function Core.ClearAllLanternEmblemDrops()
     Core.activeEmeraldSparks = {}
+end
+
+-- Spawn a hard-light construct tear/shard with explicit scale and data flag.
+-- Centralizes the FireTear/Isaac.Spawn fallback used by all synergy tiers.
+function Core.SpawnGLConstructTear(player, pos, vel, damage, scale, flag)
+    local tear = nil
+    if player and player.FireTear then
+        tear = player:FireTear(pos, vel, false, true, false)
+    elseif Isaac and Isaac.Spawn then
+        local tVar = (TearVariant and TearVariant.DEFAULT) or 0
+        tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
+        if tear and tear.ToTear then tear = tear:ToTear() end
+    end
+    if tear then
+        tear.CollisionDamage = damage
+        local sd = tear:GetData()
+        sd.isGLRingBeam = true
+        if flag then sd[flag] = true end
+        if Core.ApplyRingBeamSprite then
+            Core.ApplyRingBeamSprite(tear, scale)
+        end
+    end
+    return tear
 end
 
 function Core.GetPlayerData(player)

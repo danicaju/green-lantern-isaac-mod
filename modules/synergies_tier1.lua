@@ -4,28 +4,6 @@
 return function(Core)
     local GL = Core.GL
 
-    -- Helper: spawn an emerald construct shard / burst tear
-    local function SpawnConstructTear(player, pos, vel, damage, scale, flag)
-        local tear = nil
-        if player and player.FireTear then
-            tear = player:FireTear(pos, vel, false, true, false)
-        elseif Isaac and Isaac.Spawn then
-            local tVar = (TearVariant and TearVariant.DEFAULT) or 0
-            tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
-            if tear and tear.ToTear then tear = tear:ToTear() end
-        end
-        if tear then
-            tear.CollisionDamage = damage
-            local sd = tear:GetData()
-            sd.isGLRingBeam = true
-            if flag then sd[flag] = true end
-            if Core.ApplyRingBeamSprite then
-                Core.ApplyRingBeamSprite(tear, scale or 0.65)
-            end
-        end
-        return tear
-    end
-
     -- 1. KNOCKOUT DROPS (577): Hal's signature Giant Emerald Boxing Glove Construct Punch
     local function TriggerBoxingGlovePunch(player, target, hitPos, punchDir)
         local pos = hitPos or target.Position
@@ -38,7 +16,7 @@ return function(Core)
             local fxVar = (EffectVariant and EffectVariant.PUNCH) or (EffectVariant and EffectVariant.WATER_SPLASH) or 20
             local fx = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, pos, Vector.Zero, player)
             if fx and Core.SetEntityScaleAndColor then
-                Core.SetEntityScaleAndColor(fx, 1.30, Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30))
+                Core.SetEntityScaleAndColor(fx, 1.30, Core.GL_EMERALD_BRIGHT)
             end
             if target and target.Velocity then
                 target.Velocity = Vector((target.Velocity.X or 0) + dir.X * 14.0, (target.Velocity.Y or 0) + dir.Y * 14.0)
@@ -66,7 +44,7 @@ return function(Core)
             local column = Isaac.Spawn(EntityType.ENTITY_EFFECT, fxVar, 0, pos, Vector.Zero, player)
             if column then
                 local spr = column:GetSprite()
-                if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) end
+                if spr then spr.Color = Core.GL_EMERALD_BRIGHT end
             end
             if target and target.TakeDamage then
                 target:TakeDamage((player.Damage or 3.5) * 4.0, DamageFlag.DAMAGE_LASER, EntityRef(player), 0)
@@ -197,7 +175,7 @@ return function(Core)
         for i = 0, count - 1 do
             local angle = (i / count) * math.pi * 2
             local vel = Vector(math.cos(angle) * 9.5, math.sin(angle) * 9.5)
-            SpawnConstructTear(player, entity.Position, vel, dmg, 0.75, "isSadBombShard")
+            Core.SpawnGLConstructTear(player, entity.Position, vel, dmg, 0.75, "isSadBombShard")
         end
     end)
 
@@ -222,7 +200,7 @@ return function(Core)
                     td.isGLTrisagion = true
                     tear.CollisionDamage = (tear.CollisionDamage or player.Damage or 3.5) * 1.25
                 end
-                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+                spr.Color = Core.GL_EMERALD_COLOR
                 local frame = Game():GetFrameCount()
                 if frame % 4 == 0 and Isaac and Isaac.Spawn then
                     local fxVar = (EffectVariant and EffectVariant.HALO) or 10
@@ -234,7 +212,7 @@ return function(Core)
             elseif hasTerra then
                 spr.Color = Color(0.08, 0.85, 0.30, 1, 0.10, 0.70, 0.15)
             elseif hasAntiGrav then
-                spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+                spr.Color = Core.GL_EMERALD_BRIGHT
             elseif hasCSection then
                 spr.Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.30)
                 if not td.isGLCSection then
@@ -264,7 +242,7 @@ return function(Core)
         for i = 0, 5 do
             local angle = (i / 6) * math.pi * 2
             local vel = Vector(math.cos(angle) * 7.5, math.sin(angle) * 7.5)
-            SpawnConstructTear(player, entity.Position, vel, dmg, 0.55, "isUranusShard")
+            Core.SpawnGLConstructTear(player, entity.Position, vel, dmg, 0.55, "isUranusShard")
         end
         pcall(function()
             local sfx = (SoundEffect and SoundEffect.SOUND_GLASS_BREAK) or 0
