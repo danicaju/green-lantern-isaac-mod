@@ -130,7 +130,7 @@ return function(Core)
   function Core.ComputeContinuousBeamEndWorld(startWorld, dir, maxRangeOverride)
     if not startWorld then return Vector.Zero end
     local dLen = dir and ((dir.Length and dir:Length()) or math.sqrt((dir.X or 0)^2 + (dir.Y or 0)^2)) or 0
-    local d = (dLen > 0.001) and ((dir.Normalized and dir:Normalized()) or Vector((dir.X or 1) / dLen, (dir.Y or 0) / dLen)) or Vector(1, 0)
+    local d = (dLen > 0.001) and ((dir.Normalized and dir:Normalized()) or Vector((dir.X or 0) / dLen, (dir.Y or 0) / dLen)) or Vector(1, 0)
     local room = (Game and Game().GetRoom and Game():GetRoom()) or nil
     if not room then
       local range = maxRangeOverride or 400.0
