@@ -13,6 +13,7 @@ end
 
 -- ===================== TEST 1: CORE DEFAULTS =====================
 RegisterMod = function() return { AddCallback = function() end } end
+Color = function(...) return {} end
 local Core = dofile("modules/core.lua")
 
 check(Core.BEAM_OPACITY == 1.0, "Core.BEAM_OPACITY default is 1.0")

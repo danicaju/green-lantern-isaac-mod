@@ -134,6 +134,9 @@ local Core = {
     end,
     WILLPOWER_MAX = 100,
     TAINTED_FEAR_CHANCE = 0.25,
+    GL_EMERALD_COLOR  = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25),
+    GL_EMERALD_BRIGHT = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30),
+    GL_EMERALD_DIM    = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25),
 }
 
 local function findCb(id)

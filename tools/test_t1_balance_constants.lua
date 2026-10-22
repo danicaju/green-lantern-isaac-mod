@@ -16,6 +16,7 @@
 -- Stub minimo: core.lua usa RegisterMod(...) y unos cuantos nil IDs arriba.
 -- Solo necesitamos que la llamada exista.
 function RegisterMod(_name, _ver) return {} end
+Color = function(...) return {} end
 
 local Core = dofile("modules/core.lua")
 assert(type(Core) == "table", "core.lua debe devolver una tabla")

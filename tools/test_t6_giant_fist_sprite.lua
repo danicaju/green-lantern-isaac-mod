@@ -267,6 +267,7 @@ local Core2 = {
     DISCRETE_BEAM_DMG_MULT      = 1.0,
     WILLPOWER_PER_TEAR          = 0.0,
     TriggerHalRingDepleted      = function() end,
+    ResolveBeamPlayer           = function() return nil end,
 }
 
 -- (8.1) Cargar beam_discrete.lua con los stubs. El modulo es una factory

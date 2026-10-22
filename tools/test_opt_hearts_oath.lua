@@ -155,6 +155,10 @@ check(pickupCb ~= nil, "OPT(hearts): tainted_hearts.lua registra MC_PRE_PICKUP_C
 
 local fHud = assert(loadstring(assert(io.open("modules/hud_render.lua", "r")):read("*a"), "hud_render.lua"))
 fHud()(Core)
+-- Las barras y el texto de juramento viven ahora en hud_bars.lua.
+dofile("modules/hud_bars.lua")(Core)
+Core.PollInputForRender = function() end
+Core.RenderConstructTears = function() end
 local postCb = findCb(ModCallbacks.MC_POST_RENDER)
 check(postCb ~= nil, "OPT(oath): hud_render.lua registra MC_POST_RENDER")
 

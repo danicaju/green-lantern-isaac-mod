@@ -112,6 +112,9 @@ local Core = {
         tear._styled = true
         tear._beamScale = scale
     end,
+    GL_EMERALD_COLOR  = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25),
+    GL_EMERALD_BRIGHT = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30),
+    GL_EMERALD_DIM    = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25),
 }
 
 dofile("modules/synergies_virtues.lua")(Core)
@@ -295,6 +298,9 @@ local beamCore = {
         ent._scale = scale
         ent._color = col
     end,
+    GL_EMERALD_COLOR  = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25),
+    GL_EMERALD_BRIGHT = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30),
+    GL_EMERALD_DIM    = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25),
 }
 local fBeam = assert(io.open("modules/beam_synergies.lua", "r"))
 local srcBeam = fBeam:read("*a"); fBeam:close()
@@ -775,6 +781,11 @@ local srcHud = fHud:read("*a"); fHud:close()
 srcHud = srcHud:gsub("|", "+")
 local chunkHud = assert(loadstring(srcHud, "modules/hud_render.lua"))
 chunkHud()(hudCore)
+
+-- Helpers de HUD extraidos del coordinador; input y construct tears no se testean aqui.
+dofile("modules/hud_bars.lua")(hudCore)
+hudCore.PollInputForRender = function() end
+hudCore.RenderConstructTears = function() end
 
 local hudRenderCb = nil
 for _, c in ipairs(hudCore.GL._cbs) do

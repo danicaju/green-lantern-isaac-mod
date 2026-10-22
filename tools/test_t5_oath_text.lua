@@ -293,6 +293,10 @@ end
 local function loadHudRender()
     local factory = dofile("modules/hud_render.lua")
     factory(Core)
+    -- Las barras / oathText se renderizan desde hud_bars.lua.
+    dofile("modules/hud_bars.lua")(Core)
+    Core.PollInputForRender = function() end
+    Core.RenderConstructTears = function() end
 end
 
 -- ===================== (1) item_battery.lua: oath "IN BRIGHTEST DAY..." =====================
@@ -511,7 +515,7 @@ check(dataByPlayer[hal3.Index].oathTextTimer == 88,
       string.format("T5(3.D): rama Hal sigue decrementando 1/2 frames (90->88 en 3 frames), fue %d", dataByPlayer[hal3.Index].oathTextTimer or -1))
 
 -- ===================== (4) Heuristica: no duplicacion de decrementos en fuente =====================
-local srcHud = io.open("modules/hud_render.lua", "r")
+local srcHud = io.open("modules/hud_bars.lua", "r")
 local hudContent = srcHud and srcHud:read("*a") or ""
 srcHud:close()
 -- Debe haber exactamente 2 decrementos de data.oathTextTimer (1 rama Hal,
@@ -520,19 +524,17 @@ srcHud:close()
 -- que por jugador solo se decrementa una vez por frame.
 local _, decCount = hudContent:gsub("data%.oathTextTimer%s*=%s*data%.oathTextTimer%s*%-%s*1", "")
 check(decCount == 2,
-      string.format("T5(4): hud_render.lua debe tener exactamente 2 decrementos de oathTextTimer (rama Hal + rama Tainted), tiene %d", decCount))
+      string.format("T5(4): hud_bars.lua debe tener exactamente 2 decrementos de oathTextTimer (rama Hal + rama Tainted), tiene %d", decCount))
 -- Y la rama Tainted debe contener una referencia a oathText/oathTextTimer
 -- (para que sepamos que la hemos anadido).
 local _, refCount = hudContent:gsub("oathTextTimer", "")
 check(refCount >= 4,
-      string.format("T5(4): hud_render.lua debe mencionar oathTextTimer >=4 veces (2 decrementos + 2 referencias), tiene %d", refCount))
+      string.format("T5(4): hud_bars.lua debe mencionar oathTextTimer >=4 veces (2 decrementos + 2 referencias), tiene %d", refCount))
 -- Y el decremento de Tainted debe estar DENTRO de la rama IsTaintedHal (no
 -- suelto en el bucle de jugadores). Comprobamos que la posicion del decremento
 -- de Tainted esta DESPUES del `if Core.IsTaintedHal(player)` en el archivo.
 local posIfTainted  = hudContent:find("if Core.IsTaintedHal(player)", 1, true)
 local posTaintedDec = hudContent:find("oathTextTimer = data.oathTextTimer - 1", posIfTainted or 1, true)
--- Y debe haber EXACTAMENTE una ocurrencia entre el `if` y el proximo `if Core.IsHalJordan`
--- (que en este archivo no existe despues, asi que usamos fin de archivo).
 -- Mas simple: comprobamos que el decremento aparece despues del if tainted.
 check(posTaintedDec ~= nil and posIfTainted ~= nil and posTaintedDec > posIfTainted,
       "T5(4): el decremento de Tainted esta dentro de la rama IsTaintedHal (despues del if)")

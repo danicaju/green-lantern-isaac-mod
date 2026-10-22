@@ -14,6 +14,7 @@ end
 function RegisterMod(_name, _ver) return { AddCallback = function() end } end
 CollectibleType = { COLLECTIBLE_BIRTHRIGHT = 619 }
 ModCallbacks = { MC_POST_PLAYER_UPDATE = 1, MC_POST_NEW_ROOM = 2 }
+Color = function(...) return {} end
 
 local Core = dofile("modules/core.lua")
 check(type(Core) == "table", "core.lua must return a table")

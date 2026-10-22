@@ -123,6 +123,28 @@ local Core = {
     end,
 }
 
+function Core.SpawnGLConstructTear(player, pos, vel, damage, scale, flag)
+    local tear = nil
+    if player and player.FireTear then
+        tear = player:FireTear(pos, vel, false, true, false)
+    elseif Isaac and Isaac.Spawn then
+        local tVar = (TearVariant and TearVariant.DEFAULT) or 0
+        tear = Isaac.Spawn(EntityType.ENTITY_TEAR, tVar, 0, pos, vel, player)
+    end
+    if tear then
+        tear.CollisionDamage = damage
+        local sd = tear:GetData()
+        sd.isGLRingBeam = true
+        if flag then sd[flag] = true end
+        Core.ApplyRingBeamSprite(tear, scale)
+    end
+    return tear
+end
+
+Core.GL_EMERALD_COLOR  = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+Core.GL_EMERALD_BRIGHT = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30)
+Core.GL_EMERALD_DIM    = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+
 local function findCb(id)
     for _, c in ipairs(Core.GL._cbs) do
         if c.id == id then return c.fn end

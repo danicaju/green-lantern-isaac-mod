@@ -108,19 +108,19 @@ check(CoreHud.HUD_TEXT_SCALE == 0.8,
       string.format("hud_render debe definir Core.HUD_TEXT_SCALE = 0.8, fue %s", tostring(CoreHud.HUD_TEXT_SCALE)))
 
 -- ===================== PARTE C: contrato estatico de layout =====================
-local hudSrc = readFile("modules/hud_render.lua")
+local hudSrc = readFile("modules/hud_bars.lua")
 
 -- (4) BAR_W = 30 en las dos ramas; el valor viejo 36 no debe quedar.
 check(countPlain(hudSrc, "local BAR_W = 30") == 2,
-      "hud_render debe declarar BAR_W = 30 en 2 ramas (Hal y Tainted), halladas " .. tostring(countPlain(hudSrc, "local BAR_W = 30")))
+      "hud_bars debe declarar BAR_W = 30 en 2 ramas (Hal y Tainted), halladas " .. tostring(countPlain(hudSrc, "local BAR_W = 30")))
 check(countPlain(hudSrc, "BAR_W = 36") == 0,
-      "hud_render no debe mantener BAR_W = 36, halladas " .. tostring(countPlain(hudSrc, "BAR_W = 36")))
+      "hud_bars no debe mantener BAR_W = 36, halladas " .. tostring(countPlain(hudSrc, "BAR_W = 36")))
 
 -- (5) Etiqueta en hudX + 28 en las dos ramas; el offset viejo +33 no debe quedar.
 check(countPlain(hudSrc, "hudX + 28") == 2,
-      "hud_render debe usar hudX + 28 en 2 ramas, halladas " .. tostring(countPlain(hudSrc, "hudX + 28")))
+      "hud_bars debe usar hudX + 28 en 2 ramas, halladas " .. tostring(countPlain(hudSrc, "hudX + 28")))
 check(countPlain(hudSrc, "hudX + 33") == 0,
-      "hud_render no debe mantener hudX + 33, halladas " .. tostring(countPlain(hudSrc, "hudX + 33")))
+      "hud_bars no debe mantener hudX + 33, halladas " .. tostring(countPlain(hudSrc, "hudX + 33")))
 
 -- (6) GetCoopHUDOrigin intacto: origen del jugador 0 en 48 / 40.
 check(countPlain(hudSrc, "GetCoopHUDOrigin") >= 2,

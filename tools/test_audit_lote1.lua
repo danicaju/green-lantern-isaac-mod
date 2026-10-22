@@ -81,6 +81,15 @@ local Core = {
     IsRingActive = function() return true end,
     ApplyRingBeamSprite = function() beamCalls = beamCalls + 1 end,
     GetPlayerData = function() return {} end,
+    ResolveBeamPlayer = function(spawner)
+        if not spawner then return nil end
+        local ok, player = pcall(function() return spawner:ToPlayer() end)
+        if ok and player then return player end
+        local fam = nil
+        pcall(function() fam = spawner:ToFamiliar() end)
+        if fam and fam.Player then return fam.Player end
+        return nil
+    end,
 }
 
 -- Carga como en el resto de harness: shim de los operadores bitwise Lua 5.3
@@ -165,8 +174,8 @@ check(overrideBlock and overrideBlock:find("COLLECTIBLE_EPIC_FETUS", 1, true) ==
 -- ===================== TEST 4: F4 PCALL AL LIMITE DE ENTIDADES =====================
 local t2 = readFile("modules/synergies_tier2.lua")
 check(t2 ~= nil, "modules/synergies_tier2.lua exists")
-check(t2 and wrappedInPcall(t2, "SpawnConstructShard(player, spawnPos"),
-      "F4: SpawnConstructShard del beam continuo envuelto en pcall")
+check(t2 and wrappedInPcall(t2, "Core.SpawnGLConstructTear(player, spawnPos"),
+      "F4: Core.SpawnGLConstructTear del beam continuo envuelto en pcall")
 
 local tv = readFile("modules/synergies_virtues.lua")
 check(tv ~= nil, "modules/synergies_virtues.lua exists")

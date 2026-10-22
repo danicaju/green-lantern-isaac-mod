@@ -177,6 +177,7 @@ end
 Core.TriggerHalRingDepleted = function() end
 Core.RestoreHalRingPower = function() end
 Core.PlayRingSound = function() end
+Core.ResolveBeamPlayer = function(spawner) return spawner end
 
 -- ===================== HELPERS =====================
 local function loadModule(path)

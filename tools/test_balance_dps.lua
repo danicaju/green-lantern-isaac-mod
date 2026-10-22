@@ -26,6 +26,7 @@
 
 -- Stub minimo: core.lua usa RegisterMod(...) arriba del todo.
 function RegisterMod(_name, _ver) return {} end
+Color = function(...) return {} end
 
 local Core = dofile("modules/core.lua")
 assert(type(Core) == "table", "core.lua debe devolver una tabla")
@@ -199,9 +200,9 @@ do
     do
         local fdPos = statsSrc:find("if cacheFlag == CacheFlag.CACHE_FIREDELAY then", 1, true)
         local fdBlock = fdPos and statsSrc:sub(fdPos, fdPos + 600) or ""
-        check(fdBlock:find("ringDepleted", 1, true) ~= nil
+        check((fdBlock:find("ringDepleted", 1, true) ~= nil or fdBlock:find("ringOnline", 1, true) ~= nil)
               and fdBlock:find("HAL_FIREDELAY_BONUS", 1, true) ~= nil,
-              "E2: bloque firedelay de Hal debe contener guard ringDepleted + HAL_FIREDELAY_BONUS")
+              "E2: bloque firedelay de Hal debe contener guard ringDepleted/ringOnline + HAL_FIREDELAY_BONUS")
     end
 
     -- (12) E2: fallbacks OR cuando la constante falta (nil).

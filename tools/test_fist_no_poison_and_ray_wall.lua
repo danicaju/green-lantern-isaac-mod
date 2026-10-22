@@ -191,6 +191,7 @@ local discCore = {
     -- Wall at X >= 400
     return pos and pos.X >= 400
   end,
+  ResolveBeamPlayer = function() return nil end,
 }
 chunkDisc()(discCore)
 

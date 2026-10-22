@@ -47,6 +47,7 @@ RegisterMod = function(name, ver)
     }
 end
 Vector = function(x, y) return { X = x or 0, Y = y or 0 } end
+Color = function(...) return {} end
 
 local Core = dofile("modules/core.lua")
 check(type(Core.GetPlayerData) == "function", "Core.GetPlayerData exists")

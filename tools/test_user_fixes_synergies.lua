@@ -187,10 +187,10 @@ do
   check(hasSmoke == false, "Giant Fist must NOT spawn any SMOKE_CLOUD poison effects")
 end
 
-local fHud = assert(io.open("modules/hud_render.lua", "r"))
-local srcHud = fHud:read("*a"); fHud:close()
-check(srcHud:find("StickTarget") ~= nil, "hud_render.lua must check StickTarget for sticky tears")
-check(srcHud:find("RingFlare") ~= nil, "hud_render.lua must render RingFlare construct node when stuck")
+local fFx = assert(io.open("modules/fx_construct_tears.lua", "r"))
+local srcFx = fFx:read("*a"); fFx:close()
+check(srcFx:find("StickTarget") ~= nil, "fx_construct_tears.lua must check StickTarget for sticky tears")
+check(srcFx:find("RingFlare") ~= nil, "fx_construct_tears.lua must render RingFlare construct node when stuck")
 
 -- ===================== TEST 5: DISCRETE BEAM WALL COLLISION & DESTRUCTION =====================
 local fDisc = assert(io.open("modules/beam_discrete.lua", "r"))
