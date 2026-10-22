@@ -54,20 +54,36 @@ return function(Core)
   -- SECTION 6: GREEN LANTERN RING BEAM HANDLING (Hand origin + Piercing + Spectral)
   -- ---------------------------------------------------------------------------
 
+  -- F1: whitelist de familiares cuyas lagrimas pueden estilizarse como haz
+  -- esmeralda. Cualquier otro familiar conserva su lagrima vanilla intacta.
+  -- Enum verificado (docs Repentance): FamiliarVariant.INCUBUS = 80,
+  -- FamiliarVariant.SUCCUBUS = 96. Guardas nil + fallback numerico: sin crash.
+  local ALLOWED_FAMILIAR_BEAMERS = {}
+  do
+      local FV = FamiliarVariant
+      local incubus = (FV and (FV.INCUBUS or FV.FAMILIAR_INCUBUS)) or 80
+      local succubus = (FV and (FV.SUCCUBUS or FV.FAMILIAR_SUCCUBUS)) or 96
+      if incubus then ALLOWED_FAMILIAR_BEAMERS[incubus] = true end
+      if succubus then ALLOWED_FAMILIAR_BEAMERS[succubus] = true end
+  end
+
   GL:AddCallback(ModCallbacks.MC_POST_FIRE_TEAR, function(_, tear)
       local spawner = tear.SpawnerEntity
       if not spawner then return end
       local player = spawner:ToPlayer()
       if not player then
-          -- Incubus / familiar tears: if their owner is a GL player with an active ring, style them as beams.
+          -- Familiar tears: ONLY the whitelisted ones (Incubus / Succubus) whose
+          -- owner is a GL player with an active ring are styled as beams. Any
+          -- other familiar keeps its vanilla tear untouched.
+          local fam = nil
+          pcall(function() fam = spawner:ToFamiliar() end)
+          if not fam then return end
+          if not ALLOWED_FAMILIAR_BEAMERS[fam.Variant] then return end
           local owner = nil
           pcall(function()
-              local fam = spawner:ToFamiliar()
-              if fam then
-                  owner = fam.Player
-                  if not owner and fam.SpawnerEntity then
-                      owner = fam.SpawnerEntity:ToPlayer()
-                  end
+              owner = fam.Player
+              if not owner and fam.SpawnerEntity then
+                  owner = fam.SpawnerEntity:ToPlayer()
               end
           end)
           if owner and Core.IsRingActive(owner) then
