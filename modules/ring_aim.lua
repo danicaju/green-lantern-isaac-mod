@@ -95,10 +95,39 @@ return function(Core)
     end
   end
 
+  -- Resolve the player owner of a tear, including familiars such as Incubus.
+  local function ResolveBeamPlayer(spawner)
+    if not spawner then return nil end
+    local player = spawner:ToPlayer()
+    if player then return player end
+    local fam = nil
+    pcall(function() fam = spawner:ToFamiliar() end)
+    if fam then
+      local owner = nil
+      pcall(function() owner = fam.Player end)
+      if owner then return owner end
+      pcall(function() owner = fam.SpawnerEntity and fam.SpawnerEntity:ToPlayer() end)
+      return owner
+    end
+    return nil
+  end
+
   -- Transform a tear into an intense comic-book Green Lantern energy beam originating from the Ring
   function Core.ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
     pcall(function()
+      local beamPlayer = ResolveBeamPlayer(tear.SpawnerEntity)
+      local tint = Color(1, 1, 1, 1, 0, 0, 0)
+      local extraScale = 1.0
+      if beamPlayer and Core.GetRingBeamVisual then
+        local ok, t, s = pcall(Core.GetRingBeamVisual, beamPlayer)
+        if ok and t then
+          tint = t
+          extraScale = s or 1.0
+        end
+      end
+      local finalScale = (scaleMult or 1.0) * extraScale
+
       tear.DepthOffset = Core.IsAimingUp(nil, tear.Velocity) and -20 or 25
       tear.FallingAcceleration = -0.04
       tear.FallingSpeed = 0.0
@@ -108,13 +137,13 @@ return function(Core)
         ts:Play("Idle", true)
         local angle = (tear.Velocity and tear.Velocity:Length() > 0.01) and tear.Velocity:GetAngleDegrees() or 0.0
         ts.Rotation = angle
-        local s = scaleMult or 1.0
-        ts.Scale = Vector(s, s)
+        ts.Scale = Vector(finalScale, finalScale)
         ts.Color = Color(0, 0, 0, 0)
       end
       local td = tear:GetData()
       td.isGLRingBeam = true
-      td.glBeamScale = scaleMult or 1.0
+      td.glBeamScale = finalScale
+      td.glBeamTint = tint
       if td.hasEnteredRoom == nil then
         td.hasEnteredRoom = not (Core.IsWallAtPos and Core.IsWallAtPos(tear.Position))
       end
