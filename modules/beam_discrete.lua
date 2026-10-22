@@ -58,7 +58,24 @@ return function(Core)
       local spawner = tear.SpawnerEntity
       if not spawner then return end
       local player = spawner:ToPlayer()
-      if not player then return end
+      if not player then
+          -- Incubus / familiar tears: if their owner is a GL player with an active ring, style them as beams.
+          local owner = nil
+          pcall(function()
+              local fam = spawner:ToFamiliar()
+              if fam then
+                  owner = fam.Player
+                  if not owner and fam.SpawnerEntity then
+                      owner = fam.SpawnerEntity:ToPlayer()
+                  end
+              end
+          end)
+          if owner and Core.IsRingActive(owner) then
+              local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
+              Core.ApplyRingBeamSprite(tear, 1.05 * math.sqrt(sizeFactor))
+          end
+          return
+      end
 
       -- When Hal's ring is depleted (0% Willpower lockout), he loses the ability to use the Power Ring and fires normal tears!
       if not Core.IsRingActive(player) then return end
@@ -228,6 +245,28 @@ return function(Core)
           if td and td.glBeamScale then
               ts.Scale = Vector(td.glBeamScale, td.glBeamScale)
           end
+          -- Reveal with the item-driven tint (or pure white fallback) instead of a hardcoded white.
+          local tint = Color(1, 1, 1, 1, 0, 0, 0)
+          if td and td.glBeamTint then
+              tint = td.glBeamTint
+          else
+              local beamPlayer = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+              if not beamPlayer and tear.SpawnerEntity then
+                  local fam = nil
+                  pcall(function() fam = tear.SpawnerEntity:ToFamiliar() end)
+                  if fam then
+                      pcall(function() beamPlayer = fam.Player end)
+                      if not beamPlayer then
+                          pcall(function() beamPlayer = fam.SpawnerEntity and fam.SpawnerEntity:ToPlayer() end)
+                      end
+                  end
+              end
+              if beamPlayer and Core.GetRingBeamVisual then
+                  local ok, t = pcall(Core.GetRingBeamVisual, beamPlayer)
+                  if ok and t then tint = t end
+              end
+          end
+          ts.Color = tint
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
           elseif td and td.glBeamVel and td.glBeamVel:Length() > 0.1 then
