@@ -4,6 +4,15 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Sinergias visuales del beam esmeralda
+- Nuevo `modules/synergies_ring_tint.lua`: tabla `ITEM_VISUALS` + `Core.GetRingBeamVisual(player)` → `(tinte, multiplicador de escala)`. Tintes por item: Soy Milk (pálido, 0.8x), Lost Contact (1.15x), Midas' Touch (oro-esmeralda), **Sacred Heart (blanco puro, 1.2x — arregla el morado)**, Death's Touch (verde profundo, 1.15x), 8 Inch Nails (1.4x), Technology y Tech X.
+- `ApplyRingBeamSprite` aplica el tinte/escala del item; `EnforceRingBeamTearSprite` deja de imponer blanco fijo; el render del rayo continuo respeta el tinte.
+- **Incubus**: los tears de familiares cuyo dueño tiene el anillo activo ahora se convierten en beams esmeralda.
+- **Lost Contact**: destello esmeralda al bloquear disparos enemigos.
+- **EID**: descripciones EN/ES para Pop! (529) y Haemolacria (531); Mucormycosis y C Section ya existían.
+- Harness `tools/test_ring_tints.lua` (115 asserts). Suite 48/48, lint 43/43.
+- Nota: el tinte morado **no** venía del sprite (`gl_ring_beam.png` verificado: 0 píxeles morados), sino del color de lágrima que aplica el motor; ahora el beam fija su propio color.
+
 ### Arreglos de beams: vida, splits y Neptunus
 - `modules/core.lua`: `GL_BEAM_MAX_LIFE_FRAMES = 120` y `GL_BEAM_MAX_ALIVE = 32` (tope de proyectiles esmeralda vivos por jugador) — los beams dejan de acumularse por la sala.
 - `modules/beam_discrete.lua`: contador de vida por beam + culling del más antiguo del mismo spawner.
