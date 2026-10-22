@@ -62,7 +62,9 @@ return function(Core)
     end
 
     -- Helper: spawn Epic Fetus target marker + rocket bomb at a world position.
-    local function SpawnEpicFetusRocket(player, pos, data)
+    -- dmgMult permite nerfear SOLO los cohetes del canal continuo sin tocar el
+    -- disparo normal de Epic Fetus (que sigue usando el multiplicador clasico).
+    local function SpawnEpicFetusRocket(player, pos, data, dmgMult)
         local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
         local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, pos, Vector.Zero, player)
         if target then
@@ -218,7 +220,7 @@ return function(Core)
                 local b = bomb:ToBomb()
                 if b then
                     b.IsFetus = true
-                    b.ExplosionDamage = (player.Damage or 3.5) * 5.0
+                    b.ExplosionDamage = (player.Damage or 3.5) * (dmgMult or 5.0)
                 end
                 local bd = bomb:GetData()
                 bd.isGLBomb = true
@@ -239,7 +241,9 @@ return function(Core)
         local hasDr   = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
         if not (hasEpic or hasDr) then return end
 
-        if hasEpic and (frame % 45 == 0) then
+        -- Nerf: 1 cohete cada 90 frames (3 s) en vez de cada 45 (1.5 s). El
+        -- dano del cohete continua ademas se reduce a x2.0 (ver abajo).
+        if hasEpic and (frame % 90 == 0) then
             local aimDir = NormalizeVector(shootDir, Vector(1, 0))
             local strikePos = nil
             local room = Game and Game().GetRoom and Game():GetRoom()
@@ -257,8 +261,8 @@ return function(Core)
                 if room and room.GetClampedPosition then strikePos = room:GetClampedPosition(strikePos, 24) end
             end
 
-            SpawnEpicFetusRocket(player, strikePos, data)
-        elseif hasDr and (frame % 30 == 0) then
+            SpawnEpicFetusRocket(player, strikePos, data, 2.0)
+        elseif hasDr and (frame % 60 == 0) then
             local vel = Vector(shootDir.X * 11.0, shootDir.Y * 11.0)
             local bombVar = (BombVariant and BombVariant.BOMB_NORMAL) or 0
             local bomb = Isaac.Spawn(EntityType.ENTITY_BOMB, bombVar, 0, startWorld, vel, player)
@@ -266,7 +270,8 @@ return function(Core)
                 local b = bomb:ToBomb()
                 if b then
                     b.IsFetus = true
-                    b.ExplosionDamage = (player.Damage or 3.5) * 4.0
+                    -- Nerf del canal continuo: x2.0 en vez de x4.0.
+                    b.ExplosionDamage = (player.Damage or 3.5) * 2.0
                 end
                 local bd = bomb:GetData()
                 bd.isGLBomb = true
