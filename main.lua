@@ -9,6 +9,7 @@ local Core = include("modules.core")
 
 include("modules.ids")(Core)
 include("modules.utils")(Core)
+include("modules.synergies_ring_tint")(Core)
 include("modules.ring_aim")(Core)
 include("modules.beam_math")(Core)
 include("modules.ring_state")(Core)
