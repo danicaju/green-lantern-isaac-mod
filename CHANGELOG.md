@@ -4,6 +4,15 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Lote 3 — Refactors (sin cambio de comportamiento)
+- R1: `Core.ResolveBeamPlayer(spawner)` unifica la resolución spawner→player (antes 3 copias en `ring_aim.lua` y `beam_discrete.lua`).
+- R2: `Core.SpawnGLConstructTear(player, pos, vel, damage, scale, flag)` unifica el spawn de construct tears de tier1/2/3.
+- R3: `Core.GL_EMERALD_COLOR` / `GL_EMERALD_BRIGHT` / `GL_EMERALD_DIM` centralizan el color esmeralda (antes 30+ literales).
+- R4: helpers `IsFetusOwner`, `SpawnRocketSmoke`, `SpawnEpicFetusRocket` en `synergies_fetus.lua`.
+- R5: `ringOnline` unificado en `stats.lua` (5 ramas repetidas → una cadena `if/elseif`).
+- R6: `hud_render.lua` (374 → 121 líneas) dividido en `input_poll.lua`, `hud_bars.lua` y `fx_construct_tears.lua`.
+- Suite 50/50, lint 46/46. Sin cambios de comportamiento.
+
 ### Lote 2 — Auditoría (decisiones de diseño)
 
 - **D1 — Blend de tintes**: `synergies_ring_tint.lua` usa media geométrica por canal RGB
