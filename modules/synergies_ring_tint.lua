@@ -33,12 +33,18 @@ return function(Core)
 
     function Core.GetRingBeamVisual(player)
         local white = MakeColor(1, 1, 1, 1, 0, 0, 0)
-        local tint = white
         local scaleMul = 1.0
         if not player then
-            return tint, scaleMul
+            return white, scaleMul
         end
 
+        -- D1: blend multiplicativo suave. En vez de last-wins, acumulamos los
+        -- tintes de los items poseidos y los combinamos: media geometrica de los
+        -- canales RGB (para que Sacred Heart aclare sin borrar oro/verde) y
+        -- media aritmetica de alpha y offset colors. Un solo item conserva su
+        -- tinte exacto; sin items se devuelve blanco. La API (tint, scaleMul)
+        -- no cambia.
+        local ownedColors = {}
         for _, id in ipairs(ORDER) do
             local info = ITEM_VISUALS[id]
             if info then
@@ -50,11 +56,44 @@ return function(Core)
                 end)
                 if has then
                     scaleMul = scaleMul * info.scale
-                    tint = info.tint
+                    table.insert(ownedColors, info.tint)
                 end
             end
         end
 
-        return tint, scaleMul
+        local n = #ownedColors
+        if n == 0 then
+            return white, scaleMul
+        elseif n == 1 then
+            return ownedColors[1], scaleMul
+        end
+
+        local function clamp01(x)
+            if x < 0 then return 0 end
+            if x > 1 then return 1 end
+            return x
+        end
+
+        local r, g, b = 1.0, 1.0, 1.0
+        local a, ro, go, bo = 0.0, 0.0, 0.0, 0.0
+        for _, c in ipairs(ownedColors) do
+            r = r * (c.R or 1.0)
+            g = g * (c.G or 1.0)
+            b = b * (c.B or 1.0)
+            a = a + (c.A or 1.0)
+            ro = ro + (c.RO or 0.0)
+            go = go + (c.GO or 0.0)
+            bo = bo + (c.BO or 0.0)
+        end
+        local invN = 1.0 / n
+        r = clamp01(r ^ invN)
+        g = clamp01(g ^ invN)
+        b = clamp01(b ^ invN)
+        a = clamp01(a / n)
+        ro = ro / n
+        go = go / n
+        bo = bo / n
+
+        return MakeColor(r, g, b, a, ro, go, bo), scaleMul
     end
 end
