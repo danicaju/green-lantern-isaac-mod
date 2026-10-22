@@ -4,6 +4,16 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Fix — un clic, un beam
+
+- **Click izquierdo duplicaba la lágrima pequeña**: el mismo clic se encolaba por
+  tres vías distintas (`press` capturado en render, `release` de render y
+  `release` de gameplay). Ahora hay un único punto de encolado
+  (`QueueDiscreteClick`) con guard por pulsación (`clickQueuedThisPress`), y el
+  burst marca `firedSmallBeamThisPress = true` al consumirse, de modo que el
+  `release` posterior no vuelve a disparar.
+- Tests: `tools/test_single_click_beam.lua` (8 checks). Suite 52/52, lint 46/46.
+
 ### Fixes de gameplay (reporte en partida)
 
 - **Incubus ya dispara**: las lágrimas de familiares (Incubus/Succubus) dejan de
