@@ -260,6 +260,22 @@ return function(Core)
           if tear and tear:Exists() and not tear:IsDead() then
             local td = tear:GetData()
             if td and td.isGLRingBeam then
+              local beamPlayer = tear.SpawnerEntity and tear.SpawnerEntity:ToPlayer()
+              if not beamPlayer and tear.SpawnerEntity then
+                local fam = nil
+                pcall(function() fam = tear.SpawnerEntity:ToFamiliar() end)
+                if fam then
+                  pcall(function() beamPlayer = fam.Player end)
+                  if not beamPlayer then
+                    pcall(function() beamPlayer = fam.SpawnerEntity and fam.SpawnerEntity:ToPlayer() end)
+                  end
+                end
+              end
+              local beamTint = Color(1, 1, 1, 1, 0, 0, 0)
+              if beamPlayer and Core.GetRingBeamVisual then
+                local ok, t = pcall(Core.GetRingBeamVisual, beamPlayer)
+                if ok and t then beamTint = t end
+              end
               local isStuck = false
               pcall(function()
                 if tear.StickTarget ~= nil then isStuck = true end
@@ -278,7 +294,7 @@ return function(Core)
                   Core.glBeamTearSprite:SetFrame("EnergyNode", animFrame)
                   Core.glBeamTearSprite.Scale = Vector(1.1, 1.1)
                   Core.glBeamTearSprite.Rotation = (currentGameFrame * 6) % 360
-                  Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                  Core.glBeamTearSprite.Color = beamTint
                   Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
                 end
                 local flareSpr = Core.GetGLAuraSprites and select(2, Core.GetGLAuraSprites())
@@ -305,7 +321,7 @@ return function(Core)
                     Core.glBeamTearSprite:SetFrame("EnergyOrb", animFrame)
                     Core.glBeamTearSprite.Rotation = (currentGameFrame * 8) % 360
                     Core.glBeamTearSprite.Scale = Vector(scale * 1.15, scale * 1.15)
-                    Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                    Core.glBeamTearSprite.Color = beamTint
                     Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
                   else
                     Core.glBeamTearSprite:SetFrame("Idle", animFrame)
@@ -326,7 +342,7 @@ return function(Core)
                     end
                     Core.glBeamTearSprite.Rotation = targetRot
                     Core.glBeamTearSprite.Scale = Vector(scale, scale)
-                    Core.glBeamTearSprite.Color = Color(1, 1, 1, 1, 0, 0, 0)
+                    Core.glBeamTearSprite.Color = beamTint
                     Core.glBeamTearSprite:Render(screenPos, Vector.Zero, Vector.Zero)
                   end
                 end
