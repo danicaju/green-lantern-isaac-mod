@@ -42,6 +42,9 @@ return function(Core)
     data.overcharge = (data.overchargeTier or 0) > 0
     data.ringDepleted = (entry.ringDepleted == true)
     data.birthrightInitialized = (entry.birthrightInitialized == true)
+    -- D5: marcamos al jugador para que POST_PLAYER_INIT no pise los valores
+    -- restaurados en una partida continuada.
+    data._glContinuedRun = true
   end
 
   -- Slot COMPARTIDO SaveModData (un solo string por mod en Isaac) con secciones
