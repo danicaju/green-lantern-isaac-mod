@@ -283,6 +283,10 @@ return function(Core)
               end
           end
           ts.Color = tint
+          -- D3: el motor puede forzar Visible=true en tears; si por algun
+          -- motivo sigue oculto tras un reset C++, lo forzamos aqui junto al
+          -- color para que el beam siempre se vea.
+          tear.Visible = true
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
           elseif td and td.glBeamVel and td.glBeamVel:Length() > 0.1 then
