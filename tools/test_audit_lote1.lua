@@ -136,11 +136,17 @@ if type(modFn) == "function" then
     check(beamCalls == 0, "F1: familiar fuera de la whitelist NO recibe ApplyRingBeamSprite")
     check(tearBad.Visible == true, "F1: la lagrima del familiar no permitido queda intacta")
 
-    -- Familiar permitido (Incubus): si recibe el estilo haz.
+    -- Familiar permitido (Incubus): ahora recibe TINTE esmeralda sobre su
+    -- lagrima VANILLA. Antes se convertia en el haz oculto (Visible=false +
+    -- sprite custom) y eso dejaba a Incubus sin lagrimas visibles.
     beamCalls = 0
+    local tintCalls = 0
+    Core.ApplyFamiliarTearTint = function() tintCalls = tintCalls + 1 end
     local tearOk = makeTear(FamiliarVariant.INCUBUS, owner)
     fire(nil, tearOk)
-    check(beamCalls == 1, "F1: Incubus (en whitelist) SI recibe ApplyRingBeamSprite")
+    check(beamCalls == 0, "F1: Incubus NO se convierte en haz oculto (conserva fisica vanilla)")
+    check(tintCalls == 1, "F1: Incubus recibe ApplyFamiliarTearTint")
+    check(tearOk.Visible ~= false, "F1: la lagrima de Incubus no se oculta")
 end
 
 -- ===================== TEST 2: F2 FALLBACK DE NORMALIZACION =====================

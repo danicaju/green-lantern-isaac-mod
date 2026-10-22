@@ -458,9 +458,10 @@ local handled = beamCore.FireFetusTapConstruct(playerStub, tapData, Vector(1, 0)
 check(handled == true, "FireFetusTapConstruct: handles Epic Fetus tap")
 check(#spawnedEnts >= 2, "FireFetusTapConstruct: spawns target reticle and falling rocket")
 
--- Beam continuous synergy for Epic Fetus (orbital strike at frame 45)
+-- Beam continuous synergy for Epic Fetus (orbital strike every 90 frames; nerf
+-- de balance: antes cada 45)
 spawnedEnts = {}
-beamCore.TickFetusContinuousSynergy(playerStub, tapData, Vector(100, 100), Vector(1, 0), Vector(300, 100), 45)
+beamCore.TickFetusContinuousSynergy(playerStub, tapData, Vector(100, 100), Vector(1, 0), Vector(300, 100), 90)
 check(#spawnedEnts >= 2, "TickFetusContinuousSynergy: summons orbital strike at endWorld")
 
 Isaac.GetPlayer = origGetPlayer
