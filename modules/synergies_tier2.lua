@@ -39,7 +39,7 @@ return function(Core)
         local baseDmg = tear.CollisionDamage or player.Damage or 3.5
 
         -- Compound Fracture (509): Bone construct splinter shards
-        local hasCompound = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_COMPOUND_FRACTURE or 509)
+        local hasCompound = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_COMPOUND_FRACTURE or 509))
         if hasCompound and not (td and td.isCompoundShard) then
             pcall(function()
                 local sfx = (SoundEffect and SoundEffect.SOUND_TEARIMPACTS) or 0
@@ -57,7 +57,7 @@ return function(Core)
         end
 
         -- Fire Mind (257): Emerald plasma burns & combustions
-        local hasFireMind = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_FIRE_MIND or 257)
+        local hasFireMind = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_FIRE_MIND or 257))
         if hasFireMind then
             pcall(function()
                 if collider.AddBurn then
@@ -82,7 +82,7 @@ return function(Core)
         end
 
         -- Explosivo (400): Emerald hard-light sticky plasma bubble
-        local hasExplosivo = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_EXPLOSIVO or 400)
+        local hasExplosivo = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_EXPLOSIVO or 400))
         if hasExplosivo and math.random() < math.min(0.40, 0.12 + luck * 0.03) then
             pcall(function()
                 local sfx = (SoundEffect and SoundEffect.SOUND_SPLATTER) or 0
@@ -119,18 +119,20 @@ return function(Core)
         local spawnPos = hitPos or ent.Position
 
         -- Compound Fracture continuous beam splinter
-        if player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_COMPOUND_FRACTURE or 509) then
+        if player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_COMPOUND_FRACTURE or 509)) then
             if math.random() < 0.25 then
                 for i = -1, 1, 2 do
                     local angle = math.atan2(dir.Y, dir.X) + i * 0.50
                     local sVel = Vector(math.cos(angle) * 7.0, math.sin(angle) * 7.0)
-                    SpawnConstructShard(player, spawnPos, sVel, tickDmg * 1.5, 0.45, "isCompoundShard")
+                    pcall(function()
+                        SpawnConstructShard(player, spawnPos, sVel, tickDmg * 1.5, 0.45, "isCompoundShard")
+                    end)
                 end
             end
         end
 
         -- Fire Mind continuous beam combustion
-        if player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_FIRE_MIND or 257) then
+        if player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_FIRE_MIND or 257)) then
             pcall(function()
                 if ent.AddBurn then ent:AddBurn(EntityRef(player), 60, tickDmg * 1.2) end
             end)
@@ -143,9 +145,9 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasFlatStone = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_FLAT_STONE or 527)
-        local hasOccult = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_OF_THE_OCCULT or 601)
-        local hasContinuum = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_CONTINUUM or 369)
+        local hasFlatStone = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_FLAT_STONE or 527))
+        local hasOccult = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_EYE_OF_THE_OCCULT or 601))
+        local hasContinuum = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_CONTINUUM or 369))
         if not (hasFlatStone or hasOccult or hasContinuum) then return end
 
         local td = tear:GetData()
@@ -190,7 +192,7 @@ return function(Core)
         for i = 0, nPlayers - 1 do
             local player = Isaac.GetPlayer(i)
             if player and Core.IsRingActive(player) then
-                local hasSaturnus = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SATURNUS or 606)
+                local hasSaturnus = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SATURNUS or 606))
                 if hasSaturnus then
                     pcall(function()
                         local fxVar = (EffectVariant and EffectVariant.HALO) or 10
@@ -212,8 +214,8 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasTech2 = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECHNOLOGY_2 or 149)
-        local hasTech5 = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECH_5 or 244)
+        local hasTech2 = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TECHNOLOGY_2 or 149))
+        local hasTech5 = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TECH_5 or 244))
         if not (hasTech2 or hasTech5) then return end
 
         local ld = laser:GetData()
