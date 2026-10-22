@@ -72,17 +72,17 @@ return function(Core)
       if not spawner then return end
       local player = spawner:ToPlayer()
       if not player then
-          -- Familiar tears: ONLY the whitelisted ones (Incubus / Succubus) whose
-          -- owner is a GL player with an active ring are styled as beams. Any
-          -- other familiar keeps its vanilla tear untouched.
+          -- Familiar tears (Incubus / Succubus): se conservan VANILLA. Antes se
+          -- convertian en el haz oculto (Visible=false + sprite custom), y eso
+          -- dejaba a Incubus sin lagrimas visibles. Ahora solo se tinta el
+          -- sprite de la lagrima; fisica, colision y visibilidad intactas.
           local fam = nil
           pcall(function() fam = spawner:ToFamiliar() end)
           if not fam then return end
           if not ALLOWED_FAMILIAR_BEAMERS[fam.Variant] then return end
           local owner = Core.ResolveBeamPlayer(spawner)
-          if owner and Core.IsRingActive(owner) then
-              local sizeFactor = math.max(0.65, math.min(1.85, tear.Scale or 1.0))
-              Core.ApplyRingBeamSprite(tear, 1.05 * math.sqrt(sizeFactor))
+          if owner and Core.IsRingActive(owner) and Core.ApplyFamiliarTearTint then
+              Core.ApplyFamiliarTearTint(tear, owner)
           end
           return
       end

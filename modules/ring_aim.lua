@@ -112,6 +112,24 @@ return function(Core)
     return nil
   end
 
+  -- Tinta la lagrima VANILLA de un familiar (Incubus / Succubus) de esmeralda
+  -- sin convertirla en el haz oculto: fisica, colision y visibilidad intactas.
+  function Core.ApplyFamiliarTearTint(tear, owner)
+    if not tear then return end
+    pcall(function()
+      local tint = Core.GL_EMERALD_COLOR or Color(0.15, 1.0, 0.45, 1.0, 0.1, 0.85, 0.25)
+      if owner and Core.GetRingBeamVisual then
+        local ok, t = pcall(Core.GetRingBeamVisual, owner)
+        if ok and t then tint = t end
+      end
+      local ts = tear:GetSprite()
+      if ts and Color then ts.Color = tint end
+      tear.Visible = true
+      local td = tear:GetData()
+      if td then td.glFamiliarTint = true end
+    end)
+  end
+
   -- Transform a tear into an intense comic-book Green Lantern energy beam originating from the Ring
   function Core.ApplyRingBeamSprite(tear, scaleMult)
     if not tear then return end
