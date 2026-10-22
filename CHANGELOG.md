@@ -4,6 +4,22 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Fixes de gameplay (reporte en partida)
+
+- **Incubus ya dispara**: las lágrimas de familiares (Incubus/Succubus) dejan de
+  convertirse en el haz oculto (`Visible=false` + sprite custom), que las dejaba
+  invisibles. Ahora solo se tiñe el sprite de la lágrima vanilla con
+  `Core.ApplyFamiliarTearTint`: física, colisión y visibilidad intactas.
+- **Epic Fetus nerfeado en el canal continuo**: cohete cada 90 frames (antes 45) y
+  daño ×2.0 (antes ×5.0) cuando se canaliza el rayo. El disparo normal de Epic
+  Fetus conserva su ×5.0.
+- **Dr. Fetus nerfeado en el canal continuo**: bomba cada 60 frames (antes 30) y
+  daño ×2.0 (antes ×4.0).
+- Tests: `tools/test_incubus_fetus_fix.lua` (18 checks), `test_audit_lote1.lua` y
+  `test_new_synergies.lua` actualizados. Suite 51/51, lint 46/46.
+- `GEMINI.md` Rule 1: la suite completa se exige **antes de commitear**, no tras
+  cada edición intermedia (modo lean).
+
 ### Lote 3 — Refactors (sin cambio de comportamiento)
 - R1: `Core.ResolveBeamPlayer(spawner)` unifica la resolución spawner→player (antes 3 copias en `ring_aim.lua` y `beam_discrete.lua`).
 - R2: `Core.SpawnGLConstructTear(player, pos, vel, damage, scale, flag)` unifica el spawn de construct tears de tier1/2/3.
