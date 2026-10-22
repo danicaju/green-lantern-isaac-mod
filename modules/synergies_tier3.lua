@@ -37,7 +37,7 @@ return function(Core)
         local baseDmg = tear.CollisionDamage or player.Damage or 3.5
 
         -- Eye of Belial (462): Empowered piercing emerald dread bolt
-        local hasBelial = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_OF_BELIAL or 462)
+        local hasBelial = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_EYE_OF_BELIAL or 462))
         if hasBelial and not (td and td.isBelialEmpowered) then
             td.isBelialEmpowered = true
             pcall(function()
@@ -54,7 +54,7 @@ return function(Core)
         end
 
         -- Little Horn (408): Emerald Giant Fist Construct Smash
-        local hasLittleHorn = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_LITTLE_HORN or 408)
+        local hasLittleHorn = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_LITTLE_HORN or 408))
         if hasLittleHorn and math.random() < math.min(0.40, 0.10 + luck * 0.03) then
             pcall(function()
                 local sfx = (SoundEffect and SoundEffect.SOUND_PUNCH) or 0
@@ -73,8 +73,8 @@ return function(Core)
         end
 
         -- Sinus Infection (507) & Mucormycosis (618): Emerald construct tracking tag
-        local hasSinus = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SINUS_INFECTION or 507)
-        local hasMucor = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_MUCORMYCOSIS or 618)
+        local hasSinus = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SINUS_INFECTION or 507))
+        local hasMucor = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_MUCORMYCOSIS or 618))
         if (hasSinus or hasMucor) and math.random() < math.min(0.50, 0.15 + luck * 0.03) then
             local ed = collider.GetData and collider:GetData()
             if ed and not ed.glConstructTagged then
@@ -92,7 +92,7 @@ return function(Core)
         local player = nil
         for i = 0, nPlayers - 1 do
             local p = Isaac.GetPlayer(i)
-            if p and Core.IsRingActive(p) and p.HasCollectible and p:HasCollectible(CollectibleType.COLLECTIBLE_EUTHANASIA or 499) then
+            if p and Core.IsRingActive(p) and p.HasCollectible and p:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_EUTHANASIA or 499)) then
                 player = p; break
             end
         end
@@ -125,7 +125,7 @@ return function(Core)
         for i = 0, nPlayers - 1 do
             local player = Isaac.GetPlayer(i)
             if player and Core.IsRingActive(player) then
-                local hasBlanket = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_BLANKET or 540)
+                local hasBlanket = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_BLANKET or 540))
                 if hasBlanket then
                     pcall(function()
                         local fxVar = (EffectVariant and EffectVariant.HALO) or 10
@@ -146,7 +146,7 @@ return function(Core)
     GL:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(_, player)
         if not Core.IsRingActive(player) then return end
 
-        local hasLeaf = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_GNAWED_LEAF or 210)
+        local hasLeaf = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_GNAWED_LEAF or 210))
         if hasLeaf then
             local spr = player:GetSprite()
             if spr and player.IsInvulnerable and player:IsInvulnerable() then
@@ -168,11 +168,11 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasZero = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TECH_ZERO or 502)
-        local hasMega = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_MEGA_BLAST or 441)
-        local hasRev = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_REVELATION or 643)
-        local hasShoop = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SHOOP_DA_WHOOP or 49)
-        local hasKrampus = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_HEAD_OF_KRAMPUS or 293)
+        local hasZero = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TECH_ZERO or 502))
+        local hasMega = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_MEGA_BLAST or 441))
+        local hasRev = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_REVELATION or 643))
+        local hasShoop = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SHOOP_DA_WHOOP or 49))
+        local hasKrampus = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_HEAD_OF_KRAMPUS or 293))
 
         if not (hasZero or hasMega or hasRev or hasShoop or hasKrampus) then return end
 
@@ -206,7 +206,7 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasScatter = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SCATTER_BOMBS or 366)
+        local hasScatter = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SCATTER_BOMBS or 366))
         local ed = entity.GetData and entity:GetData()
         local isFetusOrGL = entity.IsFetus or (ed and ed.isGLBomb)
         if not (hasScatter and isFetusOrGL) then return end
@@ -228,7 +228,7 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasNep = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS or 597)
+        local hasNep = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_NEPTUNUS or 597))
         if not hasNep then return end
 
         local td = tear:GetData()
