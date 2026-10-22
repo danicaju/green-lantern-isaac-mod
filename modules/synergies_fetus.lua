@@ -4,26 +4,30 @@
 return function(Core)
     local GL = Core.GL
 
+    -- Helper: check if a ring-active player owns this Dr./Epic Fetus entity.
+    local function IsFetusOwner(player, entity, isEpic)
+        local ed = entity.GetData and entity:GetData()
+        local hasEpic = CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS)
+        local hasDr = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
+        if isEpic then
+            return hasEpic or (ed and ed.isGLRocket)
+        else
+            return hasDr or entity.IsFetus or (ed and ed.isGLBomb)
+        end
+    end
+
     -- Helper to resolve ring-active owner even when Isaac engine leaves SpawnerEntity nil
     local function FindRingFetusPlayer(entity, isEpic)
         local spawner = entity.SpawnerEntity
         local player = spawner and spawner:ToPlayer()
-        local ed = entity.GetData and entity:GetData()
-        if player and Core.IsRingActive(player) then
-            local hasEpic = CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS)
-            local hasDr = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and player:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
-            if isEpic and (hasEpic or (ed and ed.isGLRocket)) then return player end
-            if (not isEpic) and (hasDr or entity.IsFetus or (ed and ed.isGLBomb)) then return player end
-            return nil
+        if player and Core.IsRingActive(player) and IsFetusOwner(player, entity, isEpic) then
+            return player
         end
         local nPlayers = (Game().GetNumPlayers and Game():GetNumPlayers()) or 1
         for i = 0, nPlayers - 1 do
             local p = Isaac.GetPlayer(i)
-            if p and Core.IsRingActive(p) then
-                local hasEpic = CollectibleType and CollectibleType.COLLECTIBLE_EPIC_FETUS and p:HasCollectible(CollectibleType.COLLECTIBLE_EPIC_FETUS)
-                local hasDr = CollectibleType and CollectibleType.COLLECTIBLE_DR_FETUS and p:HasCollectible(CollectibleType.COLLECTIBLE_DR_FETUS)
-                if isEpic and (hasEpic or (ed and ed.isGLRocket)) then return p end
-                if (not isEpic) and (hasDr or entity.IsFetus or (ed and ed.isGLBomb)) then return p end
+            if p and Core.IsRingActive(p) and IsFetusOwner(p, entity, isEpic) then
+                return p
             end
         end
         return nil
@@ -42,6 +46,43 @@ return function(Core)
         return fallback or Vector(1, 0)
     end
 
+    -- Helper: emerald smoke trail for Epic Fetus rockets.
+    local function SpawnRocketSmoke(pos, spawner)
+        pcall(function()
+            local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
+            local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, pos, Vector.Zero, spawner)
+            if smoke then
+                smoke.CollisionDamage = 0
+                pcall(function()
+                    smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
+                    smoke.Scale = 0.55
+                end)
+            end
+        end)
+    end
+
+    -- Helper: spawn Epic Fetus target marker + rocket bomb at a world position.
+    local function SpawnEpicFetusRocket(player, pos, data)
+        local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
+        local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, pos, Vector.Zero, player)
+        if target then
+            target:GetSprite().Color = Core.GL_EMERALD_COLOR
+            target:GetData().isGLRocket = true
+        end
+        local rocketVar = (BombVariant and BombVariant.BOMB_ROCKET) or 19
+        local rocket = Isaac.Spawn(EntityType.ENTITY_BOMB, rocketVar, 0, pos, Vector.Zero, player)
+        if rocket then
+            local rd = rocket:GetData()
+            rd.isGLBomb = true
+            rd.isGLRocket = true
+            pcall(function()
+                local spr = rocket:GetSprite()
+                if spr then spr.Color = Core.GL_EMERALD_BRIGHT end
+            end)
+        end
+        data.ringFlareTimer = 10
+    end
+
     -- 1. EPIC FETUS TARGET & ROCKET EFFECT STYLING
     GL:AddCallback(ModCallbacks.MC_POST_EFFECT_INIT, function(_, effect)
         local isRocket = (EffectVariant and EffectVariant.ROCKET and effect.Variant == EffectVariant.ROCKET) or (effect.Variant == 31)
@@ -55,7 +96,7 @@ return function(Core)
         pcall(function()
             local spr = effect:GetSprite()
             if spr then
-                spr.Color = isRocket and Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) or Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+                spr.Color = isRocket and Core.GL_EMERALD_BRIGHT or Core.GL_EMERALD_COLOR
             end
         end)
         local data = Core.GetPlayerData(player)
@@ -72,22 +113,12 @@ return function(Core)
         pcall(function()
             local spr = effect:GetSprite()
             if spr then
-                spr.Color = isRocket and Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) or Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
+                spr.Color = isRocket and Core.GL_EMERALD_BRIGHT or Core.GL_EMERALD_COLOR
             end
         end)
         if isRocket and Game():GetFrameCount() % 2 == 0 then
-            pcall(function()
-                local spawner = effect.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0))
-                local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-                local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, effect.Position, Vector.Zero, spawner)
-                if smoke then
-                    smoke.CollisionDamage = 0
-                    pcall(function()
-                        smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
-                        smoke.Scale = 0.55
-                    end)
-                end
-            end)
+            local spawner = effect.SpawnerEntity or (Isaac.GetPlayer and Isaac.GetPlayer(0))
+            SpawnRocketSmoke(effect.Position, spawner)
         end
     end)
 
@@ -110,7 +141,7 @@ return function(Core)
         pcall(function()
             local spr = bomb:GetSprite()
             if spr then
-                spr.Color = isRocket and Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) or Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+                spr.Color = isRocket and Core.GL_EMERALD_BRIGHT or Core.GL_EMERALD_DIM
             end
         end)
         local data = Core.GetPlayerData(player)
@@ -124,21 +155,11 @@ return function(Core)
         pcall(function()
             local spr = bomb:GetSprite()
             if spr then
-                spr.Color = bd.isGLRocket and Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) or Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25)
+                spr.Color = bd.isGLRocket and Core.GL_EMERALD_BRIGHT or Core.GL_EMERALD_DIM
             end
         end)
         if bd.isGLRocket and Game():GetFrameCount() % 2 == 0 then
-            pcall(function()
-                local smokeVar = (EffectVariant and EffectVariant.SMOKE_CLOUD) or 141
-                local smoke = Isaac.Spawn(EntityType.ENTITY_EFFECT, smokeVar, 0, bomb.Position, Vector.Zero, bomb.SpawnerEntity)
-                if smoke then
-                    smoke.CollisionDamage = 0
-                    pcall(function()
-                        smoke:GetSprite().Color = Color(0.1, 1.0, 0.38, 0.65, 0.1, 0.6, 0.15)
-                        smoke.Scale = 0.55
-                    end)
-                end
-            end)
+            SpawnRocketSmoke(bomb.Position, bomb.SpawnerEntity)
         end
     end)
 
@@ -181,24 +202,7 @@ return function(Core)
             local targetPos = Vector(player.Position.X + aimDir.X * 180, player.Position.Y + aimDir.Y * 180)
             local room = Game and Game().GetRoom and Game():GetRoom()
             if room and room.GetClampedPosition then targetPos = room:GetClampedPosition(targetPos, 20) end
-            local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
-            local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, targetPos, Vector.Zero, player)
-            if target then
-                target:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
-                target:GetData().isGLRocket = true
-            end
-            local rocketVar = (BombVariant and BombVariant.BOMB_ROCKET) or 19
-            local rocket = Isaac.Spawn(EntityType.ENTITY_BOMB, rocketVar, 0, targetPos, Vector.Zero, player)
-            if rocket then
-                local rd = rocket:GetData()
-                rd.isGLBomb = true
-                rd.isGLRocket = true
-                pcall(function()
-                    local spr = rocket:GetSprite()
-                    if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) end
-                end)
-            end
-            data.ringFlareTimer = 10
+            SpawnEpicFetusRocket(player, targetPos, data)
             return true
         else
             local velSpeed = math.max(8.0, shotSpeed * 0.95)
@@ -221,7 +225,7 @@ return function(Core)
                 bomb.DepthOffset = 30
                 pcall(function()
                     local spr = bomb:GetSprite()
-                    if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25) end
+                    if spr then spr.Color = Core.GL_EMERALD_DIM end
                 end)
             end
             data.ringFlareTimer = 8
@@ -253,24 +257,7 @@ return function(Core)
                 if room and room.GetClampedPosition then strikePos = room:GetClampedPosition(strikePos, 24) end
             end
 
-            local targetVar = (EffectVariant and EffectVariant.TARGET) or 30
-            local target = Isaac.Spawn(EntityType.ENTITY_EFFECT, targetVar, 0, strikePos, Vector.Zero, player)
-            if target then
-                target:GetSprite().Color = Color(0.1, 1.0, 0.38, 1, 0.20, 0.95, 0.25)
-                target:GetData().isGLRocket = true
-            end
-            local rocketVar = (BombVariant and BombVariant.BOMB_ROCKET) or 19
-            local rocket = Isaac.Spawn(EntityType.ENTITY_BOMB, rocketVar, 0, strikePos, Vector.Zero, player)
-            if rocket then
-                local rd = rocket:GetData()
-                rd.isGLBomb = true
-                rd.isGLRocket = true
-                pcall(function()
-                    local spr = rocket:GetSprite()
-                    if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.25, 0.95, 0.30) end
-                end)
-            end
-            data.ringFlareTimer = 10
+            SpawnEpicFetusRocket(player, strikePos, data)
         elseif hasDr and (frame % 30 == 0) then
             local vel = Vector(shootDir.X * 11.0, shootDir.Y * 11.0)
             local bombVar = (BombVariant and BombVariant.BOMB_NORMAL) or 0
@@ -286,7 +273,7 @@ return function(Core)
                 bomb.DepthOffset = 30
                 pcall(function()
                     local spr = bomb:GetSprite()
-                    if spr then spr.Color = Color(0.1, 1.0, 0.38, 1, 0.15, 0.85, 0.25) end
+                    if spr then spr.Color = Core.GL_EMERALD_DIM end
                 end)
             end
             data.ringFlareTimer = 8
