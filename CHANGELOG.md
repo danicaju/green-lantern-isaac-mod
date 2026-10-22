@@ -4,6 +4,23 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Lote 2 — Auditoría (decisiones de diseño)
+
+- **D1 — Blend de tintes**: `synergies_ring_tint.lua` usa media geométrica por canal RGB
+  (más media de alpha y offsets) en vez de last-wins, así Sacred Heart no borra el oro de
+  Midas' Touch ni el verde de Death's Touch.
+- **D2 — Tope de escala**: nueva `Core.GL_BEAM_MAX_SCALE = 2.25` aplicada como clamp en
+  `ApplyRingBeamSprite` (antes el peor caso llegaba a ~3.09x el beam base).
+- **D3 — Visibilidad garantizada**: `EnforceRingBeamTearSprite` fuerza `tear.Visible = true`
+  junto a la restauración del color, para que un beam no pueda quedarse invisible.
+- **D4 — Lost Contact**: el destello ya no salta en colisiones tear-tear con spawner nulo
+  (arranca en `false` y solo se activa con spawner enemigo confirmado).
+- **D5 — Continuar partida**: `save_run` marca `_glContinuedRun` e `init_players` preserva
+  willpower/ringDepleted/overcharge/overchargeTier (Hal) y emeraldSparks/stolenRings
+  (Tainted) exactamente como se dejaron al guardar; en partida nueva se resetean.
+- Tests: `tools/test_lote2_decisions.lua` (40 checks), `test_ring_tints.lua` actualizado al
+  contrato de blend, suite 50/50, lint 43/43.
+
 ### Fixes de auditoría — Lote 1
 - **Familiares**: solo Incubus y Succubus convierten sus lágrimas en beams esmeralda (whitelist `ALLOWED_FAMILIAR_BEAMERS`); el resto (Smart Fly, Ghost Pepper, wisps…) conservan su lágrima vanilla.
 - **Normalización**: fallback `(dir.X or 0)` en `beam_math` — antes `or 1` sesgaba los disparos verticales.
