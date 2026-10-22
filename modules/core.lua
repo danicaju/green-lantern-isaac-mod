@@ -50,6 +50,8 @@ Core.HAL_CONTINUOUS_WILL_DRAIN     = 0.06
 -- Vida y tope de beams GL discretos (evita acumulacion opresiva en sala).
 Core.GL_BEAM_MAX_LIFE_FRAMES       = 120
 Core.GL_BEAM_MAX_ALIVE             = 32
+-- SPEC-D2: tope de escala del beam (worst-case de synergies ~3.09x -> clamp a 2.25x).
+Core.GL_BEAM_MAX_SCALE             = 2.25
 -- SPEC-D: crecimiento fluido del rayo continuo (solo render, estilo Brimstone).
 -- El haz visible crece 0->full en N frames al iniciar/cambiar de direccion.
 -- Raycast/dano/tick-rate intactos (viven en beam_math.lua con el endWorld completo).
