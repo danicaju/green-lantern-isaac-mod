@@ -1,6 +1,6 @@
 -- tools/test_lote2_decisions.lua
 -- Harness para las 5 decisiones del Lote 2 de la auditoria:
--- D1 blend de tintes, D2 clamp de escala, D3 Visible=true en beam,
+-- D1 blend de tintes, D2 clamp de escala, D3 lagrima del motor visible (beam),
 -- D4 Lost Contact flash sin falsos positivos, D5 willpower exacto en continue.
 
 local passes, failures = 0, 0
@@ -374,7 +374,7 @@ local tear3, td3, spr3 = makeBeamTear()
 local renderCbs = cbsFor(ModCallbacks.MC_POST_TEAR_RENDER)
 check(#renderCbs >= 1, "D3: POST_TEAR_RENDER registrado")
 renderCbs[1](nil, tear3, Vector.Zero)
-check(tear3.Visible == true, "D3: tear.Visible = true tras EnforceRingBeamTearSprite")
+check(tear3.Visible == true, "D3: el enforcement deja la lagrima del motor visible (el beam lo dibuja el motor)")
 check(spr3.Color.A > 0.01, "D3: color del sprite restaurado (no transparente)")
 
 -- ===================== D4: LOST CONTACT SIN FALSOS POSITIVOS =====================

@@ -53,5 +53,22 @@ check(consumedIdx ~= nil and bufferedNilIdx ~= nil and consumedIdx < bufferedNil
 local _, releases = (src or ""):gsub("data%.clickQueuedThisPress%s*=%s*false", "")
 check(releases >= 2, "el flag se libera al consumir y al expirar (releases=" .. tostring(releases) .. ")")
 
+-- 6) La lagrima nativa del motor (C++) se suprime SIEMPRE para Hal/Tainted,
+--    sin depender del willpower restante. Si sobrevive, el motor la dibuja
+--    ademas del beam manual y el jugador ve DOS lagrimas por clic.
+local beam = readFile("modules/beam_discrete.lua")
+check(beam ~= nil and beam:find("not data.allowingTapTear", 1, true) ~= nil,
+      "beam suprime toda lagrima nativa no permitida")
+check(beam ~= nil and beam:find("CanUseContinuousBeam(player) and not data.allowingTapTear", 1, true) == nil,
+      "la supresion ya no depende de CanUseContinuousBeam")
+
+-- 7) La rama de tap con el anillo agotado debe marcar allowingTapTear o la
+--    supresion anterior borraria su propia lagrima.
+local tapStart = src and src:find("data.ringDepleted and data.humanTapShootDir", 1, true)
+local tapEnd = src and src:find("if data.bufferedClickDir", 1, true)
+local tapBlock = (tapStart and tapEnd and tapEnd > tapStart) and src:sub(tapStart, tapEnd) or ""
+check(tapBlock:find("data.allowingTapTear = true", 1, true) ~= nil,
+      "el tap con anillo agotado se marca como permitido")
+
 print(string.format("\ntest_single_click_beam.lua: %d passed, %d failed", passed, failed))
 if failed > 0 then os.exit(1) end

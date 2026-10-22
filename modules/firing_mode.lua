@@ -221,10 +221,14 @@ return function(Core)
           data.humanTapShootDir = nil
           local shotSpeed = math.max(6.0, (player.ShotSpeed or 1.0) * 10.0)
           local vel = dir * shotSpeed
+          -- Marca la lagrima como spawn del mod: sin esto, la supresion de
+          -- beam_discrete.lua la borraria (es un tap legitimo con anillo agotado).
+          data.allowingTapTear = true
           pcall(function()
             vel = vel + player:GetTearMovementInheritance(dir)
             player:FireTear(player.Position, vel, false, false, false)
           end)
+          data.allowingTapTear = false
           player.FireDelay = math.max(player.MaxFireDelay or 10, 5)
         end
       end

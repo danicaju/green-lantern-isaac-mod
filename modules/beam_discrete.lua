@@ -111,9 +111,13 @@ return function(Core)
       local isItemBurst = (data.itemTearBurstFrame and math.abs(frame - data.itemTearBurstFrame) <= 2)
                          or ((data.tearsSpawnedThisFrame or 1) > 1)
 
-      -- Suppress unbuffered C++ tears when CanUseContinuousBeam(player) is active (so holding shoot never fires a Frame-1 discrete bolt!)
+      -- Suppress every native C++ tear for Hal/Tainted: the mod owns all firing
+      -- (continuous beam, buffered click burst or depleted-ring tap). Only tears
+      -- spawned by our own code paths (data.allowingTapTear) or by item bursts
+      -- survive. This removes the duplicate beam that appeared on left click when
+      -- CanUseContinuousBeam() happened to be false at spawn time.
       if (Core.IsHalJordan(player) or Core.IsTaintedHal(player)) and not isItemBurst then
-          if data.isFiringContinuousBeam or (Core.CanUseContinuousBeam(player) and not data.allowingTapTear) then
+          if data.isFiringContinuousBeam or not data.allowingTapTear then
               HideTearSprite(tear)
               if not data.isFiringContinuousBeam and tear.Velocity and tear.Velocity:Length() > 0.1 then
                   local rawDir = tear.Velocity:Normalized()
@@ -267,9 +271,9 @@ return function(Core)
               end
           end
           ts.Color = tint
-          -- D3: el motor puede forzar Visible=true en tears; si por algun
-          -- motivo sigue oculto tras un reset C++, lo forzamos aqui junto al
-          -- color para que el beam siempre se vea.
+          -- La lagrima del motor es la que dibuja el beam (su sprite se
+          -- sustituye por gl_ring_beam.anm2). Debe seguir visible: el render
+          -- custom de fx_construct_tears no pinta estos beams.
           tear.Visible = true
           if tear.Velocity and tear.Velocity:Length() > 0.1 then
               ts.Rotation = tear.Velocity:GetAngleDegrees()
