@@ -4,6 +4,15 @@ Historial de cambios del mod. Formato: lo más nuevo arriba.
 
 ## Unreleased
 
+### Fixes de auditoría — Lote 1
+- **Familiares**: solo Incubus y Succubus convierten sus lágrimas en beams esmeralda (whitelist `ALLOWED_FAMILIAR_BEAMERS`); el resto (Smart Fly, Ghost Pepper, wisps…) conservan su lágrima vanilla.
+- **Normalización**: fallback `(dir.X or 0)` en `beam_math` — antes `or 1` sesgaba los disparos verticales.
+- **Estabilidad**: `pcall` en `SpawnConstructShard` (tier2), `TakeDamage` del wisp Giant Fist y `Isaac.Spawn` del wisp Gatling (crash al límite de entidades).
+- **Datos**: `overchargeTier = 0` por defecto en `GetPlayerData`; `save_run` purga índices de jugadores desconectados antes de serializar (evita heredar estado ajeno en co-op).
+- **Robustez**: 39 accesos `CollectibleType.COLLECTIBLE_*` protegidos con `CollectibleType and` en `synergies_tier1/2/3`.
+- **Descartado**: añadir Dr./Epic Fetus a `CanUseContinuousBeam` — rompería la sinergia intencional de Epic Fetus (testeada) y dejaría muerto `Core.TickFetusContinuousSynergy`.
+- Harness nuevo `tools/test_audit_lote1.lua` (33 checks); suite 49/49, lint 43/43.
+
 ### Sinergias visuales del beam esmeralda
 - Nuevo `modules/synergies_ring_tint.lua`: tabla `ITEM_VISUALS` + `Core.GetRingBeamVisual(player)` → `(tinte, multiplicador de escala)`. Tintes por item: Soy Milk (pálido, 0.8x), Lost Contact (1.15x), Midas' Touch (oro-esmeralda), **Sacred Heart (blanco puro, 1.2x — arregla el morado)**, Death's Touch (verde profundo, 1.15x), 8 Inch Nails (1.4x), Technology y Tech X.
 - `ApplyRingBeamSprite` aplica el tinte/escala del item; `EnforceRingBeamTearSprite` deja de imponer blanco fijo; el render del rayo continuo respeta el tinte.
