@@ -82,6 +82,17 @@ return function(Core)
         local p = Isaac.GetPlayer(i)
         if p then snapshot[tostring(p.Index or i)] = Collect(p) end
       end
+      -- F6: purga de indices de jugadores desconectados: solo sobreviven las
+      -- claves de los jugadores realmente conectados (Isaac.GetPlayer(0..n-1)).
+      -- El formato JSON no cambia: tabla indexada por player.Index.
+      local connected = {}
+      for i = 0, n - 1 do
+        local p = Isaac.GetPlayer(i)
+        if p then connected[tostring(p.Index or i)] = true end
+      end
+      for k in pairs(snapshot) do
+        if not connected[k] then snapshot[k] = nil end
+      end
       slot.run = snapshot
       GL:SaveModData(json.encode(slot))
     end)
