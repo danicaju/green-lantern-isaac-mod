@@ -34,6 +34,8 @@ return function(Core)
         [507] = { en = "Attaches sticky emerald construct tracking tags that deal continuous poison damage", es = "Adhiere marcas de rastreo de constructo esmeralda que danan por veneno continuo" },
         [509] = { en = "Ring hits shatter into 3 piercing emerald bone construct splinters dealing 50% DMG", es = "Los impactos se fragmentan en 3 esquirlas oseas de constructo perforantes (50% dano)" },
         [527] = { en = "Bouncing construct bolts trigger emerald shockwaves along the floor on every bounce", es = "Los disparos rebotan en el suelo emitiendo ondas de choque de luz solida en cada bote" },
+        [529] = { en = "Construct tears bounce as emerald hard-light orbs and emit a tiny sparkle on each bounce", es = "Las lagrimas de constructo rebotan como orbes de luz solida esmeralda y sueltan chispas en cada bote" },
+        [531] = { en = "Construct bolts burst into arcing emerald mortar shards that shower enemies on impact", es = "Los proyectiles de constructo estallan en fragmentos de mortero esmeralda que caen sobre los enemigos al impactar" },
         [533] = { en = "Ring attacks become piercing emerald wave construct beams dealing +25% DMG", es = "Los disparos se convierten en ondas de energia esmeralda perforantes (+25% dano)" },
         [540] = { en = "Projects an Emerald Aegis Dome forcefield upon entering any boss room", es = "Proyecta una Cupula Egida esmeralda protectora al entrar a cualquier sala de jefe" },
         [577] = { en = "On-hit chance to manifest a Giant Boxing Glove Construct (2.5x DMG, knockback & confusion)", es = "Probabilidad de invocar un Puno de Boxeo de Constructo (x2.5 dano, retroceso y confusion)" },
