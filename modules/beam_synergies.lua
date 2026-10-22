@@ -211,17 +211,21 @@ return function(Core)
         if not player or not Core.IsRingActive(player) then return end
 
         -- Lost Contact: emerald flash when the player's tear blocks an enemy projectile.
+        -- D4: sin spawner no sabemos si el proyectil es enemigo; evitamos el
+        -- flash para no pintar destellos en colisiones tear-tear amistosas.
         if tear and type(tear.ToTear) == "function" and tear:ToTear()
            and collider and type(collider.ToTear) == "function" and collider:ToTear() then
             local colSpawner = collider.SpawnerEntity
-            local isEnemyShot = true
+            local isEnemyShot = false
             if colSpawner then
                 pcall(function()
-                    if colSpawner:ToPlayer() then isEnemyShot = false end
+                    if colSpawner:ToPlayer() then return end
                     local cf = colSpawner:ToFamiliar()
                     if cf and (cf.Player or (cf.SpawnerEntity and cf.SpawnerEntity:ToPlayer())) then
-                        isEnemyShot = false
+                        return
                     end
+                    -- Spawner confirmado y no es jugador/familiar: es enemigo.
+                    isEnemyShot = true
                 end)
             end
             if isEnemyShot then
