@@ -101,25 +101,25 @@ return function(Core)
         local dir = (vel and (vel.X ~= 0 or vel.Y ~= 0)) and vel:Normalized() or Vector(1, 0)
 
         -- Knockout Drops
-        local hasKnockout = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_KNOCKOUT_DROPS or 577)
+        local hasKnockout = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_KNOCKOUT_DROPS or 577))
         if hasKnockout and math.random() < math.min(0.50, 0.15 + luck * 0.03) then
             TriggerBoxingGlovePunch(player, collider, tear.Position, dir)
         end
 
         -- Holy Light
-        local hasHolyLight = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_HOLY_LIGHT or 374)
+        local hasHolyLight = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_HOLY_LIGHT or 374))
         if hasHolyLight and math.random() < math.min(0.50, 0.10 + luck * 0.04) then
             TriggerHolyLightColumn(player, collider, tear.Position)
         end
 
         -- Ocular Rift
-        local hasRift = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_OCULAR_RIFT or 578)
+        local hasRift = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_OCULAR_RIFT or 578))
         if hasRift and math.random() < math.min(0.35, 0.08 + luck * 0.02) then
             TriggerOcularRift(player, collider, tear.Position)
         end
 
         -- Terra
-        local hasTerra = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA or 602)
+        local hasTerra = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TERRA or 602))
         if hasTerra then
             pcall(function()
                 local sfx = (SoundEffect and SoundEffect.SOUND_ROCK_CRUMBLE) or 0
@@ -149,19 +149,19 @@ return function(Core)
         local luck = player.Luck or 0
         local dir = segDir or Vector(1, 0)
 
-        if player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_KNOCKOUT_DROPS or 577) then
+        if player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_KNOCKOUT_DROPS or 577)) then
             if math.random() < math.min(0.40, 0.12 + luck * 0.02) then
                 TriggerBoxingGlovePunch(player, ent, hitPos, dir)
             end
         end
 
-        if player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_HOLY_LIGHT or 374) then
+        if player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_HOLY_LIGHT or 374)) then
             if math.random() < math.min(0.40, 0.08 + luck * 0.03) then
                 TriggerHolyLightColumn(player, ent, hitPos)
             end
         end
 
-        if player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_OCULAR_RIFT or 578) then
+        if player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_OCULAR_RIFT or 578)) then
             if math.random() < math.min(0.30, 0.06 + luck * 0.02) then
                 TriggerOcularRift(player, ent, hitPos)
             end
@@ -185,7 +185,7 @@ return function(Core)
 
         local bd = entity.GetData and entity:GetData()
         local isFetusOrGL = entity.IsFetus or (bd and bd.isGLBomb)
-        local hasSadBombs = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SAD_BOMBS or 220)
+        local hasSadBombs = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SAD_BOMBS or 220))
         if not (hasSadBombs and (isFetusOrGL or (bomb and bomb.IsFetus))) then return end
 
         local data = Core.GetPlayerData(player)
@@ -207,10 +207,10 @@ return function(Core)
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
 
-        local hasTris = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TRISAGION or 533)
-        local hasTerra = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA or 602)
-        local hasAntiGrav = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_ANTI_GRAVITY or 222)
-        local hasCSection = player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_C_SECTION or 678)
+        local hasTris = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TRISAGION or 533))
+        local hasTerra = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_TERRA or 602))
+        local hasAntiGrav = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_ANTI_GRAVITY or 222))
+        local hasCSection = player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_C_SECTION or 678))
         if not (hasTris or hasTerra or hasAntiGrav or hasCSection) then return end
 
         local td = tear:GetData()
@@ -252,7 +252,7 @@ return function(Core)
         local player = nil
         for i = 0, nPlayers - 1 do
             local p = Isaac.GetPlayer(i)
-            if p and Core.IsRingActive(p) and p.HasCollectible and p:HasCollectible(CollectibleType.COLLECTIBLE_URANUS or 598) then
+            if p and Core.IsRingActive(p) and p.HasCollectible and p:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_URANUS or 598)) then
                 player = p; break
             end
         end
@@ -279,7 +279,7 @@ return function(Core)
         local spawner = knife.SpawnerEntity
         local player = spawner and spawner:ToPlayer()
         if not player or not Core.IsRingActive(player) then return end
-        if not (player.HasCollectible and player:HasCollectible(CollectibleType.COLLECTIBLE_SPIRIT_SWORD or 579)) then return end
+        if not (player.HasCollectible and player:HasCollectible((CollectibleType and CollectibleType.COLLECTIBLE_SPIRIT_SWORD or 579))) then return end
 
         pcall(function()
             local spr = knife:GetSprite()
